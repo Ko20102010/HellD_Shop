@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>HELLDIVERS PLEASE! — Super Earth Arsenal & Logistics Tycoon</title>
+  <link rel="stylesheet" href="./css/style.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+  <div id="game-container">
+    <!-- 3D Diorama Canvas -->
+    <canvas id="game-canvas"></canvas>
+
+    <!-- World-Space 2D Floating Labels (Order Bubbles, MAX Tags, Ground Unlock Pads) -->
+    <div id="world-labels"></div>
+
+    <!-- Fullscreen 500kg / Unlock Flash Overlay -->
+    <div id="screen-flash"></div>
+
+    <!-- Floating Multi-Touch Virtual Joystick (Module 3.1) -->
+    <div id="joystick-zone">
+      <div id="joystick-base">
+        <div id="joystick-knob"></div>
+      </div>
+    </div>
+
+    <!-- Top & Bottom Tactical HUD Layer (Module 2.3.F / 2.3.G / 2.3.K) -->
+    <div id="hud-layer">
+      <div class="hud-top-row">
+        <!-- Brand & Stratagem Sequence Rack -->
+        <div class="hud-brand-cluster">
+          <div class="super-earth-banner">
+            <div class="banner-title">💀 HELLDIVERS PLEASE! <span>SUPER EARTH LOGISTICS</span></div>
+            <div class="banner-sub">Haul Cloth, Guns, Gear, 車, 機甲 &amp; Warships to Helldivers • Hire SEAF</div>
+          </div>
+
+          <!-- Helldivers Stratagem Rack: ↑ → ↓ ↓ ↓ (Eagle 500kg Liberty Overdrive) -->
+          <div class="stratagem-card" id="stratagem-card">
+            <div class="strat-arrows">
+              <button class="strat-arrow" data-dir="UP" title="Tap UP">↑</button>
+              <button class="strat-arrow" data-dir="RIGHT" title="Tap RIGHT">→</button>
+              <button class="strat-arrow" data-dir="DOWN" title="Tap DOWN">↓</button>
+              <button class="strat-arrow" data-dir="DOWN" title="Tap DOWN">↓</button>
+              <button class="strat-arrow" data-dir="DOWN" title="Tap DOWN">↓</button>
+            </div>
+            <button class="strat-trigger-btn" id="btn-call-stratagem">🦅 500KG BOOST</button>
+          </div>
+        </div>
+
+        <!-- Resource & Action Cluster -->
+        <div class="hud-stats-cluster">
+          <div class="stat-pill cash-pill" id="cash-pill-el">
+            <span>💵</span> $<span id="hud-cash">45</span>
+          </div>
+          <div class="stat-pill carry-pill">
+            <span>🎒</span> <span id="hud-carry">0/12</span>
+            <span id="hud-carry-max" style="display:none;color:#ef4444;font-size:11px;margin-left:3px;">MAX</span>
+          </div>
+          <div class="stat-pill">
+            <span>🪖 SEAF:</span> <span id="hud-seaf">0</span>
+          </div>
+          <div class="stat-pill">
+            <span>🫡 Served:</span> <span id="hud-served">0</span>
+          </div>
+          <button class="hud-btn primary-cta" id="btn-open-seaf">🪖 SEAF &amp; Upgrades</button>
+          <button class="hud-btn" id="btn-open-save">💾 Save</button>
+          <button class="hud-btn" id="btn-mute">🔊 Audio</button>
+        </div>
+      </div>
+
+      <!-- Dynamic Next Objective Ticker -->
+      <div id="objective-ticker">
+        <span id="objective-text">🎯 Walk to the Gun or Cloth shelf (left), stack items, and bring them to the Counter!</span>
+      </div>
+
+      <!-- Bottom Tactical Inventory & Right Touch Buttons -->
+      <div class="hud-bottom-row">
+        <div class="tactical-inventory-card">
+          <div class="inv-header">
+            <span>Quartermaster Stack &amp; Counter Tray</span>
+            <span>WASD / Drag</span>
+          </div>
+          <div class="inv-badges">
+            <div class="inv-badge" id="inv-badge-cloth">🦺 <span class="inv-count">0</span></div>
+            <div class="inv-badge" id="inv-badge-gun">🔫 <span class="inv-count">0</span></div>
+            <div class="inv-badge" id="inv-badge-resource">📦 <span class="inv-count">0</span></div>
+            <div class="inv-badge" id="inv-badge-equipment">🛡️ <span class="inv-count">0</span></div>
+            <div class="inv-badge" id="inv-badge-vehicle">🚙 <span class="inv-count">0</span></div>
+            <div class="inv-badge" id="inv-badge-mech">🤖 <span class="inv-count">0</span></div>
+            <div class="inv-badge" id="inv-badge-warship">🚀 <span class="inv-count">0</span></div>
+          </div>
+        </div>
+
+        <div class="right-action-dock">
+          <button class="action-circle-btn trash-btn" id="btn-clear-stack" title="Clear Hand Stack (R)">
+            🗑️<span>DUMP</span>
+          </button>
+          <button class="action-circle-btn sprint-btn" id="btn-sprint" title="Jet-Boot Sprint Boost (Shift)">
+            ⚡<span>SPRINT</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- SEAF Command & Factory Upgrades Modal -->
+    <div class="modal-backdrop" id="modal-seaf">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h2>🪖 SEAF Recruitment &amp; Ministry of Defense Upgrades</h2>
+          <button class="modal-close-btn" id="btn-close-seaf">✕</button>
+        </div>
+        <div class="modal-body">
+          <p style="font-size:12px;color:#cbd5e1;line-height:1.45;">
+            Recruit <strong>SEAF (Super Earth Armed Forces)</strong> troopers to automatically haul Cloth (🦺), Liberator Guns (🔫), Supply Crates (📦), Shield Equipment (🛡️), Recon Vehicles (🚙 車), Patriot Mechs (🤖 機甲), and Orbital Warships (🚀 戰艦) to waiting Helldivers! You can also unlock new factory wings by stepping directly on the dashed floor pads.
+          </p>
+          <div class="upgrade-grid" id="upgrades-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LocalStorage Save Export / Import Modal (Module 3.3) -->
+    <div class="modal-backdrop" id="modal-save">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h2>💾 Super Earth Telemetry Save &amp; Export</h2>
+          <button class="modal-close-btn" id="btn-close-save">✕</button>
+        </div>
+        <div class="modal-body">
+          <p style="font-size:12px;color:#cbd5e1;">
+            Your factory expansion, Requisition Slips ($), and SEAF squad are auto-saved in your browser. Copy your Base64 save string below to back up or transfer across devices:
+          </p>
+          <textarea class="save-textarea" id="save-code-box" spellcheck="false"></textarea>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;">
+            <div style="display:flex;gap:8px;">
+              <button class="hud-btn primary-cta" id="btn-copy-save">📋 Copy Save Code</button>
+              <button class="hud-btn" id="btn-import-save">📥 Load Save Code</button>
+            </div>
+            <button class="hud-btn" id="btn-reset-save" style="border-color:#ef4444;color:#f87171;">🗑️ Reset Factory</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modular Game Scripts (Relative Paths for GitHub Pages Compatibility) -->
+  <script src="./js/config.js"></script>
+  <script src="./js/audio.js"></script>
+  <script src="./js/world.js"></script>
+  <script src="./js/game.js"></script>
+</body>
+</html>
