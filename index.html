@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>HELLDIVERS PLEASE! — Super Earth Arsenal & Logistics Tycoon</title>
+  <title>HELLDIVERS PLEASE! (v0.0.01) — Super Earth Arsenal &amp; War-Zone Tycoon</title>
   <link rel="stylesheet" href="./css/style.css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
@@ -31,8 +31,11 @@
         <!-- Brand & Stratagem Sequence Rack -->
         <div class="hud-brand-cluster">
           <div class="super-earth-banner">
-            <div class="banner-title">💀 HELLDIVERS PLEASE! <span>SUPER EARTH LOGISTICS</span></div>
-            <div class="banner-sub">Haul Cloth, Guns, Gear, 車, 機甲 &amp; Warships to Helldivers • Hire SEAF</div>
+            <div class="banner-title">
+              💀 HELLDIVERS PLEASE! <span>SUPER EARTH LOGISTICS</span>
+              <span class="version-pill" id="hud-version">v0.0.01</span>
+            </div>
+            <div class="banner-sub">Carbot Helldivers • Starter Cloth &amp; Gun Unlocked • Walk North to War Zone!</div>
           </div>
 
           <!-- Helldivers Stratagem Rack: ↑ → ↓ ↓ ↓ (Eagle 500kg Liberty Overdrive) -->
@@ -51,10 +54,10 @@
         <!-- Resource & Action Cluster -->
         <div class="hud-stats-cluster">
           <div class="stat-pill cash-pill" id="cash-pill-el">
-            <span>💵</span> $<span id="hud-cash">45</span>
+            <span>💵</span> $<span id="hud-cash">100</span>
           </div>
           <div class="stat-pill carry-pill">
-            <span>🎒</span> <span id="hud-carry">0/12</span>
+            <span>🎒</span> <span id="hud-carry">0/18</span>
             <span id="hud-carry-max" style="display:none;color:#ef4444;font-size:11px;margin-left:3px;">MAX</span>
           </div>
           <div class="stat-pill">
@@ -71,7 +74,7 @@
 
       <!-- Dynamic Next Objective Ticker -->
       <div id="objective-ticker">
-        <span id="objective-text">🎯 Walk to the Gun or Cloth shelf (left), stack items, and bring them to the Counter!</span>
+        <span id="objective-text">🎯 Cloth (🦺) &amp; Gun (🔫) are unlocked! Serve Helldivers or walk North through the Gate to the War Zone!</span>
       </div>
 
       <!-- Bottom Tactical Inventory & Right Touch Buttons -->
@@ -79,7 +82,7 @@
         <div class="tactical-inventory-card">
           <div class="inv-header">
             <span>Quartermaster Stack &amp; Counter Tray</span>
-            <span>WASD / Drag</span>
+            <span>Touch Drag / WASD</span>
           </div>
           <div class="inv-badges">
             <div class="inv-badge" id="inv-badge-cloth">🦺 <span class="inv-count">0</span></div>
@@ -112,7 +115,7 @@
         </div>
         <div class="modal-body">
           <p style="font-size:12px;color:#cbd5e1;line-height:1.45;">
-            Recruit <strong>SEAF (Super Earth Armed Forces)</strong> troopers to automatically haul Cloth (🦺), Liberator Guns (🔫), Supply Crates (📦), Shield Equipment (🛡️), Recon Vehicles (🚙 車), Patriot Mechs (🤖 機甲), and Orbital Warships (🚀 戰艦) to waiting Helldivers! You can also unlock new factory wings by stepping directly on the dashed floor pads.
+            Recruit <strong>SEAF (Super Earth Armed Forces)</strong> troopers to automatically haul Cloth (🦺), Liberator Guns (🔫), E-710 Supply Crates (📦), Shield Equipment (🛡️), Recon Vehicles (🚙 車), Patriot Mechs (🤖 機甲), and Orbital Warships (🚀 戰艦) to waiting Helldivers! Walk North out the Gate to hunt Automatons, plow E-710, and thaw frozen Helldivers!
           </p>
           <div class="upgrade-grid" id="upgrades-list"></div>
         </div>
@@ -123,7 +126,7 @@
     <div class="modal-backdrop" id="modal-save">
       <div class="modal-card">
         <div class="modal-header">
-          <h2>💾 Super Earth Telemetry Save &amp; Export</h2>
+          <h2>💾 Super Earth Telemetry Save &amp; Export (v0.0.01)</h2>
           <button class="modal-close-btn" id="btn-close-save">✕</button>
         </div>
         <div class="modal-body">

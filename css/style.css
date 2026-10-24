@@ -1,5 +1,5 @@
 /* ==========================================================================
-   HELLDIVERS PLEASE! — Super Earth Logistics & Arsenal Tycoon
+   HELLDIVERS PLEASE! — Super Earth Logistics & Arsenal Tycoon (v0.0.00)
    Modular Stylesheet (GitHub Pages & Mobile WebApp Compatible)
    Combines Module 3.1 (Mobile WebApp Base), 2.3.F/G (Helldivers HUD), 2.3.K (Burger Please UI)
    ========================================================================== */
@@ -32,6 +32,7 @@ html, body {
   height: 100%;
   overflow: hidden;
   touch-action: none;
+  overscroll-behavior: none;
   background-color: #0b0e14;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   color: var(--se-text);
@@ -41,6 +42,7 @@ html, body {
   position: relative;
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
   overflow: hidden;
 }
 
@@ -222,7 +224,7 @@ html, body {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 10px 14px;
+  padding: max(10px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
 }
 
 .hud-top-row {
@@ -261,6 +263,18 @@ html, body {
   display: flex;
   align-items: center;
   gap: 6px;
+  flex-wrap: wrap;
+}
+
+.version-pill {
+  background: rgba(251, 192, 45, 0.2);
+  border: 1px solid var(--se-yellow);
+  color: #fef08a;
+  font-size: 10px;
+  font-weight: 900;
+  padding: 1px 6px;
+  border-radius: 999px;
+  letter-spacing: 0.4px;
 }
 
 .banner-sub {
@@ -298,8 +312,8 @@ html, body {
 }
 
 .strat-arrow {
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   border-radius: 4px;
   background: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.22);
@@ -330,7 +344,7 @@ html, body {
   color: #0f172a;
   border: none;
   border-radius: 6px;
-  padding: 4px 9px;
+  padding: 5px 10px;
   font-size: 11px;
   font-weight: 900;
   cursor: pointer;
@@ -434,6 +448,8 @@ html, body {
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.45);
   pointer-events: auto;
   cursor: pointer;
+  max-width: 94vw;
+  text-align: center;
 }
 
 /* Bottom Controls & Quick Action Dock */
@@ -450,19 +466,19 @@ html, body {
   position: absolute;
   left: 0;
   bottom: 0;
-  width: 55vw;
-  height: 55vh;
+  width: 68vw;
+  height: 62vh;
   z-index: 15;
   pointer-events: auto;
 }
 
 #joystick-base {
   position: absolute;
-  width: 110px;
-  height: 110px;
+  width: 112px;
+  height: 112px;
   border-radius: 50%;
-  background: rgba(15, 23, 42, 0.45);
-  border: 2.5px solid rgba(251, 192, 45, 0.65);
+  background: rgba(15, 23, 42, 0.48);
+  border: 2.5px solid rgba(251, 192, 45, 0.72);
   transform: translate(-50%, -50%);
   display: none;
   pointer-events: none;
@@ -473,8 +489,8 @@ html, body {
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 46px;
-  height: 46px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
   background: radial-gradient(circle at 30% 30%, #ffee58, #f59e0b);
   border: 2px solid #ffffff;
@@ -538,14 +554,14 @@ html, body {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 8px;
+  gap: 10px;
   pointer-events: auto;
   z-index: 25;
 }
 
 .action-circle-btn {
-  width: 58px;
-  height: 58px;
+  width: 60px;
+  height: 60px;
   border-radius: 50%;
   background: linear-gradient(135deg, #1e293b, #0f172a);
   border: 2.5px solid var(--se-yellow);
@@ -576,8 +592,8 @@ html, body {
 }
 
 .action-circle-btn.trash-btn {
-  width: 46px;
-  height: 46px;
+  width: 48px;
+  height: 48px;
   border-color: #ef4444;
   font-size: 15px;
 }
@@ -749,23 +765,52 @@ html, body {
   transition: opacity 0.12s ease-out;
 }
 
+/* Mobile Portrait & Small Screen Ergonomics */
 @media (max-width: 640px) {
   .hud-top-row {
-    gap: 6px;
+    gap: 5px;
+  }
+  .super-earth-banner {
+    padding: 4px 9px;
+  }
+  .banner-title {
+    font-size: 11px;
+  }
+  .banner-sub {
+    display: none;
   }
   .stat-pill {
-    padding: 4px 10px;
-    font-size: 12px;
+    padding: 4px 9px;
+    font-size: 11px;
   }
   .stat-pill.cash-pill {
-    font-size: 14px;
+    font-size: 13px;
+  }
+  .hud-btn {
+    padding: 5px 9px;
+    font-size: 11px;
   }
   .tactical-inventory-card {
-    max-width: 235px;
-    padding: 6px 9px;
+    max-width: 225px;
+    padding: 5px 8px;
+    transform: none;
+  }
+  .inv-badge {
+    font-size: 10px;
+    padding: 2px 5px;
   }
   #objective-ticker {
-    font-size: 11px;
-    padding: 4px 12px;
+    font-size: 10px;
+    padding: 4px 10px;
+  }
+  .world-unlock-label {
+    min-width: 78px;
+    padding: 3px 7px;
+  }
+  .world-unlock-label .unlock-title {
+    font-size: 9px;
+  }
+  .world-unlock-label .unlock-cost {
+    font-size: 12px;
   }
 }

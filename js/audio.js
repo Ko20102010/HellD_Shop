@@ -1,7 +1,7 @@
 /* ==========================================================================
-   HELLDIVERS PLEASE! — Super Earth Logistics & Arsenal Tycoon
+   HELLDIVERS PLEASE! — Super Earth Logistics & War-Zone Tycoon (v0.0.01)
    js/audio.js — Procedural Web Audio Synthesizer (Zero External Sound Files)
-   Combines Module 3.2.K (Burger Please ASMR) & Module 3.2.F (Helldivers Audio)
+   Combines Module 3.2.K (Burger Please ASMR), 3.2.I (Whiteout Cash/Thaw) & 3.2.F
    ========================================================================== */
 
 class ProceduralAudioEngine {
@@ -67,6 +67,28 @@ class ProceduralAudioEngine {
     osc.stop(now + 0.055);
   }
 
+  // War-Zone Auto-Fire Gunfire Sound
+  playGunshot() {
+    if (this.muted) return;
+    this.init();
+    if (!this.ctx) return;
+
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(240, now);
+    osc.frequency.exponentialRampToValueAtTime(48, now + 0.055);
+
+    gain.gain.setValueAtTime(0.14, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+
+    osc.connect(gain);
+    gain.connect(this.masterGain);
+    osc.start(now);
+    osc.stop(now + 0.065);
+  }
+
   // Module 3.2.I / 3.2.K: Pitch-Ascending Cash Pickup Cascade
   playCashPickup() {
     if (this.muted) return;
@@ -122,24 +144,24 @@ class ProceduralAudioEngine {
     osc.stop(now + 0.065);
   }
 
-  // Module 3.2.K: Customer Order Satisfied Dual-Sine Bell Ding
+  // Module 3.2.K / 3.2.I: Customer Satisfied / Thawed Survivor Happy "😊" Ding
   playOrderComplete() {
     if (this.muted) return;
     this.init();
     if (!this.ctx) return;
 
     const now = this.ctx.currentTime;
-    [1046.5, 1318.5].forEach((freq, idx) => {
+    [783.99, 987.77, 1318.5].forEach((freq, idx) => {
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, now + idx * 0.055);
-      gain.gain.setValueAtTime(0.22, now + idx * 0.055);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.055 + 0.42);
+      osc.frequency.setValueAtTime(freq, now + idx * 0.05);
+      gain.gain.setValueAtTime(0.2, now + idx * 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.05 + 0.38);
       osc.connect(gain);
       gain.connect(this.masterGain);
-      osc.start(now + idx * 0.055);
-      osc.stop(now + idx * 0.055 + 0.45);
+      osc.start(now + idx * 0.05);
+      osc.stop(now + idx * 0.05 + 0.4);
     });
   }
 
@@ -181,7 +203,6 @@ class ProceduralAudioEngine {
     if (!this.ctx) return;
 
     const now = this.ctx.currentTime;
-    // 4-Note Helldivers Brass Motif: F3 (174.61), E3 (164.81), D3 (146.83), A2 (110.00)
     const notes = [
       { f: 174.61, t: 0.0, d: 0.22 },
       { f: 164.81, t: 0.24, d: 0.22 },
@@ -214,7 +235,6 @@ class ProceduralAudioEngine {
     });
 
     if (with500kg) {
-      // 90ms Audio Ducking then Seismic Drop (Module 3.2.F)
       this.masterGain.gain.setValueAtTime(0.15, now + 0.85);
       this.masterGain.gain.setValueAtTime(0.75, now + 0.94);
 

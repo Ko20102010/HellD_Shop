@@ -1,12 +1,13 @@
 /* ==========================================================================
-   HELLDIVERS PLEASE! — Super Earth Logistics & Arsenal Tycoon
-   js/config.js — Game Balance, Production Tiers, Unlock Zones & SEAF Config
+   HELLDIVERS PLEASE! — Super Earth Logistics & War-Zone Tycoon (v0.0.01)
+   js/config.js — Game Balance, Production Tiers, Solid Colliders & War Zone
    ========================================================================== */
 
 window.GAME_CONFIG = {
-  STORAGE_KEY: 'helldivers_please_save_v1',
+  VERSION: 'v0.0.01',
+  STORAGE_KEY: 'helldivers_please_save_v2',
 
-  // 7 Progressive War Materiel Types (Burger Please! style stackable items)
+  // 8 Stackable Item Types (7 Shop War Materiel + War-Zone Harvested E-710 / Scrap)
   ITEMS: {
     cloth: {
       id: 'cloth',
@@ -14,7 +15,7 @@ window.GAME_CONFIG = {
       shortName: 'Cloth/Armor',
       zhName: '基礎戰術布甲披風',
       icon: '🦺',
-      price: 12,
+      price: 15,
       color: 0xfbc02d,
       accent: 0x1e293b,
       tier: 1
@@ -25,21 +26,21 @@ window.GAME_CONFIG = {
       shortName: 'Liberator Gun',
       zhName: '解放者標準步槍',
       icon: '🔫',
-      price: 18,
+      price: 20,
       color: 0x475569,
       accent: 0xfbc02d,
       tier: 1
     },
     resource: {
       id: 'resource',
-      name: 'Hellpod Ammo & Stim Pack',
-      shortName: 'Supply Crate',
-      zhName: '彈藥與醫療補給箱',
+      name: 'E-710 Fuel & Ammo Pack',
+      shortName: 'E-710 / Supply',
+      zhName: 'E-710燃料與補給箱',
       icon: '📦',
-      price: 28,
+      price: 30,
       color: 0x22c55e,
       accent: 0xfacc15,
-      tier: 2
+      tier: 1
     },
     equipment: {
       id: 'equipment',
@@ -47,7 +48,7 @@ window.GAME_CONFIG = {
       shortName: 'Shield Gear',
       zhName: '能量護盾與重裝備',
       icon: '🛡️',
-      price: 45,
+      price: 48,
       color: 0x38bdf8,
       accent: 0x0284c7,
       tier: 2
@@ -58,7 +59,7 @@ window.GAME_CONFIG = {
       shortName: 'Recon Vehicle',
       zhName: 'M-102 戰術偵察車',
       icon: '🚙',
-      price: 85,
+      price: 90,
       color: 0x65a30d,
       accent: 0xfacc15,
       tier: 3
@@ -69,7 +70,7 @@ window.GAME_CONFIG = {
       shortName: 'Patriot Mech',
       zhName: 'EXO-45 愛國者機甲',
       icon: '🤖',
-      price: 150,
+      price: 160,
       color: 0xd97706,
       accent: 0xef4444,
       tier: 3
@@ -80,14 +81,15 @@ window.GAME_CONFIG = {
       shortName: 'Warship Core',
       zhName: '超級驅逐艦艦體核心',
       icon: '🚀',
-      price: 280,
+      price: 300,
       color: 0xa855f7,
       accent: 0x38bdf8,
       tier: 4
     }
   },
 
-  // Factory Production Stations placed around the Hangar
+  // Factory Production Stations inside the Shop Hangar (z: -8 to +9)
+  // Both Cloth (🦺) AND Gun (🔫) are 100% unlocked at start!
   STATIONS: [
     {
       id: 'station_cloth',
@@ -96,10 +98,10 @@ window.GAME_CONFIG = {
       zhTitle: '基礎布甲織造機',
       unlockedByDefault: true,
       unlockCost: 0,
-      machinePos: { x: -11.5, z: -6.5 },
-      shelfPos: { x: -8.2, z: -6.5 },
-      pickupPos: { x: -6.2, z: -6.5 },
-      craftInterval: 0.75,
+      machinePos: { x: -11.2, z: -5.2 },
+      shelfPos: { x: -8.2, z: -5.2 },
+      pickupPos: { x: -6.1, z: -5.2 },
+      craftInterval: 0.65,
       maxShelf: 18,
       wing: 'west'
     },
@@ -110,24 +112,24 @@ window.GAME_CONFIG = {
       zhTitle: '解放者步槍產線',
       unlockedByDefault: true,
       unlockCost: 0,
-      machinePos: { x: -11.5, z: -1.5 },
-      shelfPos: { x: -8.2, z: -1.5 },
-      pickupPos: { x: -6.2, z: -1.5 },
-      craftInterval: 0.85,
+      machinePos: { x: -11.2, z: -0.5 },
+      shelfPos: { x: -8.2, z: -0.5 },
+      pickupPos: { x: -6.1, z: -0.5 },
+      craftInterval: 0.72,
       maxShelf: 18,
       wing: 'west'
     },
     {
       id: 'station_resource',
       itemType: 'resource',
-      title: 'Ammo & Stim Resource Line',
+      title: 'E-710 & Ammo Supply Line',
       zhTitle: '戰略物資補給產線',
       unlockedByDefault: false,
       unlockCost: 60,
-      machinePos: { x: -11.5, z: 3.5 },
-      shelfPos: { x: -8.2, z: 3.5 },
-      pickupPos: { x: -6.2, z: 3.5 },
-      craftInterval: 0.95,
+      machinePos: { x: -11.2, z: 4.0 },
+      shelfPos: { x: -8.2, z: 4.0 },
+      pickupPos: { x: -6.1, z: 4.0 },
+      craftInterval: 0.85,
       maxShelf: 16,
       wing: 'west'
     },
@@ -138,10 +140,10 @@ window.GAME_CONFIG = {
       zhTitle: '護盾與重裝備鍛造台',
       unlockedByDefault: false,
       unlockCost: 140,
-      machinePos: { x: -11.5, z: 8.2 },
+      machinePos: { x: -11.2, z: 8.2 },
       shelfPos: { x: -8.2, z: 8.2 },
-      pickupPos: { x: -6.2, z: 8.2 },
-      craftInterval: 1.1,
+      pickupPos: { x: -6.1, z: 8.2 },
+      craftInterval: 1.0,
       maxShelf: 16,
       wing: 'west'
     },
@@ -152,10 +154,10 @@ window.GAME_CONFIG = {
       zhTitle: '戰術偵察車組裝廠',
       unlockedByDefault: false,
       unlockCost: 260,
-      machinePos: { x: 11.5, z: -6.2 },
-      shelfPos: { x: 8.2, z: -6.2 },
-      pickupPos: { x: 6.2, z: -6.2 },
-      craftInterval: 1.25,
+      machinePos: { x: 11.2, z: -5.2 },
+      shelfPos: { x: 8.2, z: -5.2 },
+      pickupPos: { x: 6.1, z: -5.2 },
+      craftInterval: 1.15,
       maxShelf: 12,
       wing: 'east'
     },
@@ -166,38 +168,38 @@ window.GAME_CONFIG = {
       zhTitle: '愛國者機甲重工架',
       unlockedByDefault: false,
       unlockCost: 480,
-      machinePos: { x: 11.5, z: -0.5 },
-      shelfPos: { x: 8.2, z: -0.5 },
-      pickupPos: { x: 6.2, z: -0.5 },
-      craftInterval: 1.45,
+      machinePos: { x: 11.2, z: -0.2 },
+      shelfPos: { x: 8.2, z: -0.2 },
+      pickupPos: { x: 6.1, z: -0.2 },
+      craftInterval: 1.35,
       maxShelf: 10,
       wing: 'east'
     },
     {
       id: 'station_warship',
       itemType: 'warship',
-      title: '2F Orbital Warship Drydock (戰艦)',
-      zhTitle: '二樓超級戰艦船塢',
+      title: 'Orbital Warship Drydock (戰艦)',
+      zhTitle: '超級戰艦船塢',
       unlockedByDefault: false,
       unlockCost: 850,
-      machinePos: { x: 3.8, z: -11.8 },
-      shelfPos: { x: 0.5, z: -10.8 },
-      pickupPos: { x: -1.8, z: -9.8 },
-      craftInterval: 1.75,
+      machinePos: { x: 11.2, z: 4.8 },
+      shelfPos: { x: 8.2, z: 4.8 },
+      pickupPos: { x: 6.1, z: 4.8 },
+      craftInterval: 1.65,
       maxShelf: 8,
-      wing: 'north2f'
+      wing: 'east'
     }
   ],
 
-  // Ground-Projected Unlockable Zones (Burger Please! step-on-pad cash drain)
+  // Ground-Projected Unlockable Zones (Shop + Outer War Zone)
   UNLOCK_ZONES: [
     {
       id: 'unlock_resource',
       type: 'station',
       targetId: 'station_resource',
-      title: '📦 Unlock Resource Line',
+      title: '📦 Unlock Supply Line',
       cost: 60,
-      pos: { x: -6.2, z: 3.5 }
+      pos: { x: -6.1, z: 4.0 }
     },
     {
       id: 'unlock_seaf_1',
@@ -205,7 +207,7 @@ window.GAME_CONFIG = {
       targetId: 'seaf_hauler_1',
       title: '🪖 Hire SEAF Trooper #1',
       cost: 80,
-      pos: { x: -3.2, z: -4.2 },
+      pos: { x: -3.2, z: -3.5 },
       isSeaf: true
     },
     {
@@ -214,32 +216,41 @@ window.GAME_CONFIG = {
       targetId: 'seaf_cashier_1',
       title: '🎖️ Hire SEAF Cashier',
       cost: 110,
-      pos: { x: -2.2, z: 1.8 },
+      pos: { x: -2.4, z: 1.8 },
       isSeaf: true
     },
     {
       id: 'unlock_equipment',
       type: 'station',
       targetId: 'station_equipment',
-      title: '🛡️ Unlock Equipment Forge',
+      title: '🛡️ Unlock Shield Forge',
       cost: 140,
-      pos: { x: -6.2, z: 8.2 }
+      pos: { x: -6.1, z: 8.2 }
+    },
+    {
+      id: 'unlock_war_turret',
+      type: 'war_turret',
+      targetId: 'sentry_turret_1',
+      title: '🔫 Build Gate Sentry Turret',
+      cost: 150,
+      pos: { x: -3.8, z: -12.0 },
+      isSeaf: true
     },
     {
       id: 'unlock_table_2',
       type: 'armory_pod',
       targetId: 'pod_bay_2',
-      title: '🪑 Expand Armory Pod #2',
+      title: '🪑 Build Warming Bench #2',
       cost: 180,
-      pos: { x: 3.6, z: 6.2 }
+      pos: { x: 3.8, z: 6.2 }
     },
     {
       id: 'unlock_vehicle',
       type: 'station',
       targetId: 'station_vehicle',
-      title: '🚙 Unlock Vehicle Factory (車)',
+      title: '🚙 Unlock Vehicle Bay (車)',
       cost: 260,
-      pos: { x: 6.2, z: -6.2 }
+      pos: { x: 6.1, z: -5.2 }
     },
     {
       id: 'unlock_seaf_2',
@@ -247,7 +258,7 @@ window.GAME_CONFIG = {
       targetId: 'seaf_hauler_2',
       title: '🪖 Hire SEAF Heavy Crew #2',
       cost: 320,
-      pos: { x: 3.4, z: -3.8 },
+      pos: { x: 3.4, z: -3.5 },
       isSeaf: true
     },
     {
@@ -256,15 +267,15 @@ window.GAME_CONFIG = {
       targetId: 'station_mech',
       title: '🤖 Unlock Patriot Mech Bay (機甲)',
       cost: 480,
-      pos: { x: 6.2, z: -0.5 }
+      pos: { x: 6.1, z: -0.2 }
     },
     {
       id: 'unlock_warship',
       type: 'station',
       targetId: 'station_warship',
-      title: '🚀 Unlock 2F Warship Dock (戰艦)',
+      title: '🚀 Unlock Warship Dock (戰艦)',
       cost: 850,
-      pos: { x: -1.8, z: -9.8 }
+      pos: { x: 6.1, z: 4.8 }
     }
   ],
 
@@ -272,8 +283,8 @@ window.GAME_CONFIG = {
   UPGRADES: [
     {
       id: 'playerSpeed',
-      title: 'Jet-Boot Thruster Servo',
-      desc: 'Increases Commander movement speed by +16% per tier.',
+      title: 'Jet-Boot & Spore-Plow Servo',
+      desc: 'Increases Commander movement speed (+16%) & War-Zone plowing speed.',
       icon: '⚡',
       baseCost: 50,
       costMult: 1.65,
@@ -282,7 +293,7 @@ window.GAME_CONFIG = {
     {
       id: 'playerCapacity',
       title: 'Exoskeletal Spine Rack',
-      desc: 'Increases Commander back-stack capacity (+6 items/tier).',
+      desc: 'Increases Commander back-stack capacity (+6 items/tier, up to 60).',
       icon: '🎒',
       baseCost: 65,
       costMult: 1.7,
@@ -310,8 +321,8 @@ window.GAME_CONFIG = {
     },
     {
       id: 'factorySpeed',
-      title: 'Super Earth Overclock Directive',
-      desc: 'Accelerates all unlocked weapon, vehicle, mech & ship assembly (+22%).',
+      title: 'Super Earth Overclock & Weapon Damage',
+      desc: 'Accelerates factory assembly (+22%) & War-Zone auto-fire damage.',
       icon: '⚙️',
       baseCost: 110,
       costMult: 1.8,
