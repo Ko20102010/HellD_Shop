@@ -1,62 +1,53 @@
-# HELLDIVERS PLEASE! — Super Earth Arsenal & 2D Factorio War-Zone Tycoon (`v0.0.06`)
+# HELLDIVERS PLEASE! — Super Earth Arsenal, Mindustry Multi-Base & 2D Factorio Tycoon (`v0.0.07`)
 
-An arcade factory-automation, logistics, and 3-layer sequential base-defense web game inspired by **Burger Please!**, **Whiteout Survival Playable Ads**, **Factorio**, and **CarbotAnimations' Helldivers 2 cartoons** (across **all episodes Ep1–Ep10+**, including [Pro vs Noobs | Helldivers 2 Ep7](http://www.youtube.com/watch?v=bn0GTO_zvAg)), built from the [Modular Game Prompt Library](https://docs.google.com/document/d/1ZoW7Oou5QpTyvwD6vrczKuXv0nW42JgLJC-au62H7Pw/edit?usp=drivesdk&ouid=114024991701964609548).
-
----
-
-## 🎮 Core Gameplay Features (`v0.0.06` — All-Episode Carbot, Real-Packet Split Belts, 7 Dedicated Counters & Smart SEAF AI Edition)
-
-1. **All-Episode CarbotAnimations *Helldivers 2* Roster (`Ep1–Ep10+` — 16 Animated Units)**:
-   - Expanded enemy and character artwork across the entire Carbot *Helldivers 2* series:
-     - **Terminids (Bugs)**: **Scavenger / Leaping Hunter Bug** (`Ep1/Ep2` with fluttering wings, derpy eyes & wagging pink tongue), **Armored Charger** (`Ep1/Ep3`), **Bile Spewer** (`Ep2/Ep5` with pulsating neon-green bloated acid sac), and **Bile Titan Boss** (`Ep1/Ep4` on 4 towering stilted spider legs).
-     - **Automatons (Bots)**: **Skull Trooper Bot** (`Ep3/Ep7`), **Rocket Devastator** (`Ep3/Ep6 Malevelon Creek` with dual 6-tube shoulder rocket pods), **Flame-Saw Hulk Boss** (`Ep3/Ep7`), and **Factory Strider Mega-Boss** (`Ep8/Ep9` 4-legged "AT-AT Mechanical Dog" walker with dorsal cannon & chin gatlings).
-     - **Super Earth Visual Gags**: **Eagle-1 500KG Fighter Jet Flyover Shadow** & red stratagem beacon beam when calling `🦅 500KG BOOST`, panic sweat drops (`💧`) on low-HP Gates, and all **16 animated units** in the **`🎭 角色 Preview`** modal.
-2. **Real-Item-Only Conveyor Belt Rendering (`Zero Fake Items on Empty Belts!`)**:
-   - Belts no longer display fake looping icons when a source machine is empty (`stock === 0`).
-   - Instead, belts render animated directional chevron rollers (`>>>`) when unlocked, and **ONLY display physical item packets (`state.beltPackets`) when real items are actively in transit** from a non-empty source to a non-full destination!
-3. **Split Raw Material Conveyor Belts (`Never Mix Different Raw Materials on One Belt`)**:
-   - **`🛢️ E-710 Fuel Belt` (`conv_raw_e710`, Purple `#a855f7`, Lv.0–20)**: Connects **ONLY the `🛢️ E-710 Auto-Pump`** along a dedicated purple pipeline (`x = -960`) to the E-710 input hoppers of stations that require `🛢️ E-710` (`🦺 Cloth`, `📦 Crate`, `🎒 Jump Pack`, `🚙 Vehicle`, `🤖 Mech`, `🚀 Warship`).
-   - **`⛏️ Super Iron Belt` (`conv_raw_iron`, Cyan `#38bdf8`, Lv.0–20)**: Connects **ONLY the `⛏️ Super Iron Auto-Drill`** along a separate parallel cyan pipeline (`x = -910`) to the Iron input hoppers of stations that require `⛏️ Iron` (`🔫 Gun`, `🧱 Ammo Press`, `📦 Crate`, `🎒 Jump Pack`, `🚙 Vehicle`, `🤖 Mech`, `🚀 Warship`).
-4. **One Item = One Dedicated Sales Counter (`7 Horizontal Assembly-to-Retail Lanes`)**:
-   - Every product has its **own dedicated Sales Counter (`Counter #1` through `Counter #7`)**, its own **Drop Pad**, its own **`$REQ` Cash Stack**, its own **Customer Queue Line**, and its own **straight horizontal Output-to-Counter Belt**:
-     - **Counter #1 (`z = 120`)**: `🦺 B-01 Tactical Cloth`
-     - **Counter #2 (`z = 390`)**: `🔫 AR-23 Liberator Gun`
-     - **Counter #3 (`z = 660`)**: `📦 Munitions Crate`
-     - **Counter #4 (`z = 930`)**: `🎒 SH-32 Jump Pack`
-     - **Counter #5 (`z = 1200`)**: `🚙 M-102 Recon Vehicle`
-     - **Counter #6 (`z = 1470`)**: `🤖 EXO-45 Patriot Mech`
-     - **Counter #7 (`z = 1740`)**: `🚀 SES Super Destroyer`
-5. **Smart SEAF Staff AI (`Unique Task Reservation + Belt-Aware Role Switching`)**:
-   - **⛏️ SEAF Quarry Miners**: Spread across distinct needy hoppers (`reservedHoppers`); if a Raw Belt (`conv_raw_e710` or `conv_raw_iron`) is already automated (`Lv.1+`), Miners automatically switch to **Hand-Mining directly from the Manual Vein** to supply bonus raw ore instead of duplicating the belt!
-   - **🪖 SEAF Logistics Troopers**: Haul finished products to their Dedicated Counters when `conv_counter_auto` is `Lv.0`. Once `conv_counter_auto` is automated (`Lv.1+`), Logistics Troopers automatically switch to **Cashier & Floor Cash Collector Patrol** — patrolling Counters `#1–#7` to auto-collect `$REQ` cash stacks directly into your wallet!
-   - **🧱 SEAF Gate Engineers**: Prioritize **1) Manually repairing any Broken (`0 HP`) or Damaged Gate Layer (`Gate 3 ➔ Gate 2 ➔ Gate 1`)**, then **2) Hauling `🧱 Ammo` to Gate Layers whose Ammo Belt is `Lv.0`**, then **3) Assisting at the Munitions Ammo Press (`+1 ⛏️ Iron` feed)**!
+An arcade factory-automation, Mindustry multi-base logistics, and 3-layer sequential war-front web game inspired by **Burger Please!**, **Whiteout Survival Playable Ads**, **Factorio**, **Mindustry**, and **CarbotAnimations' Helldivers 2 cartoons** (across **all episodes Ep1–Ep10+**, including [Pro vs Noobs | Helldivers 2 Ep7](http://www.youtube.com/watch?v=bn0GTO_zvAg)), built from the [Modular Game Prompt Library](https://docs.google.com/document/d/1ZoW7Oou5QpTyvwD6vrczKuXv0nW42JgLJC-au62H7Pw/edit?usp=drivesdk&ouid=114024991701964609548).
 
 ---
 
-## 📜 Complete Version History & Changelog (`v0.0.00` – `v0.0.06`)
+## 🎮 Core Gameplay Features (`v0.0.07` — Mobile-First HUD, Mindustry Multi-Base, Visual Tech Tree & Split Shop/War Front Edition)
+
+1. **Mobile-First Playable Portrait HUD (`100% Phone-Playable — Collapsible ☰ Menu Drawer & Pinch Zoom`)**:
+   - On mobile phones (`<= 900px`), the top HUD condenses into a sleek 2-row micro-bar (`<10%` of screen height) while all secondary modal buttons collapse into a toggleable **`☰ 選單 (Menu)`** drawer so **88%+ of the mobile screen is unobstructed 2D Canvas**.
+   - Repositioned the Virtual Joystick cleanly above the iOS Safari bottom toolbar, added **2-finger Pinch-to-Zoom**, and auto-scaled the portrait mobile camera zoom (`0.36x`) so the factory and war front are immediately readable on phones.
+2. **Split Shop vs. War Front Architecture + 4 Dedicated War-Only Functions (`🏪 工廠 Shop Base` | `⚔️ 戰場 War Front`)**:
+   - Switch instantly between **`🏪 工廠 Shop Base`** (Quarry, 7 Production Lanes, and 7 Dedicated Item Counters) and **`⚔️ 戰場 War Front`** (3-Layer Defense Corridor + **`#war-command-dock`**).
+   - **4 New War-Only Tactical Functions** bridge your Factory output directly into active War Front combat:
+     - **`🪖 +SEAF Squad`**: Consumes `1x 🔫 Gun` from your factory/counter (or `$80`) to deploy an autonomous Carbot SEAF Rifleman on the War Front.
+     - **`🚙 +Recon Buggy`**: Consumes `1x 🚙 Vehicle` (or `$180`) to deploy an autonomous HMG Recon Buggy patrolling the active Front Gate.
+     - **`🤖 +Patriot Mech`**: Consumes `1x 🤖 Patriot Mech` (or `$320`) to deploy a heavy bipedal Exosuit Walker that fires rockets and miniguns at Bile Titans, Hulks, and Factory Striders.
+     - **`💚 Mend Tower (Lv.0–20)`**: Builds Mindustry-style green **Mend Projectors** behind all 3 Gate Layers that continuously heal Gate HP and reload turret ammo.
+3. **Mindustry Multi-Base Planetary Sector Network (`🪐 多基地 Bases` — 6 Conquerable Sector Bases)**:
+   - Establish and switch between **6 Planetary Sector Bases** (*Sector Alpha-01: Angel's Venture Core*, *Sector Beta-02: Heeth Cryo-Refinery*, *Sector Gamma-03: Tien Kwan Mech Foundry*, *Sector Delta-04: Malevelon Creek Fortress*, *Sector Epsilon-05: Meridia Bio-Core*, and *Sector Zeta-06: Cyberstan Mega-Citadel*).
+   - Each base features distinct resource deposit multipliers (`⛏️ Iron`, `🛢️ E-710`, `💵 Sell Value`) and operates a **Mindustry Orbital Launch Pad** that passively beams `$REQ/s`, `🛢️ E-710`, `⛏️ Iron`, and `🧱 Ammo` to your active base!
+4. **Mindustry-Style Visual Node Tech Tree (`🌟 Mindustry 科技樹` — 13 Connected Schematic Nodes)**:
+   - Interactive 2D schematic canvas starting from **`🏛️ Core: Super Earth Shard`** with parent-to-child conduit pipes branching across **Extraction & Launch Pads**, **Silicon Foundry & Overdrive Dome**, **Plastanium Walls & Mend Projectors**, and **Commander & Allied War Units** (researchable with either `⭐ Medals` or `💵 $REQ`).
+
+---
+
+## 📜 Complete Version History & Changelog (`v0.0.00` – `v0.0.07`)
+
+### `v0.0.07` — Mobile-First Portrait HUD Fix, Mindustry Multi-Base Sector Network, Mindustry Visual Node Tech Tree & Split Shop / War Front Architecture
+- **Fixed Mobile Phone Playability (`image.png` Fix)**: Collapsed the 9 rows of wrapping top buttons on mobile screens into a toggleable **`☰ 選單 (Menu)`** drawer, hid verbose stat labels on narrow screens so all key stats fit on a single compact row, raised the Virtual Joystick above the mobile browser bottom bar, and added 2-finger pinch-to-zoom + `0.36x` mobile default zoom.
+- **Mindustry Multi-Base System (`🪐 多基地 Bases`)**: Added 6 conquerable/switchable Planetary Sector Bases (`Alpha` through `Zeta`) with per-base deposit multipliers (`⛏️ Iron`, `🛢️ E-710`, `💵 Sell Price`) and background **Orbital Launch Pad** exports (`+$REQ/s`, `+🛢️`, `+⛏️`, `+🧱`).
+- **Mindustry Visual Node Tech Tree (`🌟 Mindustry 科技樹`)**: Built an interactive 2D node-and-branch schematic tech tree (`#mindustry-tree-canvas`) rooted at `Core: Super Earth Shard` with 13 connected research nodes across 4 branches.
+- **Split Shop vs. War Front Mode Switcher + 4 War-Only Functions**: Added a 1-tap `🏪 工廠 Shop Base` / `⚔️ 戰場 War Front` mode switcher and the **War Command Deployment Dock** (`🪖 +SEAF Squad`, `🚙 +Recon Buggy`, `🤖 +Patriot Mech`, and `💚 Mindustry Mend Tower`).
 
 ### `v0.0.06` — All-Episode Carbot Art (`Ep1–Ep10+`), Real-Item-Only Split Belts, 7 Dedicated Item Counters & Smart SEAF AI
-- **All-Episode CarbotAnimations Art (`Ep1–Ep10+`)**: Added 4 new iconic enemies across Terminid & Automaton episodes (**Scavenger Hunter Bug**, **Bile Spewer**, **Bile Titan Boss**, and **Factory Strider Mega-Boss**), **Eagle-1 500KG Flyover Jet Shadow**, low-HP gate sweat drops (`💧`), and expanded the **`🎭 角色 Preview`** showcase to **16 animated units**.
-- **Fixed Conveyor Belt Visual Confusion (Real-Item-Only Packets)**: Removed fake looping belt icons when a machine has `0` stock; belts now only draw `state.beltPackets` when real items are actively moving from source to destination.
-- **Split Raw Material Conveyor Belts (`conv_raw_e710` & `conv_raw_iron`)**: Separated raw material transport into a dedicated **Purple E-710 Fuel Belt (`x = -960`)** and a dedicated **Cyan Super Iron Belt (`x = -910`)** so different raw materials never mix on the same belt.
-- **7 Dedicated Item Sales Counters (`1 Item = 1 Counter`)**: Redesigned Sector B & Sector C into 7 parallel horizontal lanes (`z = 120` to `z = 1740`), giving every item its own Dedicated Counter (`Counter #1`–`#7`), dedicated customer queue, and per-counter `$REQ` cash stack.
-- **Smart SEAF Staff AI**: Added unique task reservation (preventing workers from clumping on the same task) and belt-aware role switching (Miners switch to manual vein mining when raw belts are active; Logistics switch to Cashier & Cash Collector patrol when counter belts are active; Engineers prioritize broken/damaged gate repair).
+- **All-Episode CarbotAnimations Art (`Ep1–Ep10+`)**: Added Scavenger Hunter Bug, Bile Spewer, Bile Titan Boss, Rocket Devastator, Factory Strider Mega-Boss, Eagle-1 500KG Flyover Jet Shadow, and 17 animated units in `🎭 角色 Preview`.
+- **Real-Item-Only Split Conveyor Belts**: Removed fake looping belt icons on empty belts and split raw transport into Purple `🛢️ E-710 Belt` (`conv_raw_e710`) and Cyan `⛏️ Super Iron Belt` (`conv_raw_iron`).
+- **7 Dedicated Item Sales Counters (`1 Item = 1 Counter`) & Smart SEAF AI**.
 
 ### `v0.0.05` — Anti-Crush Fix, 1-Item Start, Wave + Rest System, Broken-Gate Manual Repair Rule, 20-Level Belts/Machines & 20hr+ Campaign
-- **Fixed Machine Unlock Crushing Character**: Moved all machine `unlockPos` pads south of `stationPos` and added `ejectEntityFromObstacles()` in `js/game.js`.
-- **True 1-Item Start (`🦺 Cloth` Only)**: Locked `🔫 Gun`, `🧱 Ammo Press`, `⛏️ Auto Iron Drill`, `🛢️ Auto E-710 Pump`, and all `Conveyor Belts` at `Lv.0` on a fresh save.
-- **Wave + Rest Phase System**: Added structured waves (`Wave 1` to `Wave 200+`) separated by `35s` peaceful Rest & Repair phases and an early-wave call button (`⚔️ Next Wave`).
-- **Broken Gate No-Auto-Heal Rule**: Gates at `0 HP` (`broken = true`) receive zero automatic HP regen until manually repaired on their pad.
-- **20 Upgrade Levels (`Lv.1–20`) on Everything** and **20+ Hour Endgame Loop** (8 Planets, 20 Milestones, Galactic Prestige Ascension & Live Mini-Map Radar).
+- **Safe Unlock Pads & Obstacle Ejection**, **True 1-Item Start (`🦺 Cloth` Only)**, **Wave + Rest Phase System**, **Broken Gate No-Auto-Heal Rule**, and **20 Upgrade Levels (`Lv.1–20`)**.
 
-### `v0.0.04` — Production Recipes, Harvest Quarry + Scale Expansion, 3-Layer Sequential Gates, Zero-Overlap Map, Commander Loadout & 12-Character Preview
-- **Item Production Recipe System (`Input Hopper ➔ Fabricator ➔ Output Pad`)**, **Manual Raw Harvest Area + Expandable Auto-Quarry Scale**, **3 Sequential Defense Gate Layers (`Gate 3 Outer ➔ Gate 2 Middle ➔ Gate 1 Inner`)**, and **Main Character 4-Slot Equipment Loadout (`🛡️ 裝備 Loadout`)**.
+### `v0.0.04` — Production Recipes, Harvest Quarry + Scale Expansion, 3-Layer Sequential Gates, Zero-Overlap Map, Commander Loadout & Character Preview
+- **Item Production Recipe System (`Input Hopper ➔ Fabricator ➔ Output Pad`)**, **Manual Raw Harvest Area + Auto-Drills**, **3 Sequential Defense Gate Layers**, and **Commander 4-Slot Equipment Loadout**.
 
 ### `v0.0.03` — Startup Black-Screen Hotfix & Versioned ZIP Naming
 - **Fixed Black Screen / Startup Crash** (`window.SoundEngine` export + `roundRect` polyfill) and added version string to the `.ZIP` filename.
 
 ### `v0.0.02` — 2D Factorio + Carbot Vector Overhaul, 3 Gates, Turret Ammo Conveyors & Permanent Skill Tree
-- **2D Top-Down Factorio + Carbot Art Engine**, **Direct + Counter Gun Selling**, **Turret Ammo (`🧱`)**, and **Permanent Warbond Skill Tree (`🌟 Forever Skills`)**.
+- **2D Top-Down Factorio + Carbot Art Engine**, **Direct + Counter Gun Selling**, **Turret Ammo (`🧱`)**, and **Permanent Warbond Skill Tree**.
 
 ### `v0.0.01` — CarbotAnimations Bean Characters, Solid Collision & Northern War-Zone Loop
 - **Carbot-Style Chubby Characters**, **AABB Solid Obstacles**, and **Northern War-Zone Loop**.

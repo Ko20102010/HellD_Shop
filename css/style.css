@@ -1,7 +1,8 @@
 /* ==========================================================================
    HELLDIVERS PLEASE! — Super Earth Arsenal & 2D Factorio War-Zone Tycoon
-   Version: v0.0.04
-   Stylesheet: Responsive Mobile/Desktop HUD, Skill Tree, Defeat & 角色圖鑑 Modal
+   Version: v0.0.07 (Mobile-First HUD, Mindustry Multi-Base & Visual Tech Tree)
+   Stylesheet: Ultra-Clean Mobile Portrait HUD (Collapsible Drawer),
+               Split Shop/War Mode Switcher, War Command Dock & Mindustry Tree
    ========================================================================== */
 
 :root {
@@ -36,22 +37,25 @@ html, body {
   color: #f8fafc;
   font-family: var(--font-body);
   touch-action: none;
+  overscroll-behavior: none;
 }
 
 #game-container {
   position: relative;
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
   overflow: hidden;
 }
 
-#canvas-wrapper {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
+#game-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
 }
 
-#fx-layer {
+#world-labels {
   position: absolute;
   inset: 0;
   z-index: 5;
@@ -63,7 +67,7 @@ html, body {
   position: absolute;
   font-family: var(--font-display);
   font-weight: 900;
-  font-size: 0.92rem;
+  font-size: 0.88rem;
   text-shadow: 0 2px 6px rgba(0, 0, 0, 0.95);
   pointer-events: none;
   white-space: nowrap;
@@ -78,47 +82,106 @@ html, body {
 }
 
 /* ==========================================================================
-   TOP BAR HUD
+   TOP BAR HUD & SPLIT SHOP/WAR MODE SWITCHER
    ========================================================================== */
 #hud-top {
   position: absolute;
-  top: 8px;
-  left: 10px;
-  right: 10px;
-  z-index: 10;
+  top: max(6px, env(safe-area-inset-top, 6px));
+  left: 8px;
+  right: 8px;
+  z-index: 15;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  pointer-events: none;
+}
+
+.hud-row-main {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 6px;
   pointer-events: none;
 }
 
 .hud-group {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   flex-wrap: wrap;
   pointer-events: auto;
+}
+
+/* Split Shop vs War Front Mode Switcher Bar */
+#mode-switcher-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  pointer-events: auto;
+  flex-wrap: wrap;
+}
+
+.mode-tab-btn {
+  cursor: pointer;
+  background: rgba(15, 23, 42, 0.92);
+  color: #cbd5e1;
+  border: 1.5px solid rgba(148, 163, 184, 0.4);
+  border-radius: 8px;
+  padding: 5px 11px;
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  font-weight: 900;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.55);
+  transition: all 0.14s ease;
+}
+
+.mode-tab-btn.active-shop {
+  background: linear-gradient(135deg, #22c55e, #15803d);
+  color: #052e16;
+  border-color: #86efac;
+}
+
+.mode-tab-btn.active-war {
+  background: linear-gradient(135deg, #ef4444, #b91c1c);
+  color: #ffffff;
+  border-color: #fca5a5;
+}
+
+.mode-tab-btn.tab-bases {
+  border-color: #38bdf8;
+  color: #7dd3fc;
+}
+
+.mode-tab-btn.tab-tech {
+  border-color: #a855f7;
+  color: #e9d5ff;
+}
+
+#btn-toggle-menu {
+  display: none;
 }
 
 .brand-badge {
   background: var(--hd-panel);
   border: 2px solid var(--hd-yellow);
-  border-radius: 10px;
-  padding: 5px 10px;
+  border-radius: 9px;
+  padding: 4px 9px;
   display: flex;
   align-items: center;
-  gap: 8px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.65);
+  gap: 6px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.65);
 }
 
 .brand-title {
   font-family: var(--font-display);
-  font-size: 0.92rem;
+  font-size: 0.86rem;
   font-weight: 900;
   color: var(--hd-yellow);
-  letter-spacing: 0.5px;
+  letter-spacing: 0.4px;
 }
 
 .version-pill {
@@ -126,21 +189,21 @@ html, body {
   color: #fde047;
   border: 1px solid var(--hd-yellow);
   font-family: monospace;
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   font-weight: 700;
-  padding: 2px 6px;
+  padding: 1px 5px;
   border-radius: 5px;
 }
 
 .stat-pill {
   background: var(--hd-panel);
   border: 1.5px solid rgba(148, 163, 184, 0.35);
-  border-radius: 10px;
-  padding: 4px 10px;
+  border-radius: 9px;
+  padding: 3px 8px;
   display: flex;
   align-items: center;
-  gap: 6px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.55);
+  gap: 5px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.55);
 }
 
 .stat-pill.cash-pill { border-color: var(--hd-green); }
@@ -148,7 +211,7 @@ html, body {
 .stat-pill.gate-pill { border-color: var(--hd-cyan); }
 
 .stat-label {
-  font-size: 0.65rem;
+  font-size: 0.6rem;
   text-transform: uppercase;
   color: #94a3b8;
   font-weight: 700;
@@ -156,7 +219,7 @@ html, body {
 
 .stat-val {
   font-family: var(--font-display);
-  font-size: 0.92rem;
+  font-size: 0.84rem;
   font-weight: 900;
 }
 
@@ -168,23 +231,22 @@ html, body {
   cursor: pointer;
   background: var(--hd-panel);
   color: #f8fafc;
-  border: 2px solid var(--hd-border);
-  border-radius: 9px;
-  padding: 6px 11px;
+  border: 1.5px solid var(--hd-border);
+  border-radius: 8px;
+  padding: 5px 9px;
   font-family: var(--font-display);
-  font-size: 0.74rem;
+  font-size: 0.7rem;
   font-weight: 800;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
   transition: transform 0.12s ease, background 0.15s ease;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.55);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.55);
 }
 
 .hud-btn:hover {
   background: rgba(30, 41, 59, 0.98);
   border-color: var(--hd-yellow);
-  transform: translateY(-1px);
 }
 
 .hud-btn.btn-primary {
@@ -222,26 +284,81 @@ html, body {
    ========================================================================== */
 #objective-banner {
   position: absolute;
-  top: 56px;
+  top: 86px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 9;
-  background: rgba(15, 23, 42, 0.92);
+  background: rgba(15, 23, 42, 0.88);
   border: 1.5px solid var(--hd-yellow);
   border-radius: 999px;
-  padding: 5px 16px;
-  font-size: 0.84rem;
+  padding: 4px 14px;
+  font-size: 0.78rem;
   font-weight: 700;
   color: #fef08a;
   display: flex;
   align-items: center;
-  gap: 8px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.65);
+  gap: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
   pointer-events: none;
   white-space: nowrap;
-  max-width: 95vw;
+  max-width: 92vw;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* ==========================================================================
+   WAR-FRONT TACTICAL DEPLOYMENT DOCK (NEW IN v0.0.07)
+   ========================================================================== */
+#war-command-dock {
+  position: absolute;
+  bottom: max(18px, env(safe-area-inset-bottom, 14px));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 14;
+  background: rgba(15, 23, 42, 0.94);
+  border: 2px solid #ef4444;
+  border-radius: 12px;
+  padding: 6px 10px;
+  display: none;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: center;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85);
+  pointer-events: auto;
+  max-width: 94vw;
+}
+
+#war-command-dock.visible {
+  display: flex;
+}
+
+.war-deploy-btn {
+  cursor: pointer;
+  background: rgba(30, 41, 59, 0.95);
+  border: 1.5px solid #f97316;
+  border-radius: 8px;
+  padding: 5px 9px;
+  color: #f8fafc;
+  font-family: var(--font-display);
+  font-size: 0.68rem;
+  font-weight: 800;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 82px;
+}
+
+.war-deploy-btn span.sub-cost {
+  font-family: var(--font-body);
+  font-size: 0.66rem;
+  color: #fde047;
+  font-weight: 700;
+}
+
+.war-deploy-btn:active {
+  transform: scale(0.95);
 }
 
 /* ==========================================================================
@@ -249,13 +366,13 @@ html, body {
    ========================================================================== */
 #zoom-controls {
   position: absolute;
-  right: 12px;
+  right: 8px;
   top: 50%;
   transform: translateY(-50%);
   z-index: 10;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
 }
 
 /* ==========================================================================
@@ -263,7 +380,7 @@ html, body {
    ========================================================================== */
 #hud-bottom {
   position: absolute;
-  bottom: 12px;
+  bottom: max(12px, env(safe-area-inset-bottom, 12px));
   left: 12px;
   right: 12px;
   z-index: 10;
@@ -277,10 +394,10 @@ html, body {
   background: var(--hd-panel);
   border: 1px solid rgba(148, 163, 184, 0.3);
   border-radius: 10px;
-  padding: 7px 12px;
-  font-size: 0.78rem;
+  padding: 6px 11px;
+  font-size: 0.75rem;
   color: #cbd5e1;
-  max-width: 460px;
+  max-width: 450px;
   pointer-events: auto;
 }
 
@@ -295,14 +412,14 @@ html, body {
 }
 
 .action-circle-btn {
-  width: 54px;
-  height: 54px;
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
   background: var(--hd-panel);
   border: 2px solid var(--hd-yellow);
   color: #fff;
   font-family: var(--font-display);
-  font-size: 0.68rem;
+  font-size: 0.64rem;
   font-weight: 900;
   display: flex;
   flex-direction: column;
@@ -314,14 +431,14 @@ html, body {
 
 #joystick-zone {
   position: absolute;
-  left: 18px;
-  bottom: 72px;
-  width: 116px;
-  height: 116px;
+  left: 14px;
+  bottom: max(74px, calc(env(safe-area-inset-bottom, 14px) + 64px));
+  width: 104px;
+  height: 104px;
   z-index: 12;
   border-radius: 50%;
-  background: rgba(15, 23, 42, 0.45);
-  border: 2px dashed rgba(250, 204, 21, 0.45);
+  background: rgba(15, 23, 42, 0.48);
+  border: 2px dashed rgba(250, 204, 21, 0.55);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -330,8 +447,8 @@ html, body {
 }
 
 #joystick-knob {
-  width: 46px;
-  height: 46px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
   background: radial-gradient(circle at 30% 30%, #fde047, #ca8a04);
   border: 2px solid #fff;
@@ -340,18 +457,18 @@ html, body {
 }
 
 /* ==========================================================================
-   MODALS & CHARACTER SHOWCASE GALLERY (角色預覽圖鑑)
+   MODALS, MINDUSTRY VISUAL TECH TREE & MULTI-BASE SECTOR MAP
    ========================================================================== */
 .modal-backdrop {
   position: fixed;
   inset: 0;
   z-index: 50;
-  background: rgba(5, 8, 15, 0.84);
+  background: rgba(5, 8, 15, 0.86);
   backdrop-filter: blur(6px);
   display: none;
   align-items: center;
   justify-content: center;
-  padding: 14px;
+  padding: 10px;
 }
 
 .modal-backdrop.open {
@@ -360,8 +477,9 @@ html, body {
 
 .modal-card {
   width: 100%;
-  max-width: 780px;
-  max-height: 88vh;
+  max-width: 820px;
+  max-height: 90vh;
+  max-height: 90dvh;
   background: #0f172a;
   border: 2px solid var(--hd-yellow);
   border-radius: 14px;
@@ -372,23 +490,24 @@ html, body {
 }
 
 .modal-card.modal-wide {
-  max-width: 1060px;
-  max-height: 91vh;
+  max-width: 1080px;
+  max-height: 92vh;
+  max-height: 92dvh;
 }
 
 .modal-header {
-  padding: 13px 18px;
+  padding: 11px 15px;
   background: rgba(30, 41, 59, 0.95);
   border-bottom: 1px solid rgba(250, 204, 21, 0.3);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 8px;
 }
 
 .modal-title {
   font-family: var(--font-display);
-  font-size: 1.02rem;
+  font-size: 0.92rem;
   font-weight: 900;
   color: var(--hd-yellow);
 }
@@ -397,53 +516,81 @@ html, body {
   background: transparent;
   border: 1px solid #64748b;
   color: #cbd5e1;
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   border-radius: 8px;
-  font-size: 1rem;
+  font-size: 0.95rem;
   cursor: pointer;
+  flex-shrink: 0;
 }
 
 .modal-body {
-  padding: 16px 18px;
+  padding: 13px 15px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
+}
+
+/* Mindustry Visual Node Tech Tree Box */
+.mindustry-tree-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: #070b12;
+  border: 1.5px solid #334155;
+  border-radius: 12px;
+  padding: 10px;
+}
+
+#mindustry-tree-canvas {
+  width: 100%;
+  height: 340px;
+  display: block;
+  background: radial-gradient(circle at 50% 15%, #172033 0%, #070b12 80%);
+  border-radius: 8px;
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+#mindustry-node-inspector {
+  background: rgba(30, 41, 59, 0.92);
+  border: 1.5px solid #facc15;
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
 }
 
 .upgrade-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 9px;
 }
 
-/* Character Showcase Grid */
 .char-showcase-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(305px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(285px, 1fr));
+  gap: 10px;
 }
 
 .char-card {
   background: rgba(30, 41, 59, 0.88);
   border: 1.5px solid rgba(148, 163, 184, 0.35);
   border-radius: 12px;
-  padding: 11px;
+  padding: 10px;
   display: flex;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
-  transition: border-color 0.15s ease, transform 0.12s ease;
-}
-
-.char-card:hover {
-  border-color: var(--hd-yellow);
-  transform: translateY(-2px);
 }
 
 .char-canvas-box {
-  width: 124px;
-  height: 114px;
+  width: 112px;
+  height: 104px;
   flex-shrink: 0;
   border-radius: 10px;
   overflow: hidden;
@@ -455,15 +602,15 @@ html, body {
 }
 
 .char-canvas-box canvas {
-  width: 124px;
-  height: 114px;
+  width: 112px;
+  height: 104px;
   display: block;
 }
 
 .char-meta {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
   min-width: 0;
 }
 
@@ -471,9 +618,9 @@ html, body {
   display: inline-block;
   align-self: flex-start;
   font-family: var(--font-display);
-  font-size: 0.64rem;
+  font-size: 0.6rem;
   font-weight: 900;
-  padding: 2px 7px;
+  padding: 2px 6px;
   border-radius: 999px;
   color: #090d14;
   background: var(--hd-yellow);
@@ -481,51 +628,51 @@ html, body {
 
 .char-name-en {
   font-family: var(--font-display);
-  font-size: 0.84rem;
+  font-size: 0.8rem;
   font-weight: 900;
   color: #f8fafc;
 }
 
 .char-name-zh {
-  font-size: 0.8rem;
+  font-size: 0.76rem;
   font-weight: 700;
   color: #fde047;
 }
 
 .char-stats-line {
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   font-weight: 700;
   color: #38bdf8;
 }
 
 .char-desc-text {
-  font-size: 0.73rem;
+  font-size: 0.7rem;
   color: #cbd5e1;
-  line-height: 1.3;
+  line-height: 1.25;
 }
 
 .upgrade-item {
   background: rgba(30, 41, 59, 0.78);
   border: 1px solid rgba(148, 163, 184, 0.3);
   border-radius: 10px;
-  padding: 11px;
+  padding: 10px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 8px;
 }
 
 .upgrade-info h4 {
   font-family: var(--font-display);
-  font-size: 0.84rem;
+  font-size: 0.8rem;
   color: #f8fafc;
-  margin-bottom: 3px;
+  margin-bottom: 2px;
 }
 
 .upgrade-info p {
-  font-size: 0.76rem;
+  font-size: 0.73rem;
   color: #94a3b8;
-  line-height: 1.3;
+  line-height: 1.25;
 }
 
 .buy-btn {
@@ -533,9 +680,9 @@ html, body {
   color: #052e16;
   border: none;
   border-radius: 8px;
-  padding: 8px 12px;
+  padding: 7px 10px;
   font-family: var(--font-display);
-  font-size: 0.74rem;
+  font-size: 0.7rem;
   font-weight: 900;
   cursor: pointer;
   white-space: nowrap;
@@ -554,19 +701,151 @@ html, body {
 
 .code-textarea {
   width: 100%;
-  min-height: 80px;
+  min-height: 74px;
   background: #090d14;
   border: 1px solid #475569;
   border-radius: 8px;
   color: #38bdf8;
   font-family: monospace;
-  font-size: 0.78rem;
-  padding: 10px;
+  font-size: 0.76rem;
+  padding: 8px;
 }
 
-@media (max-width: 768px) {
-  .brand-title { font-size: 0.78rem; }
-  .stat-val { font-size: 0.8rem; }
-  #objective-banner { top: 88px; font-size: 0.73rem; }
-  .controls-hint { display: none; }
+/* ==========================================================================
+   MOBILE PORTRAIT & PHONE ERGONOMICS (FIXES SCREEN OVERLAP 100%!)
+   On phones (<= 900px), secondary modal buttons collapse into a toggleable
+   menu drawer (`#hud-menu-drawer`) so 88%+ of the screen is unobstructed!
+   ========================================================================== */
+@media (max-width: 900px) {
+  #hud-top {
+    top: max(4px, env(safe-area-inset-top, 4px));
+    left: 6px;
+    right: 6px;
+    gap: 4px;
+  }
+
+  .brand-badge {
+    padding: 3px 6px;
+    gap: 4px;
+  }
+
+  .brand-title {
+    display: none; /* Keep compact eagle + v0.0.07 pill on phone */
+  }
+
+  .stat-pill {
+    padding: 2px 6px;
+    gap: 4px;
+    border-radius: 7px;
+  }
+
+  .stat-label {
+    display: none; /* Icon + number only on phone so all stats fit on 1 row! */
+  }
+
+  .stat-val {
+    font-size: 0.74rem;
+  }
+
+  .pill-seaf-served {
+    display: none;
+  }
+
+  #btn-toggle-menu {
+    display: inline-flex;
+    background: linear-gradient(135deg, #facc15, #eab308);
+    color: #090d14;
+    border-color: #fef08a;
+    padding: 4px 8px;
+    font-size: 0.72rem;
+  }
+
+  /* Secondary buttons collapse into a dropdown drawer on phones! */
+  #hud-menu-drawer {
+    display: none;
+    background: rgba(9, 13, 20, 0.96);
+    border: 2px solid #facc15;
+    border-radius: 12px;
+    padding: 8px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.9);
+    width: 100%;
+    justify-content: center;
+    gap: 6px;
+  }
+
+  #hud-menu-drawer.drawer-open {
+    display: flex;
+  }
+
+  .mode-tab-btn {
+    padding: 4px 7px;
+    font-size: 0.64rem;
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+
+  #objective-banner {
+    top: 66px;
+    font-size: 0.66rem;
+    padding: 2px 10px;
+    max-width: 84vw;
+  }
+
+  #zoom-controls {
+    right: 6px;
+    top: 102px;
+    transform: none;
+    gap: 4px;
+  }
+
+  #zoom-controls .hud-btn {
+    padding: 4px 6px;
+    font-size: 0.64rem;
+    min-width: 34px;
+    justify-content: center;
+  }
+
+  .controls-hint {
+    display: none;
+  }
+
+  #joystick-zone {
+    left: 12px;
+    bottom: max(18px, calc(env(safe-area-inset-bottom, 12px) + 12px));
+    width: 92px;
+    height: 92px;
+  }
+
+  #joystick-knob {
+    width: 38px;
+    height: 38px;
+  }
+
+  #hud-bottom {
+    bottom: max(18px, calc(env(safe-area-inset-bottom, 12px) + 12px));
+    right: 10px;
+    left: auto;
+  }
+
+  .action-circle-btn {
+    width: 46px;
+    height: 46px;
+    font-size: 0.58rem;
+  }
+
+  #war-command-dock {
+    bottom: max(118px, calc(env(safe-area-inset-bottom, 12px) + 112px));
+    padding: 5px 6px;
+    gap: 4px;
+  }
+
+  .war-deploy-btn {
+    min-width: 72px;
+    padding: 4px 6px;
+    font-size: 0.62rem;
+  }
+
+  #mindustry-tree-canvas {
+    height: 260px;
+  }
 }

@@ -5,8 +5,8 @@
 // ============================================================================
 
 window.GameConfig = {
-  VERSION: 'v0.0.06',
-  STORAGE_KEY: 'helldivers_please_save_v0006',
+  VERSION: 'v0.0.07',
+  STORAGE_KEY: 'helldivers_please_save_v0007',
   MAX_LEVEL: 20,
 
   // Expanded 4600 x 4000 2D Factorio + Carbot World for 7 Full Horizontal Lanes
@@ -1293,6 +1293,398 @@ window.GameConfig = {
       costScale: 1.40,
       maxLevel: 20,
       desc: 'PERMANENT (Lv.1–20): +10% Commander & SEAF move speed and +25% personal weapon & Guard Dog drone damage forever.'
+    }
+  ],
+
+  // --------------------------------------------------------------------------
+  // NEW IN v0.0.07: MINDUSTRY MULTI-BASE PLANETARY SECTOR SYSTEM
+  // Players can establish up to 6 Planetary Sector Bases, switch their active
+  // command between unlocked bases, and receive passive Orbital Launch Pad
+  // exports ($REQ/s, 🛢️ E-710, ⛏️ Iron, 🧱 Ammo) from all conquered bases!
+  // --------------------------------------------------------------------------
+  MINDUSTRY_BASES: [
+    {
+      id: 'base_alpha',
+      code: 'SECTOR ALPHA-01',
+      name: 'Base 1: Angels Venture Core (起始主基地)',
+      icon: '🏛️',
+      color: '#facc15',
+      unlockedAtStart: true,
+      unlockCost: 0,
+      reqWave: 1,
+      ironMult: 1.0,
+      e710Mult: 1.0,
+      sellMult: 1.0,
+      passiveReqPerSec: 4,
+      passiveE710Per10s: 1,
+      passiveIronPer10s: 1,
+      floorTint: '#141c2b',
+      desc: 'Starter Mindustry Core Sector. Balanced Super Iron & E-710 deposits. Launch Pad exports +$4/s & +1 🛢️/⛏️ every 10s when operating in background.'
+    },
+    {
+      id: 'base_beta',
+      code: 'SECTOR BETA-02',
+      name: 'Base 2: Heeth E-710 Cryo-Refinery (高純度燃料基地)',
+      icon: '🛢️',
+      color: '#a855f7',
+      unlockedAtStart: false,
+      unlockCost: 380,
+      reqWave: 2,
+      ironMult: 1.15,
+      e710Mult: 1.85,
+      sellMult: 1.25,
+      passiveReqPerSec: 14,
+      passiveE710Per10s: 3,
+      passiveIronPer10s: 1,
+      floorTint: '#17152e',
+      desc: 'Rich E-710 Geyser Sector (+85% E-710 Pump Speed, +25% Sell Price). Background Launch Pad beams +$14/s & +3 🛢️ E-710 every 10s to your active base!'
+    },
+    {
+      id: 'base_gamma',
+      code: 'SECTOR GAMMA-03',
+      name: 'Base 3: Tien Kwan Mech & Iron Foundry (重工與鐵礦基地)',
+      icon: '⛏️',
+      color: '#38bdf8',
+      unlockedAtStart: false,
+      unlockCost: 850,
+      reqWave: 4,
+      ironMult: 2.0,
+      e710Mult: 1.25,
+      sellMult: 1.5,
+      passiveReqPerSec: 32,
+      passiveE710Per10s: 2,
+      passiveIronPer10s: 4,
+      floorTint: '#112433',
+      desc: 'Heavy Metallurgy Sector (2.0x Iron Drill Speed, +50% Sell Price). Background Launch Pad beams +$32/s & +4 ⛏️ Super Iron every 10s to your active base!'
+    },
+    {
+      id: 'base_delta',
+      code: 'SECTOR DELTA-04',
+      name: 'Base 4: Malevelon Creek Munitions Fortress (前線軍火要塞)',
+      icon: '🛡️',
+      color: '#f97316',
+      unlockedAtStart: false,
+      unlockCost: 1800,
+      reqWave: 7,
+      ironMult: 1.75,
+      e710Mult: 1.75,
+      sellMult: 1.85,
+      passiveReqPerSec: 68,
+      passiveE710Per10s: 3,
+      passiveIronPer10s: 3,
+      passiveAmmoPer10s: 4,
+      floorTint: '#261822',
+      desc: 'Fortified Jungle Sector (1.75x Raw Extraction, +85% Sell Price). Background Launch Pad beams +$68/s & +4 🧱 Turret Ammo every 10s to your active base!'
+    },
+    {
+      id: 'base_epsilon',
+      code: 'SECTOR EPSILON-05',
+      name: 'Base 5: Meridia Supercolony Bio-Core (超級蟲巢提煉中心)',
+      icon: '🧪',
+      color: '#22c55e',
+      unlockedAtStart: false,
+      unlockCost: 3600,
+      reqWave: 12,
+      ironMult: 2.2,
+      e710Mult: 2.6,
+      sellMult: 2.4,
+      passiveReqPerSec: 145,
+      passiveE710Per10s: 6,
+      passiveIronPer10s: 5,
+      passiveAmmoPer10s: 6,
+      floorTint: '#132a1f',
+      desc: 'High-Yield Bio-Fuel Sector (2.6x E-710, 2.4x Sell Value). Background Launch Pad beams +$145/s & massive raw shipments to your active base!'
+    },
+    {
+      id: 'base_zeta',
+      code: 'SECTOR ZETA-06',
+      name: 'Base 6: Cyberstan Orbital Mega-Citadel (生化斯坦終極星際母基地)',
+      icon: '🚀',
+      color: '#ef4444',
+      unlockedAtStart: false,
+      unlockCost: 7500,
+      reqWave: 18,
+      ironMult: 3.0,
+      e710Mult: 3.0,
+      sellMult: 3.5,
+      passiveReqPerSec: 320,
+      passiveE710Per10s: 8,
+      passiveIronPer10s: 8,
+      passiveAmmoPer10s: 10,
+      floorTint: '#28141c',
+      desc: 'Supreme Mindustry Core Citadel (3.0x All Extraction, 3.5x Sell Price). Background Launch Pad beams +$320/s & full orbital resupply to all bases!'
+    }
+  ],
+
+  // --------------------------------------------------------------------------
+  // NEW IN v0.0.07: MINDUSTRY-STYLE VISUAL NODE TECH TREE (13 CONNECTED NODES)
+  // Visual 2D schematic tree starting from `core_shard` (x: 0.50, y: 0.10)
+  // branching into 4 Mindustry paths: Extraction, Factory, Defense, Allied War!
+  // --------------------------------------------------------------------------
+  MINDUSTRY_TECH_NODES: [
+    {
+      id: 'core_shard',
+      parentId: null,
+      branch: 'core',
+      name: 'Core: Super Earth Shard',
+      zhName: '核心：超級地球指揮母核',
+      icon: '🏛️',
+      color: '#facc15',
+      nx: 0.50,
+      ny: 0.11,
+      maxLevel: 20,
+      baseMedalCost: 1,
+      reqCost: 100,
+      linkedPermId: 'perm_start_grant',
+      desc: 'Root Mindustry Command Core. Unlocks all 4 research branches and grants +$150 starting Requisition & +2 Carry Stack per level.'
+    },
+    // Branch 1 (Left-Outer): Extraction & Multi-Base Launch Pads
+    {
+      id: 'tech_pneumatic_drill',
+      parentId: 'core_shard',
+      branch: 'extraction',
+      name: 'Pneumatic & Laser Drills',
+      zhName: '氣動與雷射深層鑽機',
+      icon: '⛏️',
+      color: '#38bdf8',
+      nx: 0.14,
+      ny: 0.36,
+      maxLevel: 20,
+      baseMedalCost: 1,
+      reqCost: 120,
+      linkedPermId: 'perm_raw_speed',
+      desc: '+25% Raw Quarry & Munitions Press speed per level + 2.5% chance not to consume Raw Ore.'
+    },
+    {
+      id: 'tech_titanium_belts',
+      parentId: 'tech_pneumatic_drill',
+      branch: 'extraction',
+      name: 'Titanium Dual-Split Belts',
+      zhName: '鈦合金雙軌高速輸送帶',
+      icon: '⚙️',
+      color: '#38bdf8',
+      nx: 0.14,
+      ny: 0.62,
+      maxLevel: 20,
+      baseMedalCost: 2,
+      reqCost: 220,
+      desc: 'Boosts all Split Raw Belt (🛢️/⛏️) & Counter Belt packet transit speeds by +20% per level.'
+    },
+    {
+      id: 'tech_launch_pads',
+      parentId: 'tech_titanium_belts',
+      branch: 'extraction',
+      name: 'Orbital Mass Driver & Launch Pads',
+      zhName: '星際質量投射器 (多基地產量加倍)',
+      icon: '🚀',
+      color: '#38bdf8',
+      nx: 0.14,
+      ny: 0.88,
+      maxLevel: 20,
+      baseMedalCost: 3,
+      reqCost: 400,
+      desc: 'Mindustry Inter-Base Logistics: +35% passive $REQ, 🛢️ E-710, and ⛏️ Iron exported from all your other conquered Sector Bases!'
+    },
+    // Branch 2 (Left-Inner): Factory Silicon Foundry & Arsenal Contracts
+    {
+      id: 'tech_silicon_foundry',
+      parentId: 'core_shard',
+      branch: 'factory',
+      name: 'High-Caliber Arsenal Contracts',
+      zhName: '高價值軍火貿易合約',
+      icon: '💵',
+      color: '#22c55e',
+      nx: 0.38,
+      ny: 0.36,
+      maxLevel: 20,
+      baseMedalCost: 1,
+      reqCost: 140,
+      linkedPermId: 'perm_gun_value',
+      desc: '+20% sale value across all 7 Dedicated Item Counters forever.'
+    },
+    {
+      id: 'tech_overdrive_dome',
+      parentId: 'tech_silicon_foundry',
+      branch: 'factory',
+      name: 'Mindustry Overdrive Projector',
+      zhName: '超頻力場投射器 (全產線加速)',
+      icon: '🔋',
+      color: '#22c55e',
+      nx: 0.38,
+      ny: 0.62,
+      maxLevel: 20,
+      baseMedalCost: 2,
+      reqCost: 260,
+      desc: 'Radiates an Overdrive Dome across all 7 Production Lanes (+18% crafting speed per level).'
+    },
+    {
+      id: 'tech_mech_drydock',
+      parentId: 'tech_overdrive_dome',
+      branch: 'factory',
+      name: 'T5 Exponential Reconstructor',
+      zhName: '五階指數級機甲與戰艦重構廠',
+      icon: '🤖',
+      color: '#22c55e',
+      nx: 0.38,
+      ny: 0.88,
+      maxLevel: 20,
+      baseMedalCost: 3,
+      reqCost: 450,
+      desc: '+30% Vehicle, Patriot Mech & Super Destroyer crafting speed and -20% War Front deployment cost!'
+    },
+    // Branch 3 (Right-Inner): Mindustry Walls, Mend Projectors & Foreshadow Turrets
+    {
+      id: 'tech_plastanium_walls',
+      parentId: 'core_shard',
+      branch: 'defense',
+      name: 'Plastanium & Surge Gate Walls',
+      zhName: '塑鋼與巨浪合金三層城門',
+      icon: '🛡️',
+      color: '#f97316',
+      nx: 0.62,
+      ny: 0.36,
+      maxLevel: 20,
+      baseMedalCost: 1,
+      reqCost: 130,
+      linkedPermId: 'perm_gate_armor',
+      desc: '+30% Max HP on Gate Layers 3, 2, 1 and +5 HP/s maintenance on unbroken gates.'
+    },
+    {
+      id: 'tech_mend_projector',
+      parentId: 'tech_plastanium_walls',
+      branch: 'defense',
+      name: 'Mindustry Mend & Reload Dome',
+      zhName: 'Mindustry 修復與自動裝填塔',
+      icon: '💚',
+      color: '#f97316',
+      nx: 0.62,
+      ny: 0.62,
+      maxLevel: 20,
+      baseMedalCost: 2,
+      reqCost: 240,
+      linkedPermId: 'perm_turret_power',
+      desc: '+25% Gate Turret damage, +2.5% ammo-save chance, and boosts War Front Mend Projector healing by +35%/lvl.'
+    },
+    {
+      id: 'tech_foreshadow_rail',
+      parentId: 'tech_mend_projector',
+      branch: 'defense',
+      name: 'Foreshadow Orbital Railcannon',
+      zhName: '預兆級電磁軌道巨砲塔',
+      icon: '⚡',
+      color: '#f97316',
+      nx: 0.62,
+      ny: 0.88,
+      maxLevel: 20,
+      baseMedalCost: 3,
+      reqCost: 480,
+      desc: 'Gate Sentries fire piercing railcannon beams that deal +40% bonus damage to Hulks, Bile Titans & Factory Striders!'
+    },
+    // Branch 4 (Right-Outer): Commander, Smart SEAF AI & Allied War Units
+    {
+      id: 'tech_viper_commando',
+      parentId: 'core_shard',
+      branch: 'command',
+      name: 'Viper Commando Exo-Servos',
+      zhName: '毒蛇突擊隊外骨骼與無人機',
+      icon: '🦅',
+      color: '#a855f7',
+      nx: 0.86,
+      ny: 0.36,
+      maxLevel: 20,
+      baseMedalCost: 1,
+      reqCost: 150,
+      linkedPermId: 'perm_commander_elite',
+      desc: '+10% Commander & SEAF move speed and +25% personal weapon & Guard Dog drone damage.'
+    },
+    {
+      id: 'tech_smart_seaf_ai',
+      parentId: 'tech_viper_commando',
+      branch: 'command',
+      name: 'Mindustry Logic Processor AI',
+      zhName: 'Mindustry 邏輯處理器 (SEAF 效率倍增)',
+      icon: '🧠',
+      color: '#a855f7',
+      nx: 0.86,
+      ny: 0.62,
+      maxLevel: 20,
+      baseMedalCost: 2,
+      reqCost: 260,
+      desc: 'Equips SEAF Miners, Logistics & Engineers with Mindustry Micro-Processors (+25% carry stack & +30% repair speed/lvl).'
+    },
+    {
+      id: 'tech_war_unit_command',
+      parentId: 'tech_smart_seaf_ai',
+      branch: 'command',
+      name: 'War-Zone Allied Mech Command',
+      zhName: '戰區盟軍機甲與車隊指揮部',
+      icon: '⚔️',
+      color: '#a855f7',
+      nx: 0.86,
+      ny: 0.88,
+      maxLevel: 20,
+      baseMedalCost: 3,
+      reqCost: 460,
+      desc: 'Allied SEAF Squads, Recon Buggies & Patriot Mechs deployed on the War Front gain +40% HP and +35% firepower per level!'
+    }
+  ],
+
+  // --------------------------------------------------------------------------
+  // NEW IN v0.0.07: DEDICATED WAR-FRONT TACTICAL DEPLOYMENTS
+  // Bridges the Shop & War Zone: convert produced factory items (🔫 Gun,
+  // 🚙 Vehicle, 🤖 Mech) OR Requisition ($) into active allied War-Zone units!
+  // --------------------------------------------------------------------------
+  WAR_DEPLOYMENTS: [
+    {
+      id: 'deploy_squad',
+      name: '🪖 SEAF Rifle Squad',
+      zhName: '派遣 SEAF 步槍班',
+      itemCostId: 'gun',
+      cashFallbackCost: 80,
+      hp: 260,
+      damage: 24,
+      fireRate: 0.35,
+      range: 360,
+      speed: 135,
+      color: '#38bdf8',
+      desc: 'Consumes 1x 🔫 Gun (or $80) to deploy an autonomous SEAF Rifleman on the War Front!'
+    },
+    {
+      id: 'deploy_buggy',
+      name: '🚙 FRV Recon Patrol',
+      zhName: '派遣偵察戰車巡邏',
+      itemCostId: 'vehicle',
+      cashFallbackCost: 180,
+      hp: 580,
+      damage: 46,
+      fireRate: 0.25,
+      range: 420,
+      speed: 185,
+      color: '#eab308',
+      desc: 'Consumes 1x 🚙 Vehicle (or $180) to deploy a fast HMG Recon Buggy patrolling the Gate Layers!'
+    },
+    {
+      id: 'deploy_mech',
+      name: '🤖 Patriot Mech Walker',
+      zhName: '派遣愛國者重型機甲',
+      itemCostId: 'mech',
+      cashFallbackCost: 320,
+      hp: 1200,
+      damage: 95,
+      fireRate: 0.28,
+      range: 460,
+      speed: 110,
+      color: '#f97316',
+      desc: 'Consumes 1x 🤖 Patriot Mech (or $320) to deploy an autonomous Heavy Exosuit on the War Front!'
+    },
+    {
+      id: 'build_mender',
+      name: '💚 Mindustry Mend Tower',
+      zhName: '建造 Mindustry 綠光修復塔',
+      itemCostId: null,
+      cashFallbackCost: 160,
+      color: '#4ade80',
+      desc: 'Builds/Upgrades Mindustry Mend Projectors ($160) behind all 3 Gate Layers that auto-heal gates & reload turret ammo!'
     }
   ]
 };

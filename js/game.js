@@ -1,6 +1,6 @@
 // ============================================================================
 // HELLDIVERS PLEASE! — Super Earth Arsenal & 2D Factorio War-Zone Tycoon
-// Version: v0.0.06 (All-Episode Carbot Art, Real-Item-Only Split Belts,
+// Version: v0.0.07 (All-Episode Carbot Art, Real-Item-Only Split Belts,
 //                   7 Dedicated Item Counters & Smart SEAF AI Edition)
 // Module: Core Simulation, Anti-Crush Obstacle Ejection, 1-Item Start,
 //         Real-Packet Belt System (No Fake Items on Empty Belts),
@@ -39,6 +39,19 @@
       for (const sk of CFG.PERMANENT_SKILLS) {
         this.foreverSkills[sk.id] = 0;
       }
+
+      // Mindustry Visual Tech Tree Nodes (core_shard starts at Lv.1!)
+      this.techNodes = { core_shard: 1 };
+      for (const tn of (CFG.MINDUSTRY_TECH_NODES || [])) {
+        if (tn.id !== 'core_shard') this.techNodes[tn.id] = 0;
+      }
+      this.selectedTechNodeId = 'tech_pneumatic_drill';
+
+      // Mindustry Multi-Base Planetary Sector Network
+      this.unlockedBases = { base_alpha: true };
+      this.activeBaseId = 'base_alpha';
+      this.basePassiveReqTimer = 0;
+      this.baseLaunchTimer = 0;
 
       this.ownedEquipment = {
         w_liberator: true,
@@ -170,6 +183,153 @@
       return Math.pow(2.0, this.prestigeCount || 0);
     }
 
+    getActiveBaseConfig() {
+      const list = CFG.MINDUSTRY_BASES || [];
+      return list.find((b) => b.id === this.activeBaseId) || list[0] || {
+        id: 'base_alpha',
+        code: 'SECTOR ALPHA-01',
+        name: 'Base 1: Angels Venture Core',
+        ironMult: 1.0,
+        e710Mult: 1.0,
+        sellMult: 1.0,
+        floorTint: '#141c2b'
+      };
+    }
+
+    getTechNodeLevel(nodeId) {
+      const node = (CFG.MINDUSTRY_TECH_NODES || []).find((n) => n.id === nodeId);
+      if (!node) return 0;
+      if (node.linkedPermId) {
+        const permVal = this.foreverSkills?.[node.linkedPermId] || 0;
+        const nodeVal = this.techNodes?.[nodeId] || (nodeId === 'core_shard' ? 1 : 0);
+        return Math.max(permVal, nodeVal);
+      }
+      return this.techNodes?.[nodeId] || (nodeId === 'core_shard' ? 1 : 0);
+    }
+
+    getTotalPassiveBaseIncome() {
+      const launchMult = 1 + this.getTechNodeLevel('tech_launch_pads') * 0.35;
+      let total = 0;
+      for (const b of (CFG.MINDUSTRY_BASES || [])) {
+        if (this.unlockedBases?.[b.id]) {
+          total += Math.round((b.passiveReqPerSec || 0) * launchMult);
+        }
+      }
+      return total;
+    }
+
+    setViewMode(mode) {
+      this.viewMode = mode === 'war' ? 'war' : 'shop';
+      const shopBtn = document.getElementById('btn-mode-shop');
+      const warBtn = document.getElementById('btn-mode-war');
+      const warDock = document.getElementById('war-command-dock');
+
+      if (this.viewMode === 'war') {
+        shopBtn?.classList.remove('active-shop');
+        warBtn?.classList.add('active-war');
+        warDock?.classList.add('visible');
+        const fg = this.getActiveFrontGate();
+        this.player.x = 0;
+        this.player.z = fg.ammoPadZ;
+        this.pointerTarget = null;
+        this.world.camX = 0;
+        this.world.camZ = fg.z + 80;
+        this.spawnFloatingText(this.player.x, this.player.z - 40, '⚔️ WAR FRONT COMMAND ACTIVE — DEPLOY UNITS BELOW!', '#ef4444');
+      } else {
+        warBtn?.classList.remove('active-war');
+        shopBtn?.classList.add('active-shop');
+        warDock?.classList.remove('visible');
+        if (this.player.z < -160) {
+          this.player.x = -120;
+          this.player.z = 240;
+          this.pointerTarget = null;
+          this.world.camX = -120;
+          this.world.camZ = 240;
+        }
+        this.spawnFloatingText(this.player.x, this.player.z - 40, '🏪 SHOP & FACTORY VIEW ACTIVE', '#4ade80');
+      }
+      this.updateHUD();
+    }
+
+    deployWarUnit(deployId) {
+      const dCfg = (CFG.WAR_DEPLOYMENTS || []).find((d) => d.id === deployId);
+      if (!dCfg) return;
+
+      if (deployId === 'build_mender') {
+        const curLvl = this.mendProjectorLevel || 0;
+        if (curLvl >= 20) return;
+        const cost = Math.round(160 * Math.pow(1.35, curLvl));
+        if (this.cash < cost) {
+          this.spawnFloatingText(this.player.x, this.player.z - 35, `⚠️ NEED $${cost} FOR MEND TOWER`, '#ef4444');
+          return;
+        }
+        this.cash -= cost;
+        this.mendProjectorLevel = curLvl + 1;
+        this.audio.playUnlock();
+        this.spawnFloatingText(this.player.x, this.player.z - 45, `💚 MINDUSTRY MEND PROJECTOR Lv.${this.mendProjectorLevel}/20 ONLINE!`, '#4ade80');
+        this.updateHUD();
+        return;
+      }
+
+      // Check if player has 1x of `dCfg.itemCostId` in hand inventory, factory station stock, or counter buffer!
+      const itemId = dCfg.itemCostId;
+      let consumedItem = false;
+      const invIdx = this.player.inventory.findIndex((it) => it.id === itemId);
+      if (invIdx !== -1) {
+        this.player.inventory.splice(invIdx, 1);
+        consumedItem = true;
+      } else if ((this.stations[itemId]?.stock || 0) > 0) {
+        this.stations[itemId].stock--;
+        consumedItem = true;
+      } else if ((this.counterBuffer[itemId] || 0) > 0) {
+        this.counterBuffer[itemId]--;
+        consumedItem = true;
+      }
+
+      const discountMult = Math.max(0.4, 1 - this.getTechNodeLevel('tech_mech_drydock') * 0.04);
+      const cashCost = Math.round(dCfg.cashFallbackCost * discountMult);
+
+      if (!consumedItem) {
+        if (this.cash < cashCost) {
+          this.spawnFloatingText(this.player.x, this.player.z - 35, `⚠️ NEED 1x ${itemId.toUpperCase()} OR $${cashCost}!`, '#ef4444');
+          return;
+        }
+        this.cash -= cashCost;
+      }
+
+      const cmdLvl = this.getTechNodeLevel('tech_war_unit_command');
+      const hpMult = 1 + cmdLvl * 0.40;
+      const dmgMult = 1 + cmdLvl * 0.35;
+      const fg = this.getActiveFrontGate();
+      const maxHp = Math.round(dCfg.hp * hpMult);
+
+      this.alliedUnits.push({
+        id: Math.random(),
+        unitType: deployId,
+        label: dCfg.name,
+        x: (Math.random() - 0.5) * 260,
+        z: fg.z - 55,
+        hp: maxHp,
+        maxHp,
+        damage: Math.round(dCfg.damage * dmgMult),
+        fireRate: dCfg.fireRate,
+        fireCooldown: 0,
+        range: dCfg.range,
+        speed: dCfg.speed,
+        color: dCfg.color,
+        patrolDir: Math.random() > 0.5 ? 1 : -1
+      });
+
+      this.audio.playUnlock();
+      this.spawnFloatingText(
+        0,
+        fg.z - 60,
+        consumedItem ? `⚔️ DEPLOYED ${dCfg.name.toUpperCase()} (USED 1x FACTORY ITEM)!` : `⚔️ DEPLOYED ${dCfg.name.toUpperCase()} ($${cashCost})!`,
+        dCfg.color
+      );
+      this.updateHUD();
+    }
+
     // ========================================================================
     // INITIALIZE RUN STATE (ONLY 🦺 CLOTH UNLOCKED AT START! ALL 6 BELTS Lv.0!)
     // ========================================================================
@@ -288,6 +448,10 @@
         this.upgrades[upg.id] = 0;
       }
 
+      this.viewMode = 'shop';
+      this.mendProjectorLevel = 0;
+      this.mendTickTimer = 0;
+      this.alliedUnits = [];
       this.workers = [];
       this.customers = [];
       this.enemies = [];
@@ -374,9 +538,10 @@
       const eq = this.getEquippedItems();
       const armorBonus = eq.armor?.sellBonus || 0;
       const planetMult = this.getCurrentPlanet().reqMult || 1.0;
+      const baseSellMult = this.getActiveBaseConfig().sellMult || 1.0;
       const prestigeMult = this.getPrestigeMultiplier();
       const buff = this.stratagemBuffTimer > 0 ? 1.5 : 1.0;
-      return Math.round(base * machineQualityMult * (1 + permLvl * 0.20 + armorBonus) * planetMult * prestigeMult * buff);
+      return Math.round(base * machineQualityMult * (1 + permLvl * 0.20 + armorBonus) * planetMult * baseSellMult * prestigeMult * buff);
     }
 
     getPlayerMaxCapacity() {
@@ -435,8 +600,10 @@
 
     recalcDerivedStats() {
       const rawUpgLvl = this.upgrades.raw_speed_boost || 0;
-      const permRawLvl = this.foreverSkills.perm_raw_speed || 0;
-      const factoryLvl = this.upgrades.factory_overclock || 0;
+      const permRawLvl = this.getTechNodeLevel('tech_pneumatic_drill');
+      const overdriveDomeLvl = this.getTechNodeLevel('tech_overdrive_dome');
+      const factoryLvl = (this.upgrades.factory_overclock || 0) + overdriveDomeLvl;
+      const activeBaseCfg = this.getActiveBaseConfig();
       const e710BeltLvl = this.conveyorLevels?.conv_raw_e710 || 0;
       const ironBeltLvl = this.conveyorLevels?.conv_raw_iron || 0;
       const stratBonus = this.stratagemBuffTimer > 0 ? 2.0 : 1.0;
@@ -449,8 +616,9 @@
         const lvl = rs.level || 0;
         rs.maxBuffer = rawCfg.baseBuffer + lvl * 4 + rawUpgLvl * 3;
         if (lvl > 0) {
-          const speedMult = (1 + (lvl - 1) * 0.22) * (1 + rawUpgLvl * 0.25) * (1 + permRawLvl * 0.25) * stratBonus * prestigeMult;
-          rs.cycleTime = Math.max(0.18, rawCfg.baseCycleTime / speedMult);
+          const baseDepositMult = rawCfg.id === 'raw_e710' ? (activeBaseCfg.e710Mult || 1.0) : (activeBaseCfg.ironMult || 1.0);
+          const speedMult = (1 + (lvl - 1) * 0.22) * (1 + rawUpgLvl * 0.25) * (1 + permRawLvl * 0.25) * baseDepositMult * stratBonus * prestigeMult;
+          rs.cycleTime = Math.max(0.16, rawCfg.baseCycleTime / speedMult);
         } else {
           rs.cycleTime = rawCfg.baseCycleTime;
         }
@@ -633,9 +801,130 @@
       this.updateWorkers(dt);
       this.updateCustomersAndSales(dt);
       this.updateWaveAndGates(dt);
+      this.updateMindustryBasesAndAllies(dt);
       this.updateVisualEffects(dt);
       this.checkMilestones(dt);
       this.updateHUD();
+    }
+
+    updateMindustryBasesAndAllies(dt) {
+      // 1. Mindustry Multi-Base Passive $REQ & Orbital Launch Pad Resource Shipments
+      this.basePassiveReqTimer = (this.basePassiveReqTimer || 0) + dt;
+      if (this.basePassiveReqTimer >= 1.0) {
+        this.basePassiveReqTimer -= 1.0;
+        const passiveIncome = this.getTotalPassiveBaseIncome();
+        if (passiveIncome > 0) {
+          this.cash += passiveIncome;
+        }
+      }
+
+      this.baseLaunchTimer = (this.baseLaunchTimer || 0) + dt;
+      if (this.baseLaunchTimer >= 10.0) {
+        this.baseLaunchTimer -= 10.0;
+        const launchMult = 1 + this.getTechNodeLevel('tech_launch_pads') * 0.35;
+        let bonusE710 = 0;
+        let bonusIron = 0;
+        let bonusAmmo = 0;
+        for (const b of (CFG.MINDUSTRY_BASES || [])) {
+          if (!this.unlockedBases?.[b.id] || b.id === this.activeBaseId) continue;
+          bonusE710 += Math.round((b.passiveE710Per10s || 0) * launchMult);
+          bonusIron += Math.round((b.passiveIronPer10s || 0) * launchMult);
+          bonusAmmo += Math.round((b.passiveAmmoPer10s || 0) * launchMult);
+        }
+        if (bonusE710 > 0 && this.rawExtractors.raw_e710) {
+          this.rawExtractors.raw_e710.stock = Math.min(this.rawExtractors.raw_e710.maxBuffer + 20, this.rawExtractors.raw_e710.stock + bonusE710);
+          if (this.stations.cloth) this.stations.cloth.inputStock.raw_e710 = (this.stations.cloth.inputStock.raw_e710 || 0) + Math.ceil(bonusE710 * 0.5);
+        }
+        if (bonusIron > 0 && this.rawExtractors.raw_iron) {
+          this.rawExtractors.raw_iron.stock = Math.min(this.rawExtractors.raw_iron.maxBuffer + 20, this.rawExtractors.raw_iron.stock + bonusIron);
+        }
+        if (bonusAmmo > 0) {
+          for (const g of CFG.GATES) {
+            const gs = this.gates[g.id];
+            if (gs) gs.ammo = Math.min(gs.maxAmmo || g.maxAmmo, gs.ammo + bonusAmmo);
+          }
+        }
+        if (bonusE710 > 0 || bonusIron > 0) {
+          this.spawnFloatingText(-520, -130, `🚀 ORBITAL LAUNCH PAD: +${bonusE710}🛢️ +${bonusIron}⛏️`, '#38bdf8');
+        }
+      }
+
+      // 2. Mindustry Mend Projectors behind Gate Layers (`this.mendProjectorLevel > 0`)
+      if ((this.mendProjectorLevel || 0) > 0) {
+        const mendTechBonus = 1 + this.getTechNodeLevel('tech_mend_projector') * 0.35;
+        const healPerSec = this.mendProjectorLevel * 12 * mendTechBonus;
+        for (const g of CFG.GATES) {
+          const gs = this.gates[g.id];
+          if (!gs) continue;
+          if (gs.hp < gs.maxHp) {
+            gs.hp = Math.min(gs.maxHp, gs.hp + healPerSec * dt);
+            if (gs.hp >= gs.maxHp * 0.25) gs.broken = false;
+          }
+        }
+        this.mendTickTimer = (this.mendTickTimer || 0) + dt;
+        if (this.mendTickTimer >= 4.0) {
+          this.mendTickTimer = 0;
+          for (const g of CFG.GATES) {
+            const gs = this.gates[g.id];
+            if (gs) gs.ammo = Math.min(gs.maxAmmo || g.maxAmmo, gs.ammo + Math.ceil(this.mendProjectorLevel * 0.5));
+          }
+        }
+      }
+
+      // 3. Allied War-Front Units (`this.alliedUnits`) Patrol & Combat
+      const fg = this.getActiveFrontGate();
+      const targetZ = fg.z - 55;
+      for (let i = this.alliedUnits.length - 1; i >= 0; i--) {
+        const u = this.alliedUnits[i];
+        u.fireCooldown = Math.max(0, u.fireCooldown - dt);
+
+        // Find closest enemy
+        let closest = null;
+        let minDist = u.range || 380;
+        for (const e of this.enemies) {
+          if (e.hp <= 0) continue;
+          const d = Math.hypot(e.x - u.x, e.z - u.z);
+          if (d < minDist) {
+            minDist = d;
+            closest = e;
+          }
+        }
+
+        if (closest) {
+          if (u.fireCooldown <= 0) {
+            u.fireCooldown = u.fireRate || 0.3;
+            closest.hp -= u.damage;
+            this.tracers.push({
+              sx: u.x,
+              sz: u.z - 12,
+              tx: closest.x,
+              tz: closest.z,
+              color: u.color || '#38bdf8',
+              width: u.unitType === 'deploy_mech' ? 5.5 : 3.2,
+              t: 0,
+              duration: 0.09
+            });
+            if (u.unitType === 'deploy_mech') {
+              this.explosions.push({ x: closest.x, z: closest.z, maxR: 42, t: 0, duration: 0.2 });
+            }
+            this.audio.playLaser();
+            if (closest.hp <= 0) {
+              this.handleEnemyKilled(closest);
+            }
+          }
+        } else {
+          // Patrol horizontally in front of the active Front Gate
+          const dz = targetZ - u.z;
+          if (Math.abs(dz) > 20) {
+            u.z += Math.sign(dz) * u.speed * dt;
+          } else {
+            u.x += u.patrolDir * u.speed * 0.65 * dt;
+            if (u.x > 260) u.patrolDir = -1;
+            if (u.x < -260) u.patrolDir = 1;
+          }
+        }
+      }
+      this.enemies = this.enemies.filter((e) => e.hp > 0);
     }
 
     checkMilestones(dt) {
@@ -2509,6 +2798,22 @@
         gateEl.textContent = `G3:${p3}% G2:${p2}% G1:${p1}%`;
         gateEl.style.color = p1 > 50 ? '#4ade80' : (p1 > 25 ? '#facc15' : '#ef4444');
 
+        const warUnitsEl = document.getElementById('hud-war-units-count');
+        if (warUnitsEl) warUnitsEl.textContent = `${(this.alliedUnits || []).length}`;
+
+        const baseNameEl = document.getElementById('hud-active-base-name');
+        if (baseNameEl) {
+          const bc = this.getActiveBaseConfig();
+          baseNameEl.textContent = bc.code ? bc.code.replace('SECTOR ', '') : 'Alpha';
+        }
+
+        const mendCostEl = document.getElementById('cost-build-mender');
+        if (mendCostEl) {
+          const ml = this.mendProjectorLevel || 0;
+          const mc = Math.round(160 * Math.pow(1.35, ml));
+          mendCostEl.textContent = ml >= 20 ? 'MAX Lv.20' : `Lv.${ml} ($${mc})`;
+        }
+
         const objEl = document.getElementById('objective-text');
         if (objEl) {
           const planet = this.getCurrentPlanet();
@@ -2797,11 +3102,20 @@
     renderSkillsModal() {
       const medalSpan = document.getElementById('skill-modal-medals');
       if (medalSpan) medalSpan.textContent = `${this.medals}`;
+      const cashSpan = document.getElementById('skill-modal-cash');
+      if (cashSpan) cashSpan.textContent = `$${Math.floor(this.cash)}`;
 
       const buyMedalBtn = document.getElementById('btn-buy-medal');
       if (buyMedalBtn) {
         buyMedalBtn.disabled = this.cash < 150;
       }
+
+      // Render 2D Mindustry Visual Tech Tree Canvas & Selected Node Inspector
+      const treeCanvas = document.getElementById('mindustry-tree-canvas');
+      if (treeCanvas && this.world.renderMindustryTechTree) {
+        this.world.renderMindustryTechTree(treeCanvas, this, this.selectedTechNodeId);
+      }
+      this.renderMindustryNodeInspector();
 
       const list = document.getElementById('skill-tree-list');
       if (!list) return;
@@ -2836,6 +3150,65 @@
         });
         list.appendChild(card);
       }
+    }
+
+    renderMindustryNodeInspector() {
+      const box = document.getElementById('mindustry-node-inspector');
+      if (!box) return;
+      const nodes = CFG.MINDUSTRY_TECH_NODES || [];
+      const node = nodes.find((n) => n.id === this.selectedTechNodeId) || nodes[0];
+      if (!node) return;
+
+      const lvl = this.getTechNodeLevel(node.id);
+      const isMax = lvl >= node.maxLevel;
+      const parentNode = node.parentId ? nodes.find((n) => n.id === node.parentId) : null;
+      const parentUnlocked = !parentNode || this.getTechNodeLevel(parentNode.id) > 0;
+      const medalCost = Math.max(1, Math.round((node.baseMedalCost || 1) * Math.pow(1.36, lvl)));
+      const reqCost = Math.round((node.reqCost || 140) * Math.pow(1.42, lvl));
+
+      box.innerHTML = `
+        <div style="flex:1 1 280px;">
+          <div style="font-size:0.7rem;color:${node.color || '#facc15'};font-weight:800;">
+            ${parentNode ? `🔗 REQUIRES PARENT: ${parentNode.icon} ${parentNode.name} (${parentUnlocked ? '✅ UNLOCKED' : '🔒 LOCKED'})` : '🏛️ ROOT COMMAND CORE NODE'}
+          </div>
+          <h4 style="font-family:var(--font-display);font-size:0.9rem;color:#fde047;margin:2px 0;">
+            ${node.icon} ${node.name} <span style="font-size:0.78rem;color:#f8fafc;">(${node.zhName}) — Lv.${lvl}/${node.maxLevel}</span>
+          </h4>
+          <p style="font-size:0.76rem;color:#cbd5e1;">${node.desc}</p>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="buy-btn medal-btn" id="btn-research-node-medal" ${(!parentUnlocked || isMax || this.medals < medalCost) ? 'disabled' : ''}>
+            ${isMax ? 'MAX Lv.20' : (!parentUnlocked ? '🔒 Unlock Parent First' : `⭐ Research (${medalCost} Medals)`)}
+          </button>
+          <button class="buy-btn" id="btn-research-node-req" ${(!parentUnlocked || isMax || this.cash < reqCost) ? 'disabled' : ''}>
+            ${isMax ? 'MAX Lv.20' : (!parentUnlocked ? '🔒 Locked' : `💵 Research ($${reqCost})`)}
+          </button>
+        </div>
+      `;
+
+      const upgradeNode = (useMedals) => {
+        if (!parentUnlocked || isMax) return;
+        if (useMedals) {
+          if (this.medals < medalCost) return;
+          this.medals -= medalCost;
+        } else {
+          if (this.cash < reqCost) return;
+          this.cash -= reqCost;
+        }
+        const nextLvl = lvl + 1;
+        this.techNodes[node.id] = nextLvl;
+        if (node.linkedPermId) {
+          this.foreverSkills[node.linkedPermId] = nextLvl;
+        }
+        this.recalcDerivedStats();
+        this.saveGame();
+        this.audio.playUnlock();
+        this.renderSkillsModal();
+        this.updateHUD();
+      };
+
+      box.querySelector('#btn-research-node-medal')?.addEventListener('click', () => upgradeNode(true));
+      box.querySelector('#btn-research-node-req')?.addEventListener('click', () => upgradeNode(false));
     }
 
     renderCampaignModal() {
@@ -2876,6 +3249,56 @@
             );
           }
         });
+      }
+
+      const basesGrid = document.getElementById('mindustry-bases-grid');
+      if (basesGrid) {
+        basesGrid.innerHTML = '';
+        for (const b of (CFG.MINDUSTRY_BASES || [])) {
+          const isUnlocked = !!this.unlockedBases?.[b.id];
+          const isActive = this.activeBaseId === b.id;
+          const canUnlock = !isUnlocked && (this.cash >= b.unlockCost || this.highestWave >= b.reqWave);
+          const card = document.createElement('div');
+          card.className = 'upgrade-item';
+          if (isActive) {
+            card.style.borderColor = '#4ade80';
+            card.style.background = 'rgba(34, 197, 94, 0.14)';
+          } else if (isUnlocked) {
+            card.style.borderColor = b.color;
+          }
+          card.innerHTML = `
+            <div class="upgrade-info">
+              <div style="font-size:0.68rem;color:${b.color};font-weight:800;">${b.code} | ⛏️x${b.ironMult} 🛢️x${b.e710Mult} 💵x${b.sellMult}</div>
+              <h4>${b.icon} ${b.name}</h4>
+              <p>${b.desc}</p>
+            </div>
+            <button class="buy-btn ${isActive ? 'medal-btn' : ''}" ${(!isUnlocked && !canUnlock) ? 'disabled' : ''}>
+              ${isActive ? '🏛️ ACTIVE BASE' : (isUnlocked ? '🚀 Switch Base' : (this.highestWave >= b.reqWave ? '🔓 Claim Free (Wave Req Met)' : `🔓 Unlock $${b.unlockCost}`))}
+            </button>
+          `;
+          card.querySelector('button')?.addEventListener('click', () => {
+            if (isUnlocked) {
+              this.activeBaseId = b.id;
+              this.recalcDerivedStats();
+              this.saveGame();
+              this.audio.playUnlock();
+              this.renderCampaignModal();
+              this.updateHUD();
+              this.spawnFloatingText(this.player.x, this.player.z - 45, `🪐 DEPLOYED TO ${b.code}!`, b.color);
+            } else if (this.highestWave >= b.reqWave || this.cash >= b.unlockCost) {
+              if (this.highestWave < b.reqWave) this.cash -= b.unlockCost;
+              this.unlockedBases[b.id] = true;
+              this.activeBaseId = b.id;
+              this.recalcDerivedStats();
+              this.saveGame();
+              this.audio.playUnlock();
+              this.renderCampaignModal();
+              this.updateHUD();
+              this.spawnFloatingText(this.player.x, this.player.z - 45, `🎉 CONQUERED ${b.code} — LAUNCH PAD ONLINE!`, '#4ade80');
+            }
+          });
+          basesGrid.appendChild(card);
+        }
       }
 
       const planetGrid = document.getElementById('campaign-planets-grid');
@@ -2933,6 +3356,10 @@
         playTimeSeconds: this.playTimeSeconds,
         claimedMilestones: this.claimedMilestones,
         foreverSkills: this.foreverSkills,
+        techNodes: this.techNodes,
+        unlockedBases: this.unlockedBases,
+        activeBaseId: this.activeBaseId,
+        mendProjectorLevel: this.mendProjectorLevel,
         ownedEquipment: this.ownedEquipment,
         equipped: this.equipped,
         waveNumber: this.waveNumber,
@@ -2976,6 +3403,10 @@
         if (typeof data.playTimeSeconds === 'number') this.playTimeSeconds = data.playTimeSeconds;
         if (data.claimedMilestones) Object.assign(this.claimedMilestones, data.claimedMilestones);
         if (data.foreverSkills) Object.assign(this.foreverSkills, data.foreverSkills);
+        if (data.techNodes) Object.assign(this.techNodes, data.techNodes);
+        if (data.unlockedBases) Object.assign(this.unlockedBases, data.unlockedBases);
+        if (typeof data.activeBaseId === 'string') this.activeBaseId = data.activeBaseId;
+        if (typeof data.mendProjectorLevel === 'number') this.mendProjectorLevel = data.mendProjectorLevel;
         if (data.ownedEquipment) Object.assign(this.ownedEquipment, data.ownedEquipment);
         if (data.equipped) Object.assign(this.equipped, data.equipped);
         if (typeof data.cash === 'number') this.cash = Math.max(40, data.cash);
@@ -3108,8 +3539,60 @@
         this.pointerTarget = { x: 520, z: 390 };
       });
       document.getElementById('btn-snap-gates')?.addEventListener('click', () => {
-        const fg = this.getActiveFrontGate();
-        this.pointerTarget = { x: 0, z: fg.ammoPadZ };
+        this.setViewMode('war');
+      });
+
+      // Mobile Drawer Toggle (`☰ 選單`)
+      const drawerEl = document.getElementById('hud-menu-drawer');
+      const closeMobileDrawer = () => drawerEl?.classList.remove('drawer-open');
+      document.getElementById('btn-toggle-menu')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        drawerEl?.classList.toggle('drawer-open');
+      });
+      drawerEl?.querySelectorAll('button').forEach((b) => {
+        if (!b.classList.contains('strat-arrow')) {
+          b.addEventListener('click', closeMobileDrawer);
+        }
+      });
+
+      // Split Shop vs. War Front Mode Switcher + Mindustry Bases & Tech Shortcuts
+      document.getElementById('btn-mode-shop')?.addEventListener('click', () => this.setViewMode('shop'));
+      document.getElementById('btn-mode-war')?.addEventListener('click', () => this.setViewMode('war'));
+      document.getElementById('btn-mode-bases')?.addEventListener('click', () => {
+        this.renderCampaignModal();
+        document.getElementById('modal-campaign')?.classList.add('open');
+      });
+      document.getElementById('btn-mode-tech')?.addEventListener('click', () => {
+        this.renderSkillsModal();
+        document.getElementById('modal-skills')?.classList.add('open');
+      });
+
+      // War Front Deployment Dock Buttons
+      document.getElementById('btn-deploy-squad')?.addEventListener('click', () => this.deployWarUnit('deploy_squad'));
+      document.getElementById('btn-deploy-buggy')?.addEventListener('click', () => this.deployWarUnit('deploy_buggy'));
+      document.getElementById('btn-deploy-mech')?.addEventListener('click', () => this.deployWarUnit('deploy_mech'));
+      document.getElementById('btn-build-mender')?.addEventListener('click', () => this.deployWarUnit('build_mender'));
+
+      // Interactive Mindustry Visual Tech Tree Canvas Click/Tap Selection
+      const treeCanvas = document.getElementById('mindustry-tree-canvas');
+      treeCanvas?.addEventListener('pointerdown', (e) => {
+        const rect = treeCanvas.getBoundingClientRect();
+        const nx = (e.clientX - rect.left) / Math.max(1, rect.width);
+        const ny = (e.clientY - rect.top) / Math.max(1, rect.height);
+        let bestNode = null;
+        let bestDist = 0.16;
+        for (const n of (CFG.MINDUSTRY_TECH_NODES || [])) {
+          const d = Math.hypot(nx - n.nx, ny - n.ny);
+          if (d < bestDist) {
+            bestDist = d;
+            bestNode = n;
+          }
+        }
+        if (bestNode) {
+          this.selectedTechNodeId = bestNode.id;
+          this.audio.playPickup();
+          this.renderSkillsModal();
+        }
       });
 
       document.getElementById('btn-skip-rest')?.addEventListener('click', () => {

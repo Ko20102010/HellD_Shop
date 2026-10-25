@@ -1,6 +1,6 @@
 // ============================================================================
 // HELLDIVERS PLEASE! — Super Earth Arsenal & 2D Factorio War-Zone Tycoon
-// Version: v0.0.06 (All-Episode Carbot Art, Real-Item-Only Split Belts,
+// Version: v0.0.07 (All-Episode Carbot Art, Real-Item-Only Split Belts,
 //                   7 Dedicated Item Counters & Smart SEAF AI Edition)
 // Module: High-DPI 2D Factorio + CarbotAnimations Ep1–Ep10+ Vector World,
 //         4600x4000 Zero-Overlap Layout, Real-Packet Conveyor Rendering,
@@ -36,8 +36,11 @@
 
       this.camX = -120;
       this.camZ = 220;
-      this.zoom = 0.54;
-      this.targetZoom = 0.54;
+      const isMobileScreen = (window.innerWidth || 1280) < 768;
+      this.zoom = isMobileScreen ? 0.36 : 0.54;
+      this.targetZoom = this.zoom;
+      this.pinchStartDist = null;
+      this.pinchStartZoom = this.zoom;
       this.shakeTimer = 0;
       this.shakeIntensity = 0;
 
@@ -61,6 +64,28 @@
         const delta = e.deltaY > 0 ? -0.07 : 0.07;
         this.setZoom(this.targetZoom + delta);
       }, { passive: false });
+
+      // 2-Finger Pinch-to-Zoom for Mobile Phones
+      this.canvas.addEventListener('touchstart', (e) => {
+        if (e.touches && e.touches.length === 2) {
+          const dx = e.touches[0].clientX - e.touches[1].clientX;
+          const dy = e.touches[0].clientY - e.touches[1].clientY;
+          this.pinchStartDist = Math.hypot(dx, dy);
+          this.pinchStartZoom = this.targetZoom;
+        }
+      }, { passive: true });
+      this.canvas.addEventListener('touchmove', (e) => {
+        if (e.touches && e.touches.length === 2 && this.pinchStartDist > 10) {
+          const dx = e.touches[0].clientX - e.touches[1].clientX;
+          const dy = e.touches[0].clientY - e.touches[1].clientY;
+          const dist = Math.hypot(dx, dy);
+          const ratio = dist / this.pinchStartDist;
+          this.setZoom(this.pinchStartZoom * ratio);
+        }
+      }, { passive: true });
+      this.canvas.addEventListener('touchend', () => {
+        this.pinchStartDist = null;
+      }, { passive: true });
     }
 
     setZoom(z) {
@@ -573,8 +598,12 @@
         ctx.restore();
       }
 
-      ctx.fillStyle = '#141c2b';
+      const activeBaseCfg = state.getActiveBaseConfig ? state.getActiveBaseConfig() : null;
+      ctx.fillStyle = activeBaseCfg?.floorTint || '#141c2b';
       ctx.fillRect(W.minX, W.wallZ, W.maxX - W.minX, W.maxZ - W.wallZ);
+
+      // Mindustry Core & Orbital Launch Pad Receiver at (-160, -140)
+      this.drawMindustryCoreAndPortal(ctx, state);
 
       // Sector A: Raw Quarry & Munitions Press (West)
       this.drawFloorSector(
@@ -1706,6 +1735,15 @@
         });
       }
 
+      if (state.alliedUnits) {
+        for (const u of state.alliedUnits) {
+          renderList.push({
+            z: u.z,
+            draw: () => this.drawAlliedWarUnit(ctx, u)
+          });
+        }
+      }
+
       for (const e of state.enemies) {
         renderList.push({
           z: e.z,
@@ -2377,6 +2415,226 @@
       ctx.closePath();
       ctx.fill();
       ctx.stroke();
+      ctx.restore();
+    }
+
+    // Mindustry Core Shard, Multi-Base Orbital Receiver & Split Shop/War Rapid-Transit Portal
+    drawMindustryCoreAndPortal(ctx, state) {
+      const baseCfg = state.getActiveBaseConfig ? state.getActiveBaseConfig() : { name: 'Base Alpha', code: 'SECTOR ALPHA-01', color: '#facc15' };
+      ctx.save();
+      ctx.translate(-520, -90);
+      ctx.fillStyle = '#1e293b';
+      ctx.strokeStyle = baseCfg.color || '#facc15';
+      ctx.lineWidth = 4;
+      ctx.fillRect(-70, -54, 140, 108);
+      ctx.strokeRect(-70, -54, 140, 108);
+
+      const pulse = 1 + Math.sin(this.time * 4) * 0.08;
+      ctx.save();
+      ctx.scale(pulse, pulse);
+      ctx.fillStyle = baseCfg.color || '#facc15';
+      ctx.beginPath();
+      ctx.arc(0, 0, 22, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      ctx.font = '22px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('🏛️', 0, 1);
+
+      ctx.fillStyle = '#fde047';
+      ctx.font = '900 11.5px Orbitron, sans-serif';
+      ctx.fillText(`🏛️ MINDUSTRY CORE: ${baseCfg.code}`, 0, -64);
+      ctx.fillStyle = '#4ade80';
+      ctx.font = '700 11px Rajdhani, sans-serif';
+      const exportIncome = state.getTotalPassiveBaseIncome ? state.getTotalPassiveBaseIncome() : 0;
+      ctx.fillText(`🚀 Launch Pad Network: +$${exportIncome}/s Passive`, 0, 68);
+      ctx.restore();
+
+      // Mindustry Mend Projectors behind Gate Layers if unlocked (`state.mendProjectorLevel > 0`)
+      const mendLvl = state.mendProjectorLevel || 0;
+      if (mendLvl > 0) {
+        for (const g of window.GameConfig.GATES) {
+          ctx.save();
+          ctx.translate(g.x + 210, g.z + 75);
+          const ringR = 26 + ((this.time * 45) % 90);
+          const alpha = Math.max(0, 1 - (ringR - 26) / 90) * 0.45;
+          ctx.strokeStyle = `rgba(74, 222, 128, ${alpha})`;
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.arc(0, 0, ringR, 0, Math.PI * 2);
+          ctx.stroke();
+
+          ctx.fillStyle = '#064e3b';
+          ctx.strokeStyle = '#4ade80';
+          ctx.lineWidth = 3;
+          ctx.fillRect(-22, -22, 44, 44);
+          ctx.strokeRect(-22, -22, 44, 44);
+          ctx.fillStyle = '#4ade80';
+          ctx.font = '900 10px Orbitron, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText(`💚 MEND Lv.${mendLvl}`, 0, -28);
+          ctx.font = '16px sans-serif';
+          ctx.fillText('💚', 0, 5);
+          ctx.restore();
+        }
+      }
+    }
+
+    // Draws Allied Combat Units Deployed on the War Front (`deploy_squad`, `deploy_buggy`, `deploy_mech`)
+    drawAlliedWarUnit(ctx, u) {
+      if (u.unitType === 'deploy_mech') {
+        this.drawPatriotMechSprite(ctx, u.x, u.z, this.time * 1.4, 1.15, true, []);
+      } else if (u.unitType === 'deploy_buggy') {
+        this.drawReconVehicleSprite(ctx, u.x, u.z, this.time * 1.6, 1.12, true, []);
+      } else {
+        this.drawCarbotBean(ctx, u.x, u.z, {
+          bodyColor: '#1d4ed8',
+          capeColor: '#facc15',
+          trimColor: '#fde047',
+          visorColor: '#38bdf8',
+          isCommander: false,
+          hasRifle: true,
+          weaponId: 'w_liberator',
+          walkPhase: this.time * 8,
+          scale: 0.96,
+          label: ''
+        });
+      }
+      ctx.save();
+      ctx.translate(u.x, u.z);
+      const hpRatio = Math.max(0, Math.min(1, u.hp / u.maxHp));
+      ctx.fillStyle = '#090d14';
+      ctx.fillRect(-20, -38, 40, 6);
+      ctx.fillStyle = '#4ade80';
+      ctx.fillRect(-19, -37, 38 * hpRatio, 4);
+      ctx.fillStyle = '#86efac';
+      ctx.font = '900 9.5px Orbitron, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(u.label || 'ALLIED UNIT', 0, -42);
+      ctx.restore();
+    }
+
+    // Interactive 2D Mindustry-Style Visual Node Tech Tree Renderer
+    renderMindustryTechTree(canvas, state, selectedNodeId) {
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const rect = canvas.getBoundingClientRect();
+      const cw = Math.max(300, Math.floor(rect.width || 860));
+      const ch = Math.max(240, Math.floor(rect.height || 320));
+      if (canvas.width !== cw * dpr || canvas.height !== ch * dpr) {
+        canvas.width = cw * dpr;
+        canvas.height = ch * dpr;
+      }
+
+      ctx.save();
+      ctx.scale(dpr, dpr);
+
+      // Mindustry dark schematic background + grid
+      ctx.fillStyle = '#070b12';
+      ctx.fillRect(0, 0, cw, ch);
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.08)';
+      ctx.lineWidth = 1;
+      for (let gx = 0; gx < cw; gx += 28) {
+        ctx.beginPath();
+        ctx.moveTo(gx, 0);
+        ctx.lineTo(gx, ch);
+        ctx.stroke();
+      }
+      for (let gy = 0; gy < ch; gy += 28) {
+        ctx.beginPath();
+        ctx.moveTo(0, gy);
+        ctx.lineTo(cw, gy);
+        ctx.stroke();
+      }
+
+      const nodes = window.GameConfig.MINDUSTRY_TECH_NODES || [];
+      const nodeMap = {};
+      for (const n of nodes) nodeMap[n.id] = n;
+
+      // 1. Draw Mindustry Orthogonal / Diagonal Conduit Pipes (Parent -> Child)
+      for (const n of nodes) {
+        if (!n.parentId || !nodeMap[n.parentId]) continue;
+        const p = nodeMap[n.parentId];
+        const px = p.nx * cw;
+        const py = p.ny * ch;
+        const cx = n.nx * cw;
+        const cy = n.ny * ch;
+        const pLvl = state.getTechNodeLevel ? state.getTechNodeLevel(p.id) : 0;
+        const nLvl = state.getTechNodeLevel ? state.getTechNodeLevel(n.id) : 0;
+        const midY = (py + cy) * 0.5;
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(px, py);
+        ctx.lineTo(px, midY);
+        ctx.lineTo(cx, midY);
+        ctx.lineTo(cx, cy);
+
+        if (nLvl > 0) {
+          ctx.strokeStyle = n.color || '#4ade80';
+          ctx.lineWidth = 4;
+          ctx.stroke();
+        } else if (pLvl > 0 || p.id === 'core_shard') {
+          ctx.strokeStyle = '#facc15';
+          ctx.lineWidth = 2.5;
+          ctx.setLineDash([6, 4]);
+          ctx.stroke();
+        } else {
+          ctx.strokeStyle = '#334155';
+          ctx.lineWidth = 2;
+          ctx.setLineDash([4, 6]);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      // 2. Draw Each Mindustry Tech Node Box
+      const boxW = cw < 520 ? 68 : 118;
+      const boxH = cw < 520 ? 44 : 52;
+
+      for (const n of nodes) {
+        const cx = n.nx * cw;
+        const cy = n.ny * ch;
+        const lvl = state.getTechNodeLevel ? state.getTechNodeLevel(n.id) : 0;
+        const unlockedParent = !n.parentId || (state.getTechNodeLevel ? state.getTechNodeLevel(n.parentId) > 0 : true);
+        const isSelected = n.id === selectedNodeId;
+
+        ctx.save();
+        ctx.translate(cx, cy);
+
+        ctx.fillStyle = lvl > 0 ? '#132a23' : (unlockedParent ? '#1e293b' : '#0f141f');
+        ctx.strokeStyle = isSelected ? '#ffffff' : (lvl > 0 ? (n.color || '#4ade80') : (unlockedParent ? '#facc15' : '#334155'));
+        ctx.lineWidth = isSelected ? 3.5 : 2.2;
+
+        ctx.beginPath();
+        ctx.roundRect(-boxW / 2, -boxH / 2, boxW, boxH, 8);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.font = cw < 520 ? '15px sans-serif' : '18px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(n.icon, cw < 520 ? 0 : -boxW / 2 + 18, cw < 520 ? -6 : -4);
+
+        ctx.fillStyle = lvl > 0 ? '#4ade80' : (unlockedParent ? '#fde047' : '#64748b');
+        ctx.font = cw < 520 ? '900 8.5px Orbitron, sans-serif' : '900 9.5px Orbitron, sans-serif';
+        if (cw < 520) {
+          ctx.fillText(`Lv.${lvl}/${n.maxLevel}`, 0, 12);
+        } else {
+          ctx.textAlign = 'left';
+          const shortTitle = n.name.length > 14 ? n.name.slice(0, 13) + '..' : n.name;
+          ctx.fillStyle = '#f8fafc';
+          ctx.fillText(shortTitle, -boxW / 2 + 32, -7);
+          ctx.fillStyle = lvl > 0 ? '#4ade80' : (unlockedParent ? '#fde047' : '#94a3b8');
+          ctx.fillText(`Lv.${lvl}/${n.maxLevel}`, -boxW / 2 + 32, 9);
+        }
+
+        ctx.restore();
+      }
+
       ctx.restore();
     }
   }
