@@ -1,13 +1,13 @@
 // ============================================================================
 // HELLDIVERS PLEASE! — Super Earth Arsenal & 2D Factorio War-Zone Tycoon
-// Version: v0.0.02
+// Version: v0.0.03
 // Module: Configuration, 2D Factorio Map, 3 Gates, Conveyors & Permanent Skills
 // ============================================================================
 
 window.GameConfig = {
-  VERSION: 'v0.0.02',
-  STORAGE_KEY: 'helldivers_please_save_v0002',
-  LEGACY_KEYS: ['helldivers_please_save_v0001', 'helldivers_please_save_v0000'],
+  VERSION: 'v0.0.03',
+  STORAGE_KEY: 'helldivers_please_save_v0003',
+  LEGACY_KEYS: ['helldivers_please_save_v0002', 'helldivers_please_save_v0001', 'helldivers_please_save_v0000'],
 
   // Expanded 2D Factorio + Carbot World Bounds (Center is 0,0)
   // Shop Floor: y in [-220, +980], x in [-1250, +1250]
@@ -17,7 +17,7 @@ window.GameConfig = {
     maxX: 1240,
     minZ: -1020,
     maxZ: 960,
-    wallZ: -220, // Perimeter defensive wall separating Shop Floor (z > -220) and War Zone (z < -220)
+    wallZ: -220,
     gateWidth: 150
   },
 
@@ -26,7 +26,7 @@ window.GameConfig = {
     sprintMultiplier: 1.55,
     baseCapacity: 14,
     pickupRadius: 88,
-    transferInterval: 0.065, // ~15 items/sec parabolic transfer
+    transferInterval: 0.065,
     attackRange: 250,
     attackCooldown: 0.22,
     attackDamage: 26,
@@ -377,9 +377,6 @@ window.GameConfig = {
     }
   ],
 
-  // --------------------------------------------------------------------------
-  // MULTI-STALL SALES COUNTER & SKY-HIGH CASH TOWERS
-  // --------------------------------------------------------------------------
   LOCATIONS: {
     counterDropZone: { x: 120, z: 220, radius: 130 },
     counterTable: { x: 260, z: 220, width: 220, depth: 340 },
@@ -389,14 +386,10 @@ window.GameConfig = {
     customerQueueStart: { x: 430, z: 220 },
     customerQueueSpacing: 76,
     customerExit: { x: 1120, z: -40 },
-    // War Zone Cryo-Pods (Thaw frozen Helldivers with E-710)
     brazierWest: { x: -420, z: -560, radius: 95, cost: 3 },
     brazierEast: { x: 420, z: -560, radius: 95, cost: 3 }
   },
 
-  // --------------------------------------------------------------------------
-  // IN-RUN UPGRADES (SEAF Staff, Raw Speed, Turret Boosts)
-  // --------------------------------------------------------------------------
   UPGRADES: [
     {
       id: 'raw_speed_boost',
@@ -463,11 +456,6 @@ window.GameConfig = {
     }
   ],
 
-  // --------------------------------------------------------------------------
-  // PERMANENT SKILL TREE (KEPT FOREVER EVEN WHEN A GATE FALLS / LOSE!)
-  // Uses Warbond Medals (⭐) earned from serving customers, killing enemies,
-  // or converting Requisition ($REQ -> ⭐).
-  // --------------------------------------------------------------------------
   PERMANENT_SKILLS: [
     {
       id: 'perm_gun_value',

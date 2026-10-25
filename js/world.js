@@ -1,10 +1,24 @@
 // ============================================================================
 // HELLDIVERS PLEASE! — Super Earth Arsenal & 2D Factorio War-Zone Tycoon
-// Version: v0.0.02
+// Version: v0.0.03
 // Module: High-DPI 2D Factorio + CarbotAnimations Vector World Renderer
 // ============================================================================
 
 (function () {
+  // Ensure ctx.roundRect polyfill exists on all browsers/WebViews
+  if (typeof CanvasRenderingContext2D !== 'undefined' && !CanvasRenderingContext2D.prototype.roundRect) {
+    CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
+      const radius = Math.min(typeof r === 'number' ? r : 8, w / 2, h / 2);
+      this.moveTo(x + radius, y);
+      this.arcTo(x + w, y, x + w, y + h, radius);
+      this.arcTo(x + w, y + h, x, y + h, radius);
+      this.arcTo(x, y + h, x, y, radius);
+      this.arcTo(x, y, x + w, y, radius);
+      this.closePath();
+      return this;
+    };
+  }
+
   class WorldRenderer2D {
     constructor(canvasEl) {
       this.canvas = canvasEl || document.getElementById('game-canvas');
@@ -20,7 +34,7 @@
       // Camera state (world coordinates)
       this.camX = 0;
       this.camZ = 220;
-      this.zoom = 0.72; // Default zoom to see big Factorio shop floor clearly
+      this.zoom = 0.72;
       this.targetZoom = 0.72;
       this.shakeTimer = 0;
       this.shakeIntensity = 0;
@@ -67,7 +81,6 @@
       this.shakeTimer = duration;
     }
 
-    // Convert screen pixel (clientX, clientY) to world (x, z)
     screenToWorld(clientX, clientY) {
       const rect = this.canvas.getBoundingClientRect();
       const sx = clientX - rect.left;
@@ -83,15 +96,11 @@
       return { x: sx, y: sy };
     }
 
-    // ========================================================================
-    // MAIN 2D FACTORIO + CARBOT ANIMATIONS RENDER FRAME
-    // ========================================================================
     render(state, dt) {
       this.time += dt;
       this.beltPhase = (this.beltPhase + dt * 48) % 24;
       this.zoom += (this.targetZoom - this.zoom) * Math.min(1, dt * 10);
 
-      // Smoothly follow player
       const targetX = state.player.x;
       const targetZ = state.player.z;
       this.camX += (targetX - this.camX) * Math.min(1, dt * 8.5);
@@ -118,34 +127,15 @@
       ctx.scale(this.zoom, this.zoom);
       ctx.translate(-this.camX, -this.camZ);
 
-      // 1. Draw Floor & War Zone Terrain
       this.drawTerrainAndGrid(ctx, state);
-
-      // 2. Draw Factorio Conveyor Belts (Both Planned & Active Animated Belts)
       this.drawConveyorNetwork(ctx, state);
-
-      // 3. Draw Trigger Pads (Unlock Pads, Raw Pads, Ammo Pads, Counter Pad)
       this.drawFloorPads(ctx, state);
-
-      // 4. Draw Perimeter Wall & 3 Defense Gates + Gate HP Bars + Gate Turrets
       this.drawPerimeterAndGates(ctx, state);
-
-      // 5. Draw Raw Material Drills & Munitions Ammo Press
       this.drawRawDrillsAndAmmoPress(ctx, state);
-
-      // 6. Draw 7 Arsenal Assembly Machines
       this.drawArsenalFactories(ctx, state);
-
-      // 7. Draw Multi-Stall Sales Counter, Cash Towers & Trash Incinerator
       this.drawCounterAndCashTowers(ctx, state);
-
-      // 8. Draw War Zone Snow/Ash Tiles, Frozen Helldiver Cryo-Pods & Loot Drops
       this.drawWarZoneObjects(ctx, state);
-
-      // 9. Y-Sorted Dynamic Entities (Player, SEAF Staff, Customers, Enemies)
       this.drawSortedEntities(ctx, state);
-
-      // 10. Draw Parabolic Flying Items, Bullets, Laser Beams & Explosions
       this.drawProjectilesAndArcs(ctx, state);
 
       ctx.restore();
@@ -154,7 +144,6 @@
     drawTerrainAndGrid(ctx, state) {
       const W = window.GameConfig.WORLD;
 
-      // Outer War-Zone Ground (North of wallZ = -220)
       const warGrad = ctx.createLinearGradient(0, W.minZ, 0, W.wallZ);
       warGrad.addColorStop(0, '#1e1b2e');
       warGrad.addColorStop(0.6, '#27293d');
@@ -162,7 +151,6 @@
       ctx.fillStyle = warGrad;
       ctx.fillRect(W.minX - 100, W.minZ - 100, (W.maxX - W.minX) + 200, (W.wallZ - W.minZ) + 100);
 
-      // War-Zone Craters & Scorch Marks
       for (const c of this.craters) {
         ctx.save();
         ctx.translate(c.x, c.z);
@@ -176,17 +164,14 @@
         ctx.restore();
       }
 
-      // Expanded Factorio Industrial Shop Floor (South of wallZ = -220)
       ctx.fillStyle = '#161f2e';
       ctx.fillRect(W.minX, W.wallZ, W.maxX - W.minX, W.maxZ - W.wallZ);
 
-      // Distinct Factorio Sector Zones on Shop Floor
       this.drawFloorSector(ctx, -1180, -180, 560, 1080, '#132338', '#38bdf8', 'SECTOR A: RAW EXTRACTION & MUNITIONS');
       this.drawFloorSector(ctx, -560, 80, 620, 820, '#1b2434', '#facc15', 'SECTOR B: ARSENAL ASSEMBLY LINES');
       this.drawFloorSector(ctx, 100, 40, 460, 540, '#172b26', '#22c55e', 'SECTOR C: HELLDIVER SALES COUNTER');
       this.drawFloorSector(ctx, 240, 460, 940, 440, '#261e2e', '#f97316', 'SECTOR D: HEAVY VEHICLE, MECH & DESTROYER BAY');
 
-      // Crisp Factorio Metal Grid Lines (60px grid)
       ctx.strokeStyle = 'rgba(148, 163, 184, 0.09)';
       ctx.lineWidth = 1.5;
       ctx.beginPath();
@@ -200,7 +185,6 @@
       }
       ctx.stroke();
 
-      // Outer Shop Perimeter Walls
       ctx.strokeStyle = '#475569';
       ctx.lineWidth = 14;
       ctx.strokeRect(W.minX, W.minZ, W.maxX - W.minX, W.maxZ - W.minZ);

@@ -1,6 +1,6 @@
 // ============================================================================
 // HELLDIVERS PLEASE! — Super Earth Arsenal & 2D Factorio War-Zone Tycoon
-// Version: v0.0.02
+// Version: v0.0.03
 // Module: Core 2D Factorio + Carbot Simulation, 3-Gate Siege, Conveyors,
 //         Raw Speed Upgrades, Direct Gun Selling & Permanent Skill Tree
 // ============================================================================
@@ -10,7 +10,15 @@
 
   class HelldiversFactorioGame {
     constructor() {
-      this.audio = new window.SoundEngine();
+      const AudioCtor = window.SoundEngine || window.ProceduralAudioEngine;
+      this.audio = AudioCtor ? new AudioCtor() : {
+        playCash() {},
+        playPickup() {},
+        playUnlock() {},
+        playLaser() {},
+        playStratagem() {},
+        toggle() { return true; }
+      };
       this.canvasEl = document.getElementById('game-canvas');
       this.fxLayer = document.getElementById('world-labels');
       this.world = new window.WorldRenderer2D(this.canvasEl);
@@ -56,6 +64,9 @@
       // Spawn immediate initial Helldivers (First customer ALWAYS orders 🔫 Gun!)
       this.spawnCustomer('gun');
       this.spawnCustomer('cloth');
+
+      // Render first frame immediately so canvas is never black even before rAF!
+      this.world.render(this, 0.016);
 
       // Start 60FPS loop
       this.lastTime = performance.now();
@@ -1241,6 +1252,9 @@
     }
 
     updateHUD() {
+      const verEl = document.getElementById('hud-version');
+      if (verEl) verEl.textContent = CFG.VERSION;
+
       const cashEl = document.getElementById('hud-cash');
       if (cashEl) cashEl.textContent = `$${Math.floor(this.cash)}`;
 
@@ -1259,7 +1273,6 @@
       const servedEl = document.getElementById('hud-served');
       if (servedEl) servedEl.textContent = `${this.totalServed}`;
 
-      // Update inventory item badges
       for (const item of CFG.ITEMS) {
         const badge = document.getElementById(`inv-badge-${item.id}`);
         if (badge) {
@@ -1304,7 +1317,6 @@
       if (!list) return;
       list.innerHTML = '';
 
-      // 1. Raw Material Drill Speed Upgrades
       for (const raw of CFG.RAW_EXTRACTORS) {
         const rs = this.rawExtractors[raw.id];
         const cost = this.getRawUpgradeCost(raw.id);
@@ -1332,7 +1344,6 @@
         list.appendChild(card);
       }
 
-      // 2. Factorio Conveyor Belt Automation Upgrades
       for (const c of CFG.CONVEYORS) {
         const owned = !!this.conveyors[c.id];
         const rem = Math.max(0, this.conveyorRemaining[c.id] ?? c.cost);
@@ -1361,7 +1372,6 @@
         list.appendChild(card);
       }
 
-      // 3. Standard SEAF Staff & Commander Upgrades
       for (const upg of CFG.UPGRADES) {
         const lvl = this.upgrades[upg.id] || 0;
         const isMax = lvl >= upg.maxLevel;
@@ -1468,7 +1478,16 @@
 
     loadGame(rawJson = null) {
       try {
-        const saved = rawJson || localStorage.getItem(CFG.STORAGE_KEY);
+        let saved = rawJson || localStorage.getItem(CFG.STORAGE_KEY);
+        if (!saved && CFG.LEGACY_KEYS) {
+          for (const k of CFG.LEGACY_KEYS) {
+            const legacy = localStorage.getItem(k);
+            if (legacy) {
+              saved = legacy;
+              break;
+            }
+          }
+        }
         if (!saved) return;
         const data = JSON.parse(saved);
         if (typeof data.medals === 'number') this.medals = data.medals;
@@ -1528,7 +1547,6 @@
         pointerDown = false;
       });
 
-      // Virtual Touch Joystick
       const joyZone = document.getElementById('joystick-zone');
       const joyKnob = document.getElementById('joystick-knob');
       if (joyZone && joyKnob) {
@@ -1567,7 +1585,6 @@
         window.addEventListener('pointercancel', resetJoy);
       }
 
-      // Zoom Buttons
       document.getElementById('btn-zoom-in')?.addEventListener('click', () => {
         this.world.setZoom(this.world.targetZoom + 0.14);
       });
@@ -1578,7 +1595,6 @@
         this.world.setZoom(0.72);
       });
 
-      // Stratagem Keypad Arrows + Trigger Button
       document.querySelectorAll('.strat-arrow').forEach((btn) => {
         btn.addEventListener('click', () => {
           const dir = btn.getAttribute('data-dir');
@@ -1601,14 +1617,12 @@
         if (btn) btn.style.borderColor = this.sprintToggle ? '#4ade80' : '#facc15';
       });
 
-      // Audio Toggle
       document.getElementById('btn-mute')?.addEventListener('click', () => {
         const enabled = this.audio.toggle();
         const btn = document.getElementById('btn-mute');
         if (btn) btn.textContent = enabled ? '🔊 Audio' : '🔇 Muted';
       });
 
-      // Modals Open/Close
       document.getElementById('btn-open-seaf')?.addEventListener('click', () => {
         this.renderUpgradesModal();
         document.getElementById('modal-seaf')?.classList.add('open');
@@ -1635,7 +1649,6 @@
         }
       });
 
-      // Defeat Modal Buttons
       document.getElementById('btn-redeploy-now')?.addEventListener('click', () => {
         this.redeployAfterDefeat();
       });
@@ -1644,7 +1657,6 @@
         document.getElementById('modal-skills')?.classList.add('open');
       });
 
-      // Save Modal
       document.getElementById('btn-open-save')?.addEventListener('click', () => {
         this.saveGame();
         document.getElementById('modal-save')?.classList.add('open');
@@ -1680,7 +1692,6 @@
         document.getElementById('modal-save')?.classList.remove('open');
       });
 
-      // GitHub ZIP Modal
       document.getElementById('btn-open-github')?.addEventListener('click', () => {
         document.getElementById('modal-github')?.classList.add('open');
       });
@@ -1697,7 +1708,7 @@
         if (statusEl) statusEl.textContent = '⚠️ JSZip library not loaded.';
         return;
       }
-      if (statusEl) statusEl.textContent = '⏳ Packaging v0.0.02 modular repository (.zip)...';
+      if (statusEl) statusEl.textContent = `⏳ Packaging ${CFG.VERSION} modular repository (.zip)...`;
 
       const zip = new window.JSZip();
       const files = window.__REPO_SOURCE_FILES__ || {};
@@ -1714,16 +1725,26 @@
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = isFullPackage ? 'helldivers_please_v0.0.02_full_repo.zip' : 'helldivers_please_v0.0.02_update_code.zip';
+      a.download = isFullPackage
+        ? `helldivers_please_${CFG.VERSION}_full_repo.zip`
+        : `helldivers_please_${CFG.VERSION}_update_code.zip`;
       document.body.appendChild(a);
       a.click();
       a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 5000);
-      if (statusEl) statusEl.textContent = `✅ Downloaded ${a.download} (v0.0.02)!`;
+      if (statusEl) statusEl.textContent = `✅ Downloaded ${a.download} (${CFG.VERSION})!`;
     }
   }
 
-  window.addEventListener('DOMContentLoaded', () => {
-    window.game = new HelldiversFactorioGame();
-  });
+  function bootHelldiversGame() {
+    if (!window.game) {
+      window.game = new HelldiversFactorioGame();
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    window.addEventListener('DOMContentLoaded', bootHelldiversGame);
+  } else {
+    bootHelldiversGame();
+  }
 })();

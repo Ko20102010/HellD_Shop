@@ -1,4 +1,4 @@
-# 🦅 HELLDIVERS PLEASE! — Super Earth Arsenal & 2D Factorio War-Zone Tycoon (`v0.0.02`)
+# 🦅 HELLDIVERS PLEASE! — Super Earth Arsenal & 2D Factorio War-Zone Tycoon (`v0.0.03`)
 
 A hybrid **2D Factorio Industrial Automation + Burger Please Arcade Tycoon + Whiteout Survival War-Zone Defense** web game set in the **Helldivers 2** universe with **CarbotAnimations 2D vector cartoon aesthetics**.
 
@@ -6,9 +6,19 @@ A hybrid **2D Factorio Industrial Automation + Burger Please Arcade Tycoon + Whi
 
 ## 📋 Version History & Changelog
 
-### `v0.0.02` — 2D Factorio Overhaul, 3 Defense Gates, Turret Ammo Conveyors, Raw Speed & Forever Skill Tree (Current)
+### `v0.0.03` — Black Screen / Audio Boot Fix & Versioned `.ZIP` Filename (Current)
+1. **Fixed Black Screen / Startup Crash (`SoundEngine` & `roundRect` Boot Fix)**:
+   - Fixed a startup `TypeError` in `js/audio.js` where `window.SoundEngine` was not exported alongside `window.ProceduralAudioEngine`, which previously halted initialization before the 2D canvas rendered.
+   - Added immediate first-frame rendering (`this.world.render(this, 0.016)`) and a `document.readyState` boot check so the 2D Factorio + Carbot world renders immediately on load in all browsers and Canvas views.
+   - Added a `CanvasRenderingContext2D.prototype.roundRect` polyfill so Carbot bean characters and UI bubbles render on all mobile and desktop browsers without error.
+2. **Versioned `.ZIP` Package Filename**:
+   - Renamed the repository archive to include the semantic version number directly in the `.zip` filename (`helldivers_please_v0.0.03_github_repo.zip`, plus in-game `helldivers_please_v0.0.03_full_repo.zip` and `helldivers_please_v0.0.03_update_code.zip`).
+
+---
+
+### `v0.0.02` — 2D Factorio Overhaul, 3 Defense Gates, Turret Ammo Conveyors, Raw Speed & Forever Skill Tree
 1. **Fixed Gun (`🔫`) Selling & Multi-Stall Queue**:
-   - **No More Queue Deadlocks**: Helldiver customers waiting at the Quartermaster Counter are now served **simultaneously regardless of queue order** whenever their requested item (`🔫 Gun`, `🦺 Cloth`, etc.) is in the counter tray.
+   - **No More Queue Deadlocks**: Helldiver customers waiting at the Quartermaster Counter are served **simultaneously regardless of queue order** whenever their requested item (`🔫 Gun`, `🦺 Cloth`, etc.) is in the counter tray.
    - **Direct Hand-to-Customer Selling**: Walking near the Sales Counter or directly near any queued Helldiver while holding their requested item (`🔫 Gun`, `🦺 Cloth`, etc.) immediately sells it straight from your hands with a `+$45 🔫 SOLD!` popup!
    - **Guaranteed Early Gun Orders**: The counter starts pre-stocked with `3x 🔫 AR-23 Liberator Guns` and `3x 🦺 B-01 Tactical Cloth`, and the very first arriving Helldiver is guaranteed to buy a `🔫 Gun`.
 2. **Expanded 2D Shop Floor (`2480 × 1980` Map + Zoom Controls)**:

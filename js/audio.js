@@ -1,7 +1,7 @@
 /* ==========================================================================
-   HELLDIVERS PLEASE! — Super Earth Logistics & War-Zone Tycoon (v0.0.01)
+   HELLDIVERS PLEASE! — Super Earth Logistics & War-Zone Tycoon (v0.0.03)
    js/audio.js — Procedural Web Audio Synthesizer (Zero External Sound Files)
-   Combines Module 3.2.K (Burger Please ASMR), 3.2.I (Whiteout Cash/Thaw) & 3.2.F
+   Exports both window.SoundEngine and window.ProceduralAudioEngine
    ========================================================================== */
 
 class ProceduralAudioEngine {
@@ -43,7 +43,34 @@ class ProceduralAudioEngine {
     return this.muted;
   }
 
-  // Module 3.2.K: Burger/Item Stack Thud (playBurgerStack)
+  // Alias used by v0.0.02/v0.0.03 game controller (returns true when audio is ON)
+  toggle() {
+    const muted = this.toggleMute();
+    return !muted;
+  }
+
+  // Alias methods for 2D Factorio + Carbot game controller
+  playPickup(stackCount = 1) {
+    this.playItemStack(stackCount);
+  }
+
+  playCash() {
+    this.playCashPickup();
+  }
+
+  playUnlock() {
+    this.playOrderComplete();
+  }
+
+  playLaser() {
+    this.playGunshot();
+  }
+
+  playStratagem() {
+    this.playHeroicFanfareAndBlast(true);
+  }
+
+  // Module 3.2.K: Burger/Item Stack Thud
   playItemStack(stackCount = 1) {
     if (this.muted) return;
     this.init();
@@ -89,7 +116,7 @@ class ProceduralAudioEngine {
     osc.stop(now + 0.065);
   }
 
-  // Module 3.2.I / 3.2.K: Pitch-Ascending Cash Pickup Cascade
+  // Pitch-Ascending Cash Pickup Cascade
   playCashPickup() {
     if (this.muted) return;
     this.init();
@@ -120,7 +147,7 @@ class ProceduralAudioEngine {
     osc.stop(now + 0.09);
   }
 
-  // Module 3.2.K: Cash Spend Pentatonic Chime into Unlock Zones
+  // Cash Spend Pentatonic Chime into Unlock Zones
   playCashSpend(step = 0) {
     if (this.muted) return;
     this.init();
@@ -144,7 +171,7 @@ class ProceduralAudioEngine {
     osc.stop(now + 0.065);
   }
 
-  // Module 3.2.K / 3.2.I: Customer Satisfied / Thawed Survivor Happy "😊" Ding
+  // Customer Satisfied / Unlock Chime
   playOrderComplete() {
     if (this.muted) return;
     this.init();
@@ -165,7 +192,7 @@ class ProceduralAudioEngine {
     });
   }
 
-  // Module 3.2.F: Helldivers Stratagem Terminal Beep & Error
+  // Helldivers Stratagem Terminal Beep & Error
   playStratagemKey(isSuccess = true) {
     if (this.muted) return;
     this.init();
@@ -196,7 +223,7 @@ class ProceduralAudioEngine {
     }
   }
 
-  // Module 3.2.F: Heroic 4-Note Brass Leitmotif (F3 -> E3 -> D3 -> A2) + 500kg Blast
+  // Heroic 4-Note Brass Leitmotif + 500kg Blast
   playHeroicFanfareAndBlast(with500kg = false) {
     if (this.muted) return;
     this.init();
@@ -255,4 +282,6 @@ class ProceduralAudioEngine {
   }
 }
 
+window.ProceduralAudioEngine = ProceduralAudioEngine;
+window.SoundEngine = ProceduralAudioEngine;
 window.audioEngine = new ProceduralAudioEngine();
