@@ -2,151 +2,244 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>HELLDIVERS PLEASE! (v0.0.01) — Super Earth Arsenal &amp; War-Zone Tycoon</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>HELLDIVERS PLEASE! — 2D Factorio &amp; Carbot War-Zone Tycoon (v0.0.02)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./css/style.css" />
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <!-- JSZip for in-app GitHub repository ZIP packaging -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
 <body>
   <div id="game-container">
-    <!-- 3D Diorama Canvas -->
     <canvas id="game-canvas"></canvas>
-
-    <!-- World-Space 2D Floating Labels (Order Bubbles, MAX Tags, Ground Unlock Pads) -->
     <div id="world-labels"></div>
-
-    <!-- Fullscreen 500kg / Unlock Flash Overlay -->
     <div id="screen-flash"></div>
 
-    <!-- Floating Multi-Touch Virtual Joystick (Module 3.1) -->
-    <div id="joystick-zone">
-      <div id="joystick-base">
-        <div id="joystick-knob"></div>
-      </div>
-    </div>
-
-    <!-- Top & Bottom Tactical HUD Layer (Module 2.3.F / 2.3.G / 2.3.K) -->
     <div id="hud-layer">
-      <div class="hud-top-row">
-        <!-- Brand & Stratagem Sequence Rack -->
-        <div class="hud-brand-cluster">
-          <div class="super-earth-banner">
-            <div class="banner-title">
-              💀 HELLDIVERS PLEASE! <span>SUPER EARTH LOGISTICS</span>
-              <span class="version-pill" id="hud-version">v0.0.01</span>
-            </div>
-            <div class="banner-sub">Carbot Helldivers • Starter Cloth &amp; Gun Unlocked • Walk North to War Zone!</div>
+      <!-- TOP HUD -->
+      <header id="hud-top">
+        <div class="hud-group">
+          <div class="brand-badge">
+            <span>🦅</span>
+            <span class="brand-title">HELLDIVERS PLEASE!</span>
+            <span class="version-pill" id="hud-version">v0.0.02</span>
           </div>
 
-          <!-- Helldivers Stratagem Rack: ↑ → ↓ ↓ ↓ (Eagle 500kg Liberty Overdrive) -->
-          <div class="stratagem-card" id="stratagem-card">
-            <div class="strat-arrows">
-              <button class="strat-arrow" data-dir="UP" title="Tap UP">↑</button>
-              <button class="strat-arrow" data-dir="RIGHT" title="Tap RIGHT">→</button>
-              <button class="strat-arrow" data-dir="DOWN" title="Tap DOWN">↓</button>
-              <button class="strat-arrow" data-dir="DOWN" title="Tap DOWN">↓</button>
-              <button class="strat-arrow" data-dir="DOWN" title="Tap DOWN">↓</button>
+          <div class="stat-pill cash-pill" id="cash-pill-el">
+            <span>💵</span>
+            <div>
+              <div class="stat-label">Requisition</div>
+              <div class="stat-val" id="hud-cash">$120</div>
             </div>
-            <button class="strat-trigger-btn" id="btn-call-stratagem">🦅 500KG BOOST</button>
+          </div>
+
+          <div class="stat-pill medal-pill" title="Permanent Warbond Medals (Kept Forever Even If Gates Fall!)">
+            <span>⭐</span>
+            <div>
+              <div class="stat-label">Forever Medals</div>
+              <div class="stat-val" id="hud-medals">3</div>
+            </div>
+          </div>
+
+          <div class="stat-pill gate-pill" title="Active Defense Gates HP (If any Gate hits 0 HP = Defeat!)">
+            <span>🛡️</span>
+            <div>
+              <div class="stat-label">Gate HP</div>
+              <div class="stat-val" id="hud-gates-hp">100%</div>
+            </div>
+          </div>
+
+          <div class="stat-pill">
+            <span>🎒</span>
+            <div>
+              <div class="stat-label">Carry Stack</div>
+              <div class="stat-val"><span id="hud-carry">0</span> / <span id="hud-carry-max">14</span></div>
+            </div>
+          </div>
+
+          <div class="stat-pill">
+            <span>🪖</span>
+            <div>
+              <div class="stat-label">SEAF / Served</div>
+              <div class="stat-val"><span id="hud-seaf">0</span> | <span id="hud-served">0</span></div>
+            </div>
           </div>
         </div>
 
-        <!-- Resource & Action Cluster -->
-        <div class="hud-stats-cluster">
-          <div class="stat-pill cash-pill" id="cash-pill-el">
-            <span>💵</span> $<span id="hud-cash">100</span>
+        <div class="hud-group">
+          <div id="stratagem-card" style="display:flex;align-items:center;gap:4px;background:rgba(15,23,42,0.9);padding:4px 8px;border-radius:9px;border:1px solid #ef4444;">
+            <button class="strat-arrow hud-btn" data-dir="UP" title="Tap UP" style="padding:3px 6px;">↑</button>
+            <button class="strat-arrow hud-btn" data-dir="RIGHT" title="Tap RIGHT" style="padding:3px 6px;">→</button>
+            <button class="strat-arrow hud-btn" data-dir="DOWN" title="Tap DOWN" style="padding:3px 6px;">↓</button>
+            <button class="strat-arrow hud-btn" data-dir="DOWN" title="Tap DOWN" style="padding:3px 6px;">↓</button>
+            <button class="strat-arrow hud-btn" data-dir="DOWN" title="Tap DOWN" style="padding:3px 6px;">↓</button>
+            <button class="strat-trigger-btn hud-btn btn-stratagem" id="btn-call-stratagem">🦅 500KG BOOST</button>
           </div>
-          <div class="stat-pill carry-pill">
-            <span>🎒</span> <span id="hud-carry">0/18</span>
-            <span id="hud-carry-max" style="display:none;color:#ef4444;font-size:11px;margin-left:3px;">MAX</span>
-          </div>
-          <div class="stat-pill">
-            <span>🪖 SEAF:</span> <span id="hud-seaf">0</span>
-          </div>
-          <div class="stat-pill">
-            <span>🫡 Served:</span> <span id="hud-served">0</span>
-          </div>
-          <button class="hud-btn primary-cta" id="btn-open-seaf">🪖 SEAF &amp; Upgrades</button>
+
+          <button class="hud-btn primary-cta btn-primary" id="btn-open-seaf">🪖 SEAF &amp; Upgrades</button>
+          <button class="hud-btn btn-skill" id="btn-open-skills">🌟 Forever Skills</button>
+          <button class="hud-btn btn-zip" id="btn-open-github" style="border-color:#4ade80;color:#4ade80;">📦 GitHub ZIP</button>
           <button class="hud-btn" id="btn-open-save">💾 Save</button>
           <button class="hud-btn" id="btn-mute">🔊 Audio</button>
         </div>
-      </div>
+      </header>
 
-      <!-- Dynamic Next Objective Ticker -->
+      <!-- OBJECTIVE & GATE ALERT BANNER -->
       <div id="objective-ticker">
-        <span id="objective-text">🎯 Cloth (🦺) &amp; Gun (🔫) are unlocked! Serve Helldivers or walk North through the Gate to the War Zone!</span>
-      </div>
-
-      <!-- Bottom Tactical Inventory & Right Touch Buttons -->
-      <div class="hud-bottom-row">
-        <div class="tactical-inventory-card">
-          <div class="inv-header">
-            <span>Quartermaster Stack &amp; Counter Tray</span>
-            <span>Touch Drag / WASD</span>
-          </div>
-          <div class="inv-badges">
-            <div class="inv-badge" id="inv-badge-cloth">🦺 <span class="inv-count">0</span></div>
-            <div class="inv-badge" id="inv-badge-gun">🔫 <span class="inv-count">0</span></div>
-            <div class="inv-badge" id="inv-badge-resource">📦 <span class="inv-count">0</span></div>
-            <div class="inv-badge" id="inv-badge-equipment">🛡️ <span class="inv-count">0</span></div>
-            <div class="inv-badge" id="inv-badge-vehicle">🚙 <span class="inv-count">0</span></div>
-            <div class="inv-badge" id="inv-badge-mech">🤖 <span class="inv-count">0</span></div>
-            <div class="inv-badge" id="inv-badge-warship">🚀 <span class="inv-count">0</span></div>
-          </div>
-        </div>
-
-        <div class="right-action-dock">
-          <button class="action-circle-btn trash-btn" id="btn-clear-stack" title="Clear Hand Stack (R)">
-            🗑️<span>DUMP</span>
-          </button>
-          <button class="action-circle-btn sprint-btn" id="btn-sprint" title="Jet-Boot Sprint Boost (Shift)">
-            ⚡<span>SPRINT</span>
-          </button>
+        <div id="objective-banner">
+          <span>📡</span>
+          <span id="objective-text">DIRECTIVE: Sell 🔫 Guns &amp; 🦺 Cloth to Helldivers, haul (搬) 🧱 Ammo to Gate Alpha Turret, or build Factorio Conveyor Belts!</span>
         </div>
       </div>
+
+      <!-- RIGHT-SIDE ZOOM CONTROLS FOR BIG FACTORIO SHOP -->
+      <div id="zoom-controls">
+        <button class="hud-btn" id="btn-zoom-in" title="Zoom In">+</button>
+        <button class="hud-btn" id="btn-zoom-out" title="Zoom Out">−</button>
+        <button class="hud-btn" id="btn-zoom-reset" title="Reset Camera Zoom">🔍</button>
+      </div>
+
+      <!-- VIRTUAL JOYSTICK FOR PHONE / TOUCH -->
+      <div id="joystick-zone" title="Drag to move Commander">
+        <div id="joystick-base"></div>
+        <div id="joystick-knob"></div>
+      </div>
+
+      <!-- BOTTOM CONTROLS & INVENTORY BADGES -->
+      <footer id="hud-bottom">
+        <div class="controls-hint">
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px;">
+            <span class="version-pill" id="inv-badge-cloth">🦺 0</span>
+            <span class="version-pill" id="inv-badge-gun">🔫 0</span>
+            <span class="version-pill" id="inv-badge-resource">📦 0</span>
+            <span class="version-pill" id="inv-badge-equipment">🎒 0</span>
+            <span class="version-pill" id="inv-badge-vehicle">🚙 0</span>
+            <span class="version-pill" id="inv-badge-mech">🤖 0</span>
+            <span class="version-pill" id="inv-badge-warship">🚀 0</span>
+          </div>
+          <strong>2D FACTORIO + CARBOT:</strong> Sell <strong>🔫 Guns &amp; 🦺 Cloth</strong> at the Counter (or directly to customers!), haul (搬) <strong>🧱 Ammo</strong> to Gate Turrets or build <strong>Conveyor Belts</strong>, and defend all 3 Gates (HP = 0 means Defeat, keep <strong>🌟 Forever Skills</strong>!).
+        </div>
+
+        <div class="mobile-action-cluster">
+          <button class="action-circle-btn trash-btn" id="btn-clear-stack" title="Clear Hand Stack (R)">🗑️<span>DUMP</span></button>
+          <button class="action-circle-btn sprint-btn" id="btn-sprint" title="Jet-Boot Sprint Boost (Shift)">⚡<span>SPRINT</span></button>
+        </div>
+      </footer>
     </div>
 
-    <!-- SEAF Command & Factory Upgrades Modal -->
+    <!-- UPGRADES, CONVEYORS & RAW SPEED MODAL -->
     <div class="modal-backdrop" id="modal-seaf">
       <div class="modal-card">
         <div class="modal-header">
-          <h2>🪖 SEAF Recruitment &amp; Ministry of Defense Upgrades</h2>
-          <button class="modal-close-btn" id="btn-close-seaf">✕</button>
+          <div class="modal-title">🪖 SUPER EARTH LOGISTICS, RAW SPEED &amp; CONVEYORS</div>
+          <button class="modal-close-btn modal-close" id="btn-close-seaf">✕</button>
         </div>
         <div class="modal-body">
-          <p style="font-size:12px;color:#cbd5e1;line-height:1.45;">
-            Recruit <strong>SEAF (Super Earth Armed Forces)</strong> troopers to automatically haul Cloth (🦺), Liberator Guns (🔫), E-710 Supply Crates (📦), Shield Equipment (🛡️), Recon Vehicles (🚙 車), Patriot Mechs (🤖 機甲), and Orbital Warships (🚀 戰艦) to waiting Helldivers! Walk North out the Gate to hunt Automatons, plow E-710, and thaw frozen Helldivers!
+          <p style="font-size:0.84rem; color:#cbd5e1;">
+            Upgrade <strong>⛏️ Raw Material Drill Speed</strong>, hire <strong>🧱 SEAF Ammo Haulers (搬)</strong> &amp; <strong>🪖 Logistics Staff</strong>, or build automated <strong>Factorio Conveyor Belts</strong>:
           </p>
           <div class="upgrade-grid" id="upgrades-list"></div>
         </div>
       </div>
     </div>
 
-    <!-- LocalStorage Save Export / Import Modal (Module 3.3) -->
+    <!-- PERMANENT SKILL TREE MODAL (KEPT FOREVER EVEN AFTER DEFEAT!) -->
+    <div class="modal-backdrop" id="modal-skills">
+      <div class="modal-card">
+        <div class="modal-header">
+          <div class="modal-title">🌟 PERMANENT WARBOND SKILL TREE (KEPT FOREVER!)</div>
+          <button class="modal-close-btn modal-close" id="btn-close-skills">✕</button>
+        </div>
+        <div class="modal-body">
+          <div style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px; background:rgba(168,85,247,0.15); border:1px solid #a855f7; padding:10px 14px; border-radius:10px;">
+            <div>
+              <div style="font-family:var(--font-display); font-weight:900; color:#fde047; font-size:0.92rem;">
+                ⭐ PERMANENT WARBOND MEDALS: <span id="skill-modal-medals">3</span>
+              </div>
+              <div style="font-size:0.78rem; color:#e2e8f0;">
+                Earn ⭐ Medals every 5 customers served, by eliminating Hulks, or by exchanging $150 Requisition below. <strong>All Forever Skills persist even if a Gate falls!</strong>
+              </div>
+            </div>
+            <button class="buy-btn medal-btn" id="btn-buy-medal">
+              💱 Exchange $150 -&gt; +1 ⭐ Medal
+            </button>
+          </div>
+          <div class="upgrade-grid" id="skill-tree-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DEFEAT / GATE BREACHED MODAL (HP = 0 -> LOSE, KEEP PERMANENT SKILLS) -->
+    <div class="modal-backdrop" id="modal-defeat">
+      <div class="modal-card" style="border-color:#ef4444;">
+        <div class="modal-header" style="background:rgba(127, 29, 29, 0.95);">
+          <div class="modal-title" style="color:#fca5a5;">💥 DEFENSE GATE BREACHED — SECTOR OVERRUN!</div>
+        </div>
+        <div class="modal-body">
+          <p id="defeat-summary-text" style="font-size:0.95rem; color:#f8fafc; line-height:1.45;">
+            Automaton forces breached a Defense Gate (HP reached 0)! Your current factory sector was overrun, but High Command evacuated your <strong>⭐ Warbond Medals</strong> and <strong>🌟 Permanent Skill Tree</strong> upgrades!
+          </p>
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <button class="hud-btn btn-primary" id="btn-redeploy-now" style="font-size:0.9rem; padding:10px 18px;">
+              🔄 Redeploy New Factory (Keep Forever Skills!)
+            </button>
+            <button class="hud-btn btn-skill" id="btn-defeat-open-skills" style="font-size:0.9rem; padding:10px 18px;">
+              🌟 Spend Forever Medals First
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SAVE / LOAD MODAL -->
     <div class="modal-backdrop" id="modal-save">
       <div class="modal-card">
         <div class="modal-header">
-          <h2>💾 Super Earth Telemetry Save &amp; Export (v0.0.01)</h2>
-          <button class="modal-close-btn" id="btn-close-save">✕</button>
+          <div class="modal-title">💾 SAVE / EXPORT COMMAND PROGRESS (v0.0.02)</div>
+          <button class="modal-close-btn modal-close" id="btn-close-save">✕</button>
         </div>
         <div class="modal-body">
-          <p style="font-size:12px;color:#cbd5e1;">
-            Your factory expansion, Requisition Slips ($), and SEAF squad are auto-saved in your browser. Copy your Base64 save string below to back up or transfer across devices:
+          <p style="font-size:0.84rem; color:#cbd5e1;">
+            Your progress and <strong>🌟 Forever Skill Tree</strong> auto-save to browser storage. Copy or paste a Save Code below:
           </p>
-          <textarea class="save-textarea" id="save-code-box" spellcheck="false"></textarea>
-          <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;">
-            <div style="display:flex;gap:8px;">
-              <button class="hud-btn primary-cta" id="btn-copy-save">📋 Copy Save Code</button>
-              <button class="hud-btn" id="btn-import-save">📥 Load Save Code</button>
-            </div>
+          <textarea class="code-textarea" id="save-code-box" placeholder="Save code will appear here..."></textarea>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="hud-btn primary-cta btn-primary" id="btn-copy-save">📋 Copy Save Code</button>
+            <button class="hud-btn" id="btn-import-save">📥 Load Save Code</button>
             <button class="hud-btn" id="btn-reset-save" style="border-color:#ef4444;color:#f87171;">🗑️ Reset Factory</button>
           </div>
         </div>
       </div>
     </div>
+
+    <!-- GITHUB ZIP PACKAGER MODAL -->
+    <div class="modal-backdrop" id="modal-github">
+      <div class="modal-card">
+        <div class="modal-header">
+          <div class="modal-title">📦 GITHUB &amp; GITHUB PAGES REPOSITORY PACKAGER (v0.0.02)</div>
+          <button class="modal-close-btn modal-close" id="btn-close-github">✕</button>
+        </div>
+        <div class="modal-body">
+          <p style="font-size:0.85rem; color:#cbd5e1; line-height:1.45;">
+            Download a clean, modular GitHub repository archive ready for <strong>GitHub Pages</strong> deployment. Includes <code>index.html</code>, <code>css/style.css</code>, <code>js/config.js</code>, <code>js/audio.js</code>, <code>js/world.js</code>, <code>js/game.js</code>, and <code>README.md</code> (with full <code>v0.0.00</code>, <code>v0.0.01</code>, and <code>v0.0.02</code> changelog history).
+          </p>
+          <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:4px;">
+            <button class="upg-buy-btn hud-btn btn-primary" id="btn-ingame-dl-full">
+              📦 Download Full Package (.zip)
+            </button>
+            <button class="upg-buy-btn hud-btn btn-zip" id="btn-ingame-dl-update">
+              ⚡ Download Update-Only Code (.zip)
+            </button>
+          </div>
+          <div id="ingame-dl-status" style="font-size:0.8rem; color:#4ade80; margin-top:4px;"></div>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <!-- Modular Game Scripts (Relative Paths for GitHub Pages Compatibility) -->
+  <!-- Modular Game Scripts -->
   <script src="./js/config.js"></script>
   <script src="./js/audio.js"></script>
   <script src="./js/world.js"></script>

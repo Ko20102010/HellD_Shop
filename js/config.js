@@ -1,344 +1,527 @@
-/* ==========================================================================
-   HELLDIVERS PLEASE! — Super Earth Logistics & War-Zone Tycoon (v0.0.01)
-   js/config.js — Game Balance, Production Tiers, Solid Colliders & War Zone
-   ========================================================================== */
+// ============================================================================
+// HELLDIVERS PLEASE! — Super Earth Arsenal & 2D Factorio War-Zone Tycoon
+// Version: v0.0.02
+// Module: Configuration, 2D Factorio Map, 3 Gates, Conveyors & Permanent Skills
+// ============================================================================
 
-window.GAME_CONFIG = {
-  VERSION: 'v0.0.01',
-  STORAGE_KEY: 'helldivers_please_save_v2',
+window.GameConfig = {
+  VERSION: 'v0.0.02',
+  STORAGE_KEY: 'helldivers_please_save_v0002',
+  LEGACY_KEYS: ['helldivers_please_save_v0001', 'helldivers_please_save_v0000'],
 
-  // 8 Stackable Item Types (7 Shop War Materiel + War-Zone Harvested E-710 / Scrap)
-  ITEMS: {
-    cloth: {
-      id: 'cloth',
-      name: 'B-01 Tactical Cloth & Cape',
-      shortName: 'Cloth/Armor',
-      zhName: '基礎戰術布甲披風',
-      icon: '🦺',
-      price: 15,
-      color: 0xfbc02d,
-      accent: 0x1e293b,
-      tier: 1
-    },
-    gun: {
-      id: 'gun',
-      name: 'AR-23 Liberator Rifle',
-      shortName: 'Liberator Gun',
-      zhName: '解放者標準步槍',
-      icon: '🔫',
-      price: 20,
-      color: 0x475569,
-      accent: 0xfbc02d,
-      tier: 1
-    },
-    resource: {
-      id: 'resource',
-      name: 'E-710 Fuel & Ammo Pack',
-      shortName: 'E-710 / Supply',
-      zhName: 'E-710燃料與補給箱',
-      icon: '📦',
-      price: 30,
-      color: 0x22c55e,
-      accent: 0xfacc15,
-      tier: 1
-    },
-    equipment: {
-      id: 'equipment',
-      name: 'SH-32 Shield & Heavy Gear',
-      shortName: 'Shield Gear',
-      zhName: '能量護盾與重裝備',
-      icon: '🛡️',
-      price: 48,
-      color: 0x38bdf8,
-      accent: 0x0284c7,
-      tier: 2
-    },
-    vehicle: {
-      id: 'vehicle',
-      name: 'M-102 Fast Recon Vehicle (車)',
-      shortName: 'Recon Vehicle',
-      zhName: 'M-102 戰術偵察車',
-      icon: '🚙',
-      price: 90,
-      color: 0x65a30d,
-      accent: 0xfacc15,
-      tier: 3
-    },
-    mech: {
-      id: 'mech',
-      name: 'EXO-45 Patriot Exosuit (機甲)',
-      shortName: 'Patriot Mech',
-      zhName: 'EXO-45 愛國者機甲',
-      icon: '🤖',
-      price: 160,
-      color: 0xd97706,
-      accent: 0xef4444,
-      tier: 3
-    },
-    warship: {
-      id: 'warship',
-      name: 'Super Destroyer Warship Core (戰艦)',
-      shortName: 'Warship Core',
-      zhName: '超級驅逐艦艦體核心',
-      icon: '🚀',
-      price: 300,
-      color: 0xa855f7,
-      accent: 0x38bdf8,
-      tier: 4
-    }
+  // Expanded 2D Factorio + Carbot World Bounds (Center is 0,0)
+  // Shop Floor: y in [-220, +980], x in [-1250, +1250]
+  // Outer War Zone: y in [-1050, -220], x in [-1250, +1250]
+  WORLD: {
+    minX: -1240,
+    maxX: 1240,
+    minZ: -1020,
+    maxZ: 960,
+    wallZ: -220, // Perimeter defensive wall separating Shop Floor (z > -220) and War Zone (z < -220)
+    gateWidth: 150
   },
 
-  // Factory Production Stations inside the Shop Hangar (z: -8 to +9)
-  // Both Cloth (🦺) AND Gun (🔫) are 100% unlocked at start!
-  STATIONS: [
+  PLAYER: {
+    baseSpeed: 255,
+    sprintMultiplier: 1.55,
+    baseCapacity: 14,
+    pickupRadius: 88,
+    transferInterval: 0.065, // ~15 items/sec parabolic transfer
+    attackRange: 250,
+    attackCooldown: 0.22,
+    attackDamage: 26,
+    plowRadius: 95
+  },
+
+  // --------------------------------------------------------------------------
+  // RAW MATERIAL EXTRACTORS (Upgradable Generation Speed!)
+  // --------------------------------------------------------------------------
+  RAW_EXTRACTORS: [
     {
-      id: 'station_cloth',
-      itemType: 'cloth',
-      title: 'B-01 Cloth & Cape Loom',
-      zhTitle: '基礎布甲織造機',
-      unlockedByDefault: true,
+      id: 'raw_iron',
+      name: 'Super Iron Ore Drill',
+      shortName: 'Iron Drill',
+      icon: '⛏️',
+      color: '#38bdf8',
+      x: -920,
+      z: 660,
+      padX: -790,
+      padZ: 660,
+      baseCycleTime: 1.8,
+      baseUpgradeCost: 80,
+      costScale: 1.55,
+      maxBuffer: 20,
+      desc: 'Extracts raw Super Iron Ore to accelerate Gun, Vehicle & Mech assembly and feed the Munitions Press.'
+    },
+    {
+      id: 'raw_e710',
+      name: 'E-710 Hyper-Fuel Pump',
+      shortName: 'E-710 Pump',
+      icon: '🛢️',
+      color: '#a855f7',
+      x: -920,
+      z: 360,
+      padX: -790,
+      padZ: 360,
+      baseCycleTime: 2.0,
+      baseUpgradeCost: 100,
+      costScale: 1.55,
+      maxBuffer: 20,
+      desc: 'Refines raw E-710 fuel to accelerate Cloth, Stratagem, Exosuit & Destroyer output and turret ammo synthesis.'
+    }
+  ],
+
+  // --------------------------------------------------------------------------
+  // MUNITIONS PRESS (Produces Turret Ammo 🧱 for Gate Turrets!)
+  // Starts with manual hauling (搬) to Gate Turrets; upgradable to Conveyor Belts!
+  // --------------------------------------------------------------------------
+  AMMO_PRESS: {
+    id: 'ammo',
+    name: 'Munitions Ammo Press',
+    shortName: 'Ammo Press',
+    icon: '🧱',
+    color: '#f97316',
+    x: -640,
+    z: 60,
+    padX: -520,
+    padZ: 60,
+    baseCycleTime: 1.15,
+    maxBuffer: 30,
+    initialStock: 10,
+    desc: 'Synthesizes Heavy Turret Ammo (🧱). Carry (搬) ammo to Gate Turrets or build Factorio Conveyor Belts!'
+  },
+
+  // --------------------------------------------------------------------------
+  // THREE NORTHERN WAR-ZONE DEFENSE GATES (Start with 1, Expand to 3)
+  // Enemies attack active Gates. If ANY Gate HP reaches 0 -> Base Overrun (Lose)!
+  // --------------------------------------------------------------------------
+  GATES: [
+    {
+      id: 'gate_1',
+      index: 0,
+      name: 'Gate Alpha (Center)',
+      shortName: 'Gate Alpha',
+      x: 0,
+      z: -220,
+      turretX: 0,
+      turretZ: -150,
+      ammoPadX: -95,
+      ammoPadZ: -140,
+      unlockPadX: 0,
+      unlockPadZ: -140,
+      unlockedAtStart: true,
       unlockCost: 0,
-      machinePos: { x: -11.2, z: -5.2 },
-      shelfPos: { x: -8.2, z: -5.2 },
-      pickupPos: { x: -6.1, z: -5.2 },
-      craftInterval: 0.65,
-      maxShelf: 18,
-      wing: 'west'
+      baseMaxHp: 600,
+      turretName: 'A/AC-8 Dual Autocannon',
+      turretRange: 390,
+      turretFireRate: 0.42,
+      turretDamage: 38,
+      maxAmmo: 40,
+      initialAmmo: 18,
+      conveyorId: 'conv_gate_1',
+      conveyorCost: 180,
+      color: '#facc15',
+      desc: 'Primary central blast gate to the Automaton War Zone.'
     },
     {
-      id: 'station_gun',
-      itemType: 'gun',
-      title: 'AR-23 Liberator Gun Line',
-      zhTitle: '解放者步槍產線',
-      unlockedByDefault: true,
-      unlockCost: 0,
-      machinePos: { x: -11.2, z: -0.5 },
-      shelfPos: { x: -8.2, z: -0.5 },
-      pickupPos: { x: -6.1, z: -0.5 },
-      craftInterval: 0.72,
-      maxShelf: 18,
-      wing: 'west'
+      id: 'gate_2',
+      index: 1,
+      name: 'Gate Beta (West Wing)',
+      shortName: 'Gate Beta',
+      x: -620,
+      z: -220,
+      turretX: -620,
+      turretZ: -150,
+      ammoPadX: -715,
+      ammoPadZ: -140,
+      unlockPadX: -620,
+      unlockPadZ: -135,
+      unlockedAtStart: false,
+      unlockCost: 400,
+      baseMaxHp: 850,
+      turretName: 'A/MG-43 Heavy Gatling Sentry',
+      turretRange: 420,
+      turretFireRate: 0.28,
+      turretDamage: 32,
+      maxAmmo: 50,
+      initialAmmo: 25,
+      conveyorId: 'conv_gate_2',
+      conveyorCost: 260,
+      color: '#38bdf8',
+      desc: 'Unlocks the Western Front Gate, spawns +40% more Helldiver customers & rich Scrap veins!'
     },
     {
-      id: 'station_resource',
-      itemType: 'resource',
-      title: 'E-710 & Ammo Supply Line',
-      zhTitle: '戰略物資補給產線',
-      unlockedByDefault: false,
-      unlockCost: 60,
-      machinePos: { x: -11.2, z: 4.0 },
-      shelfPos: { x: -8.2, z: 4.0 },
-      pickupPos: { x: -6.1, z: 4.0 },
-      craftInterval: 0.85,
-      maxShelf: 16,
-      wing: 'west'
-    },
-    {
-      id: 'station_equipment',
-      itemType: 'equipment',
-      title: 'Shield & Stratagem Forge',
-      zhTitle: '護盾與重裝備鍛造台',
-      unlockedByDefault: false,
-      unlockCost: 140,
-      machinePos: { x: -11.2, z: 8.2 },
-      shelfPos: { x: -8.2, z: 8.2 },
-      pickupPos: { x: -6.1, z: 8.2 },
-      craftInterval: 1.0,
-      maxShelf: 16,
-      wing: 'west'
-    },
-    {
-      id: 'station_vehicle',
-      itemType: 'vehicle',
-      title: 'FRV Recon Vehicle Hangar (車)',
-      zhTitle: '戰術偵察車組裝廠',
-      unlockedByDefault: false,
-      unlockCost: 260,
-      machinePos: { x: 11.2, z: -5.2 },
-      shelfPos: { x: 8.2, z: -5.2 },
-      pickupPos: { x: 6.1, z: -5.2 },
-      craftInterval: 1.15,
-      maxShelf: 12,
-      wing: 'east'
-    },
-    {
-      id: 'station_mech',
-      itemType: 'mech',
-      title: 'EXO-45 Patriot Mech Gantry (機甲)',
-      zhTitle: '愛國者機甲重工架',
-      unlockedByDefault: false,
-      unlockCost: 480,
-      machinePos: { x: 11.2, z: -0.2 },
-      shelfPos: { x: 8.2, z: -0.2 },
-      pickupPos: { x: 6.1, z: -0.2 },
-      craftInterval: 1.35,
-      maxShelf: 10,
-      wing: 'east'
-    },
-    {
-      id: 'station_warship',
-      itemType: 'warship',
-      title: 'Orbital Warship Drydock (戰艦)',
-      zhTitle: '超級戰艦船塢',
-      unlockedByDefault: false,
+      id: 'gate_3',
+      index: 2,
+      name: 'Gate Gamma (East Wing)',
+      shortName: 'Gate Gamma',
+      x: 620,
+      z: -220,
+      turretX: 620,
+      turretZ: -150,
+      ammoPadX: 525,
+      ammoPadZ: -140,
+      unlockPadX: 620,
+      unlockPadZ: -135,
+      unlockedAtStart: false,
       unlockCost: 850,
-      machinePos: { x: 11.2, z: 4.8 },
-      shelfPos: { x: 8.2, z: 4.8 },
-      pickupPos: { x: 6.1, z: 4.8 },
-      craftInterval: 1.65,
-      maxShelf: 8,
-      wing: 'east'
+      baseMaxHp: 1200,
+      turretName: 'A/MLS-4X Railcannon Sentry',
+      turretRange: 460,
+      turretFireRate: 0.50,
+      turretDamage: 75,
+      maxAmmo: 60,
+      initialAmmo: 30,
+      conveyorId: 'conv_gate_3',
+      conveyorCost: 380,
+      color: '#f97316',
+      desc: 'Unlocks the Eastern Heavy Sector, high-value Hulk hunting & +60% Helldiver customer surge!'
     }
   ],
 
-  // Ground-Projected Unlockable Zones (Shop + Outer War Zone)
-  UNLOCK_ZONES: [
+  // --------------------------------------------------------------------------
+  // FACTORIO CONVEYOR BELT UPGRADES
+  // --------------------------------------------------------------------------
+  CONVEYORS: [
     {
-      id: 'unlock_resource',
-      type: 'station',
-      targetId: 'station_resource',
-      title: '📦 Unlock Supply Line',
-      cost: 60,
-      pos: { x: -6.1, z: 4.0 }
-    },
-    {
-      id: 'unlock_seaf_1',
-      type: 'seaf_hauler',
-      targetId: 'seaf_hauler_1',
-      title: '🪖 Hire SEAF Trooper #1',
-      cost: 80,
-      pos: { x: -3.2, z: -3.5 },
-      isSeaf: true
-    },
-    {
-      id: 'unlock_seaf_cashier',
-      type: 'seaf_cashier',
-      targetId: 'seaf_cashier_1',
-      title: '🎖️ Hire SEAF Cashier',
-      cost: 110,
-      pos: { x: -2.4, z: 1.8 },
-      isSeaf: true
-    },
-    {
-      id: 'unlock_equipment',
-      type: 'station',
-      targetId: 'station_equipment',
-      title: '🛡️ Unlock Shield Forge',
+      id: 'conv_raw_feed',
+      name: 'Raw Ore -> Factory & Ammo Belt',
+      icon: '⚙️',
       cost: 140,
-      pos: { x: -6.1, z: 8.2 }
+      padX: -780,
+      padZ: 210,
+      color: '#38bdf8',
+      desc: 'Connects Iron & E-710 Drills directly to the Munitions Press & Assembly Lines (+50% output speed)!'
     },
     {
-      id: 'unlock_war_turret',
-      type: 'war_turret',
-      targetId: 'sentry_turret_1',
-      title: '🔫 Build Gate Sentry Turret',
-      cost: 150,
-      pos: { x: -3.8, z: -12.0 },
-      isSeaf: true
-    },
-    {
-      id: 'unlock_table_2',
-      type: 'armory_pod',
-      targetId: 'pod_bay_2',
-      title: '🪑 Build Warming Bench #2',
+      id: 'conv_gate_1',
+      name: 'Ammo Belt -> Gate Alpha Turret',
+      icon: '⏩',
       cost: 180,
-      pos: { x: 3.8, z: 6.2 }
+      gateId: 'gate_1',
+      padX: -210,
+      padZ: -140,
+      color: '#facc15',
+      desc: 'Factorio conveyor belt automatically feeds 🧱 Ammo from the Munitions Press into Gate Alpha Turret!'
     },
     {
-      id: 'unlock_vehicle',
-      type: 'station',
-      targetId: 'station_vehicle',
-      title: '🚙 Unlock Vehicle Bay (車)',
+      id: 'conv_gate_2',
+      name: 'Ammo Belt -> Gate Beta Turret',
+      icon: '⏩',
       cost: 260,
-      pos: { x: 6.1, z: -5.2 }
+      gateId: 'gate_2',
+      padX: -820,
+      padZ: -140,
+      color: '#38bdf8',
+      desc: 'Factorio conveyor belt automatically feeds 🧱 Ammo into Gate Beta Turret (West)!'
     },
     {
-      id: 'unlock_seaf_2',
-      type: 'seaf_hauler',
-      targetId: 'seaf_hauler_2',
-      title: '🪖 Hire SEAF Heavy Crew #2',
+      id: 'conv_gate_3',
+      name: 'Ammo Belt -> Gate Gamma Turret',
+      icon: '⏩',
+      cost: 380,
+      gateId: 'gate_3',
+      padX: 410,
+      padZ: -140,
+      color: '#f97316',
+      desc: 'Factorio conveyor belt automatically feeds 🧱 Ammo into Gate Gamma Turret (East)!'
+    },
+    {
+      id: 'conv_counter_auto',
+      name: 'Factory -> Sales Counter Belt',
+      icon: '🛒',
       cost: 320,
-      pos: { x: 3.4, z: -3.5 },
-      isSeaf: true
-    },
-    {
-      id: 'unlock_mech',
-      type: 'station',
-      targetId: 'station_mech',
-      title: '🤖 Unlock Patriot Mech Bay (機甲)',
-      cost: 480,
-      pos: { x: 6.1, z: -0.2 }
-    },
-    {
-      id: 'unlock_warship',
-      type: 'station',
-      targetId: 'station_warship',
-      title: '🚀 Unlock Warship Dock (戰艦)',
-      cost: 850,
-      pos: { x: 6.1, z: 4.8 }
+      padX: -140,
+      padZ: 280,
+      color: '#22c55e',
+      desc: 'Factorio logistics belt automatically transfers finished Guns, Cloth & Gear to the Sales Counter!'
     }
   ],
 
-  // Upgrades in the SEAF Command & Logistics Modal
+  // --------------------------------------------------------------------------
+  // 7 ARSENAL PRODUCTION LINES (Both Cloth & Gun Unlocked at Start!)
+  // --------------------------------------------------------------------------
+  ITEMS: [
+    {
+      id: 'cloth',
+      tier: 1,
+      name: 'B-01 Tactical Cape & Armor',
+      shortName: 'Cape & Armor',
+      icon: '🦺',
+      color: '#facc15',
+      unlockedAtStart: true,
+      unlockCost: 0,
+      sellPrice: 25,
+      cycleTime: 1.5,
+      maxBuffer: 14,
+      initialStock: 4,
+      rawType: 'raw_e710',
+      stationPos: { x: -380, z: 420 },
+      pickupPos: { x: -260, z: 420 },
+      unlockPos: { x: -320, z: 420 },
+      description: 'Standard-issue titanium-weave Helldiver armor and cape. Unlocked at start!'
+    },
+    {
+      id: 'gun',
+      tier: 2,
+      name: 'AR-23 Liberator Rifle',
+      shortName: 'Liberator Gun',
+      icon: '🔫',
+      color: '#38bdf8',
+      unlockedAtStart: true,
+      unlockCost: 0,
+      sellPrice: 45,
+      cycleTime: 1.65,
+      maxBuffer: 14,
+      initialStock: 4,
+      rawType: 'raw_iron',
+      stationPos: { x: -380, z: 210 },
+      pickupPos: { x: -260, z: 210 },
+      unlockPos: { x: -320, z: 210 },
+      description: 'High-demand bullpup assault rifle for Helldiver squads. Unlocked & pre-stocked at start!'
+    },
+    {
+      id: 'resource',
+      tier: 3,
+      name: 'E-710 Munitions Crate',
+      shortName: 'Munitions Crate',
+      icon: '📦',
+      color: '#22c55e',
+      unlockedAtStart: false,
+      unlockCost: 150,
+      sellPrice: 75,
+      cycleTime: 2.1,
+      maxBuffer: 12,
+      initialStock: 3,
+      rawType: 'raw_e710',
+      stationPos: { x: -380, z: 630 },
+      pickupPos: { x: -260, z: 630 },
+      unlockPos: { x: -260, z: 630 },
+      description: 'Refined Element-710 fuel cells, stims, and high-explosive magazines.'
+    },
+    {
+      id: 'equipment',
+      tier: 4,
+      name: 'SH-32 Ballistic Jump Pack',
+      shortName: 'Tac-Equipment',
+      icon: '🎒',
+      color: '#a855f7',
+      unlockedAtStart: false,
+      unlockCost: 400,
+      sellPrice: 140,
+      cycleTime: 2.6,
+      maxBuffer: 10,
+      initialStock: 2,
+      rawType: 'raw_e710',
+      stationPos: { x: -40, z: 630 },
+      pickupPos: { x: 80, z: 630 },
+      unlockPos: { x: 80, z: 630 },
+      description: 'Personal shield generators, jump packs, and orbital laser beacons.'
+    },
+    {
+      id: 'vehicle',
+      tier: 5,
+      name: 'M-102 Fast Recon Vehicle (車)',
+      shortName: 'Recon Vehicle (車)',
+      icon: '🚙',
+      color: '#f97316',
+      unlockedAtStart: false,
+      unlockCost: 1100,
+      sellPrice: 310,
+      cycleTime: 3.3,
+      maxBuffer: 8,
+      initialStock: 2,
+      rawType: 'raw_iron',
+      stationPos: { x: 340, z: 660 },
+      pickupPos: { x: 340, z: 530 },
+      unlockPos: { x: 340, z: 530 },
+      description: 'All-terrain armored buggy mounted with a heavy twin-linked HMG.'
+    },
+    {
+      id: 'mech',
+      tier: 6,
+      name: 'EXO-45 Patriot Exosuit (機甲)',
+      shortName: 'Patriot Mech (機甲)',
+      icon: '🤖',
+      color: '#ef4444',
+      unlockedAtStart: false,
+      unlockCost: 2800,
+      sellPrice: 680,
+      cycleTime: 4.2,
+      maxBuffer: 6,
+      initialStock: 2,
+      rawType: 'raw_iron',
+      stationPos: { x: 680, z: 660 },
+      pickupPos: { x: 680, z: 530 },
+      unlockPos: { x: 680, z: 530 },
+      description: 'Heavy bipedal combat walker armed with rocket pods and rotary cannon.'
+    },
+    {
+      id: 'warship',
+      tier: 7,
+      name: 'SES Super Destroyer (Warship)',
+      shortName: 'Super Destroyer',
+      icon: '🚀',
+      color: '#ec4899',
+      unlockedAtStart: false,
+      unlockCost: 6500,
+      sellPrice: 1650,
+      cycleTime: 5.2,
+      maxBuffer: 5,
+      initialStock: 1,
+      rawType: 'raw_e710',
+      stationPos: { x: 980, z: 660 },
+      pickupPos: { x: 980, z: 530 },
+      unlockPos: { x: 980, z: 530 },
+      description: 'Orbital Battleship Warship charter packet with full 500kg Eagle bay.'
+    }
+  ],
+
+  // --------------------------------------------------------------------------
+  // MULTI-STALL SALES COUNTER & SKY-HIGH CASH TOWERS
+  // --------------------------------------------------------------------------
+  LOCATIONS: {
+    counterDropZone: { x: 120, z: 220, radius: 130 },
+    counterTable: { x: 260, z: 220, width: 220, depth: 340 },
+    cashRegisterZone: { x: 280, z: 450, radius: 125 },
+    trashCanZone: { x: -560, z: 460, radius: 75 },
+    customerSpawn: { x: 1120, z: 220 },
+    customerQueueStart: { x: 430, z: 220 },
+    customerQueueSpacing: 76,
+    customerExit: { x: 1120, z: -40 },
+    // War Zone Cryo-Pods (Thaw frozen Helldivers with E-710)
+    brazierWest: { x: -420, z: -560, radius: 95, cost: 3 },
+    brazierEast: { x: 420, z: -560, radius: 95, cost: 3 }
+  },
+
+  // --------------------------------------------------------------------------
+  // IN-RUN UPGRADES (SEAF Staff, Raw Speed, Turret Boosts)
+  // --------------------------------------------------------------------------
   UPGRADES: [
     {
-      id: 'playerSpeed',
-      title: 'Jet-Boot & Spore-Plow Servo',
-      desc: 'Increases Commander movement speed (+16%) & War-Zone plowing speed.',
-      icon: '⚡',
-      baseCost: 50,
-      costMult: 1.65,
-      maxLevel: 8
-    },
-    {
-      id: 'playerCapacity',
-      title: 'Exoskeletal Spine Rack',
-      desc: 'Increases Commander back-stack capacity (+6 items/tier, up to 60).',
-      icon: '🎒',
-      baseCost: 65,
-      costMult: 1.7,
-      maxLevel: 8
-    },
-    {
-      id: 'seafCount',
-      title: 'Recruit SEAF Logistics Trooper',
-      desc: 'Hires an additional autonomous SEAF soldier to haul gear.',
-      icon: '🪖',
+      id: 'raw_speed_boost',
+      name: 'Overclock Raw Material Drills',
+      icon: '⛏️',
       baseCost: 90,
-      costMult: 1.85,
-      maxLevel: 6,
-      isSeaf: true
+      costMultiplier: 1.55,
+      maxLevel: 15,
+      description: 'Increases Super Iron & E-710 Raw Extractor speed by +35% per level and speeds up Munitions Press.'
     },
     {
-      id: 'seafSpeed',
-      title: 'SEAF Tactical Drill & Stack',
-      desc: 'Boosts all SEAF Troopers speed (+18%) and carry stack (+3).',
-      icon: '🎖️',
-      baseCost: 85,
-      costMult: 1.75,
-      maxLevel: 6,
-      isSeaf: true
-    },
-    {
-      id: 'factorySpeed',
-      title: 'Super Earth Overclock & Weapon Damage',
-      desc: 'Accelerates factory assembly (+22%) & War-Zone auto-fire damage.',
-      icon: '⚙️',
+      id: 'seaf_ammo_hauler',
+      name: 'Hire SEAF Ammo Hauler (搬彈兵)',
+      icon: '🧱',
       baseCost: 110,
-      costMult: 1.8,
-      maxLevel: 8
+      costMultiplier: 1.65,
+      maxLevel: 6,
+      description: 'Deploys a Carbot SEAF Trooper who automatically carries (搬) 🧱 Ammo from the Munitions Press to Gate Turrets!'
     },
     {
-      id: 'requisitionBonus',
-      title: 'Ministry of Prosperity Grant',
-      desc: 'Helldivers pay +20% more Requisition Slips ($) per order.',
-      icon: '💵',
+      id: 'seaf_carrier',
+      name: 'Hire SEAF Logistics Trooper',
+      icon: '🪖',
+      baseCost: 120,
+      costMultiplier: 1.65,
+      maxLevel: 8,
+      description: 'Deploys an automated Carbot SEAF Trooper who hauls Guns, Cloth & Gear from factories to the Sales Counter.'
+    },
+    {
+      id: 'seaf_cashier',
+      name: 'Deploy Auto-Cashier Drone',
+      icon: '🤖',
+      baseCost: 220,
+      costMultiplier: 2.0,
+      maxLevel: 3,
+      description: 'Automatically serves queued Helldivers faster and streams Requisition bills straight to your account.'
+    },
+    {
+      id: 'player_boots',
+      name: 'Jump-Jet Servo Boots',
+      icon: '⚡',
+      baseCost: 100,
+      costMultiplier: 1.6,
+      maxLevel: 8,
+      description: 'Increases Commander movement speed (+14%/lvl) and War-Zone snowplow radius.'
+    },
+    {
+      id: 'player_exo_rig',
+      name: 'Heavy Back-Stack Rig',
+      icon: '🎒',
       baseCost: 130,
-      costMult: 1.85,
-      maxLevel: 6
+      costMultiplier: 1.65,
+      maxLevel: 8,
+      description: 'Adds +5 max carry capacity to your vertical back-stack per upgrade level.'
+    },
+    {
+      id: 'factory_overclock',
+      name: 'Super Uranium Factory Turbines',
+      icon: '⚙️',
+      baseCost: 180,
+      costMultiplier: 1.75,
+      maxLevel: 10,
+      description: 'Speeds up all 7 weapon, vehicle, mech, and warship assembly lines by +22% per level.'
     }
   ],
 
-  // Stratagem Sequence for Orbital Liberty Overdrive (↑ → ↓ ↓ ↓)
-  STRATAGEM_SEQUENCE: ['UP', 'RIGHT', 'DOWN', 'DOWN', 'DOWN']
+  // --------------------------------------------------------------------------
+  // PERMANENT SKILL TREE (KEPT FOREVER EVEN WHEN A GATE FALLS / LOSE!)
+  // Uses Warbond Medals (⭐) earned from serving customers, killing enemies,
+  // or converting Requisition ($REQ -> ⭐).
+  // --------------------------------------------------------------------------
+  PERMANENT_SKILLS: [
+    {
+      id: 'perm_gun_value',
+      name: 'High-Caliber Arsenal Contracts',
+      icon: '🔫',
+      baseMedalCost: 2,
+      costScale: 1.5,
+      maxLevel: 15,
+      desc: 'PERMANENT: +25% sale price on all Guns, Cloth, Vehicles, Mechs & Warships forever (kept after defeat).'
+    },
+    {
+      id: 'perm_raw_speed',
+      name: 'Deep-Mantle Tectonic Drills',
+      icon: '⛏️',
+      baseMedalCost: 2,
+      costScale: 1.5,
+      maxLevel: 15,
+      desc: 'PERMANENT: +35% Raw Material & Munitions Press generation speed forever.'
+    },
+    {
+      id: 'perm_gate_armor',
+      name: 'Super Titanium Gate Bulkheads',
+      icon: '🛡️',
+      baseMedalCost: 2,
+      costScale: 1.5,
+      maxLevel: 15,
+      desc: 'PERMANENT: +40% Max Gate HP on all 3 Gates and +6 HP/sec automatic Gate self-repair forever.'
+    },
+    {
+      id: 'perm_turret_power',
+      name: 'Orbital Autoloader Munitions',
+      icon: '🗼',
+      baseMedalCost: 3,
+      costScale: 1.6,
+      maxLevel: 12,
+      desc: 'PERMANENT: +35% Gate Turret damage and 25% chance per shot not to consume 🧱 Ammo forever.'
+    },
+    {
+      id: 'perm_start_grant',
+      name: 'Ministry Priority Drop Grant',
+      icon: '💰',
+      baseMedalCost: 3,
+      costScale: 1.6,
+      maxLevel: 10,
+      desc: 'PERMANENT: Start every new deployment (after defeat/reset) with +$250 Requisition and +4 Carry Capacity per level.'
+    },
+    {
+      id: 'perm_commander_elite',
+      name: 'Viper Commando Stim Infusion',
+      icon: '🦅',
+      baseMedalCost: 3,
+      costScale: 1.6,
+      maxLevel: 10,
+      desc: 'PERMANENT: +15% Commander & SEAF move speed and +35% personal rifle damage forever.'
+    }
+  ]
 };
