@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>HELLDIVERS PLEASE! — 2D Factorio, Mindustry &amp; Carbot Tycoon (v0.0.07)</title>
+  <title>HELLDIVERS PLEASE! — Super Destroyer Warship &amp; Mindustry War-Zone Tycoon (v0.0.08)</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
@@ -19,17 +19,15 @@
     <span id="conv_raw_feed" style="display:none;"></span>
 
     <div id="hud-layer">
-      <!-- TOP HUD (Mobile-First Compact Bar + Split Shop/War Switcher + Collapsible Drawer) -->
+      <!-- ====================================================================
+           ULTRA-MINIMALIST SINGLE-ROW TOP PILL BAR (< 8% SCREEN FOOTPRINT!)
+           90%+ of secondary stats, teleports & menus live inside #hud-menu-drawer
+           ==================================================================== -->
       <header id="hud-top">
         <div class="hud-row-main">
-          <div class="hud-group">
-            <div class="brand-badge">
-              <span>🦅</span>
-              <span class="brand-title">HELLDIVERS PLEASE!</span>
-              <span class="version-pill" id="hud-version">v0.0.07</span>
-            </div>
-
-            <div class="stat-pill cash-pill" id="cash-pill-el">
+          <!-- Left: Essential 3 Stats (Cash, Medals, Carry Stack) -->
+          <div class="hud-group hud-essentials">
+            <div class="stat-pill cash-pill" id="cash-pill-el" title="Requisition Slips ($)">
               <span>💵</span>
               <div>
                 <div class="stat-label">Requisition</div>
@@ -43,6 +41,40 @@
                 <div class="stat-label">Forever Medals</div>
                 <div class="stat-val" id="hud-medals">3</div>
               </div>
+            </div>
+
+            <div class="stat-pill" title="Commander Carry Stack">
+              <span>🎒</span>
+              <div>
+                <div class="stat-label">Carry Stack</div>
+                <div class="stat-val"><span id="hud-carry">3</span>/<span id="hud-carry-max">14</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Center: True Split Scene Switcher (Warship Shop vs. Planetary War Front) -->
+          <div id="mode-switcher-bar">
+            <button class="mode-tab-btn active-shop" id="btn-mode-shop" title="SES Super Destroyer Orbital Warship Shop &amp; 7 Production Lanes">
+              🏪 工廠 Shop Base
+            </button>
+            <button class="mode-tab-btn" id="btn-mode-war" title="Drop via Hellpod to Planetary 3-Layer War Front">
+              ⚔️ 戰場 War Front (<span id="hud-war-units-count">0</span>)
+            </button>
+          </div>
+
+          <!-- Right: Single Command Drawer Button (Hides 90%+ of UI clutter until tapped!) -->
+          <div class="hud-group">
+            <button class="hud-btn" id="btn-toggle-menu" title="Open/Close Super Destroyer Command Center">☰ 選單</button>
+          </div>
+        </div>
+
+        <!-- COLLAPSIBLE COMMAND CENTER DRAWER (Hidden by default on ALL screens until ☰ 選單 is tapped!) -->
+        <div class="hud-group" id="hud-menu-drawer">
+          <div class="drawer-section-header">
+            <div class="brand-badge">
+              <span>🚀</span>
+              <span class="brand-title">SES SUPER DESTROYER COMMAND</span>
+              <span class="version-pill" id="hud-version">v0.0.08</span>
             </div>
 
             <div class="stat-pill gate-pill" title="Wave &amp; Rest Timer">
@@ -62,14 +94,6 @@
               </div>
             </div>
 
-            <div class="stat-pill">
-              <span>🎒</span>
-              <div>
-                <div class="stat-label">Carry Stack</div>
-                <div class="stat-val"><span id="hud-carry">3</span>/<span id="hud-carry-max">14</span></div>
-              </div>
-            </div>
-
             <div class="stat-pill pill-seaf-served">
               <span>🪖</span>
               <div>
@@ -77,13 +101,35 @@
                 <div class="stat-val"><span id="hud-seaf">0</span> | <span id="hud-served">0</span></div>
               </div>
             </div>
-
-            <!-- Mobile Drawer Toggle Button (Visible on Phones <= 900px) -->
-            <button class="hud-btn" id="btn-toggle-menu" title="Open/Close Tactical Menu">☰ 選單</button>
           </div>
 
-          <!-- Collapsible Secondary Button Drawer (Inline on Desktop, Dropdown Drawer on Phone) -->
-          <div class="hud-group" id="hud-menu-drawer">
+          <!-- Primary Command & Mindustry Modals -->
+          <div class="drawer-row">
+            <button class="mode-tab-btn tab-bases" id="btn-mode-bases" title="Open Mindustry Multi-Base Planetary Sector Map">
+              🪐 多基地 Bases (<span id="hud-active-base-name">Alpha</span>)
+            </button>
+            <button class="mode-tab-btn tab-tech" id="btn-mode-tech" title="Open Mindustry Visual Node Tech Tree">
+              🌟 Mindustry 科技樹
+            </button>
+            <button class="hud-btn primary-cta btn-primary" id="btn-open-seaf">🪖 SEAF &amp; Upgrades</button>
+            <button class="hud-btn btn-skill" id="btn-open-loadout" title="Equip Weapons, Armor, Guard Dog Drone &amp; Mechs">
+              🛡️ 裝備 Loadout
+            </button>
+            <button class="hud-btn btn-char" id="btn-open-characters" title="Preview All 17 Carbot Ep1–Ep10+ Characters, Mechs &amp; Enemies">
+              🎭 角色 Preview
+            </button>
+            <button class="hud-btn btn-skill" id="btn-open-skills">🌟 Forever Skills</button>
+            <button class="hud-btn" id="btn-open-campaign" style="border-color:#fde047;color:#fde047;">🏆 戰役 &amp; 成就</button>
+          </div>
+
+          <!-- Quick Deck Teleports, Eagle-1 500KG Stratagem & System Controls -->
+          <div class="drawer-row">
+            <button class="hud-btn" id="btn-snap-quarry" title="Walk to Sector A Quarry">⛏️ 礦區</button>
+            <button class="hud-btn" id="btn-snap-factory" title="Walk to Sector B Factories">⚙️ 工廠</button>
+            <button class="hud-btn" id="btn-snap-counter" title="Walk to Sector C 7 Dedicated Counters">💵 櫃檯</button>
+            <button class="hud-btn" id="btn-snap-gates" title="Switch to Active Front Gate">🛡️ 城門</button>
+            <button class="hud-btn" id="btn-zoom-reset" title="Reset Camera Zoom">🔍</button>
+
             <div id="stratagem-card" style="display:flex;align-items:center;gap:3px;background:rgba(15,23,42,0.9);padding:3px 6px;border-radius:8px;border:1px solid #ef4444;">
               <button class="strat-arrow hud-btn" data-dir="UP" title="Tap UP" style="padding:2px 5px;">↑</button>
               <button class="strat-arrow hud-btn" data-dir="RIGHT" title="Tap RIGHT" style="padding:2px 5px;">→</button>
@@ -93,47 +139,37 @@
               <button class="strat-trigger-btn hud-btn btn-stratagem" id="btn-call-stratagem">🦅 500KG BOOST</button>
             </div>
 
-            <button class="hud-btn btn-char" id="btn-open-characters" title="Preview All 17 Carbot Ep1–Ep10+ Characters, Mechs &amp; Enemies">
-              🎭 角色 Preview
-            </button>
-            <button class="hud-btn btn-skill" id="btn-open-loadout" title="Equip Weapons, Armor, Guard Dog Drone &amp; Mechs">
-              🛡️ 裝備 Loadout
-            </button>
-            <button class="hud-btn primary-cta btn-primary" id="btn-open-seaf">🪖 SEAF &amp; Upgrades</button>
-            <button class="hud-btn btn-skill" id="btn-open-skills">🌟 Forever Skills</button>
-            <button class="hud-btn" id="btn-open-campaign" style="border-color:#fde047;color:#fde047;">🏆 戰役 &amp; 成就</button>
             <button class="hud-btn btn-zip" id="btn-open-github" style="border-color:#4ade80;color:#4ade80;">📦 GitHub ZIP</button>
             <button class="hud-btn" id="btn-open-save">💾 Save</button>
             <button class="hud-btn" id="btn-mute">🔊 Audio</button>
           </div>
-        </div>
 
-        <!-- ROW 2: SPLIT SHOP vs. WAR FRONT SWITCHER + MINDUSTRY BASES & TECH TREE SHORTCUTS -->
-        <div id="mode-switcher-bar">
-          <button class="mode-tab-btn active-shop" id="btn-mode-shop" title="Focus on Quarry, 7 Production Lanes &amp; 7 Sales Counters">
-            🏪 工廠 Shop Base
-          </button>
-          <button class="mode-tab-btn" id="btn-mode-war" title="Switch to 3-Layer War Front &amp; Deploy Combat Units!">
-            ⚔️ 戰場 War Front (<span id="hud-war-units-count">0</span>)
-          </button>
-          <button class="mode-tab-btn tab-bases" id="btn-mode-bases" title="Open Mindustry Multi-Base Planetary Sector Map">
-            🪐 多基地 Bases (<span id="hud-active-base-name">Alpha</span>)
-          </button>
-          <button class="mode-tab-btn tab-tech" id="btn-mode-tech" title="Open Mindustry Visual Node Tech Tree">
-            🌟 Mindustry 科技樹
-          </button>
+          <!-- Inventory Breakdown & Current Directive (Inside Drawer Only — Zero Screen Clutter!) -->
+          <div class="drawer-footer-info">
+            <div id="objective-ticker">
+              <div id="objective-banner">
+                <span>📡</span>
+                <span id="objective-text">DIRECTIVE: Harvest 🛢️ E-710 in Quarry Bay ➔ Feed 🦺 Cloth Hopper ➔ Sell at Counter #1!</span>
+              </div>
+            </div>
+            <div class="controls-hint">
+              <div style="display:flex;gap:5px;flex-wrap:wrap;">
+                <span class="version-pill" id="inv-badge-raw_iron" title="Raw Super Iron Ore">⛏️ 0</span>
+                <span class="version-pill" id="inv-badge-raw_e710" title="Raw E-710 Fuel">🛢️ 1</span>
+                <span class="version-pill" id="inv-badge-cloth">🦺 2</span>
+                <span class="version-pill" id="inv-badge-gun">🔫 0</span>
+                <span class="version-pill" id="inv-badge-resource">📦 0</span>
+                <span class="version-pill" id="inv-badge-equipment">🎒 0</span>
+                <span class="version-pill" id="inv-badge-vehicle">🚙 0</span>
+                <span class="version-pill" id="inv-badge-mech">🤖 0</span>
+                <span class="version-pill" id="inv-badge-warship">🚀 0</span>
+              </div>
+            </div>
+          </div>
         </div>
       </header>
 
-      <!-- OBJECTIVE & GATE ALERT BANNER -->
-      <div id="objective-ticker">
-        <div id="objective-banner">
-          <span>📡</span>
-          <span id="objective-text">DIRECTIVE: Harvest 🛢️ E-710 in Sector A ➔ Feed 🦺 Cloth Hopper ➔ Sell at Counter #1 or tap ⚔️ War Front!</span>
-        </div>
-      </div>
-
-      <!-- NEW IN v0.0.07: DEDICATED WAR-FRONT COMMAND DEPLOYMENT DOCK -->
+      <!-- DEDICATED WAR-FRONT COMMAND DEPLOYMENT DOCK (Visible ONLY in ⚔️ War Front Mode) -->
       <div id="war-command-dock">
         <button class="war-deploy-btn" id="btn-deploy-squad" title="Deploy Autonomous SEAF Rifleman (Uses 1x 🔫 Gun or $80)">
           <span>🪖 +SEAF Squad</span>
@@ -153,40 +189,20 @@
         </button>
       </div>
 
-      <!-- RIGHT-SIDE ZOOM & QUICK TELEPORT CONTROLS -->
+      <!-- ULTRA-CLEAN 2-BUTTON ZOOM PILL (Right Edge) -->
       <div id="zoom-controls">
         <button class="hud-btn" id="btn-zoom-in" title="Zoom In">+</button>
         <button class="hud-btn" id="btn-zoom-out" title="Zoom Out">−</button>
-        <button class="hud-btn" id="btn-zoom-reset" title="Reset Camera Zoom">🔍</button>
-        <button class="hud-btn" id="btn-snap-quarry" title="Walk to Sector A Quarry">⛏️ 礦區</button>
-        <button class="hud-btn" id="btn-snap-factory" title="Walk to Sector B Factories">⚙️ 工廠</button>
-        <button class="hud-btn" id="btn-snap-counter" title="Walk to Sector C 7 Dedicated Counters">💵 櫃檯</button>
-        <button class="hud-btn" id="btn-snap-gates" title="Switch to Active Front Gate">🛡️ 城門</button>
       </div>
 
-      <!-- VIRTUAL JOYSTICK FOR PHONE / TOUCH (Positioned cleanly above Safari bar) -->
-      <div id="joystick-zone" title="Drag here or drag anywhere on map to move Commander">
+      <!-- VIRTUAL JOYSTICK FOR PHONE / TOUCH -->
+      <div id="joystick-zone" title="Drag here or tap/drag anywhere on deck to move Commander">
         <div id="joystick-base"></div>
         <div id="joystick-knob"></div>
       </div>
 
-      <!-- BOTTOM CONTROLS & INVENTORY BADGES -->
+      <!-- COMPACT BOTTOM-RIGHT ACTION BUTTONS (Dump & Sprint Only) -->
       <footer id="hud-bottom">
-        <div class="controls-hint">
-          <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:4px;">
-            <span class="version-pill" id="inv-badge-raw_iron" title="Raw Super Iron Ore">⛏️ 0</span>
-            <span class="version-pill" id="inv-badge-raw_e710" title="Raw E-710 Fuel">🛢️ 1</span>
-            <span class="version-pill" id="inv-badge-cloth">🦺 2</span>
-            <span class="version-pill" id="inv-badge-gun">🔫 0</span>
-            <span class="version-pill" id="inv-badge-resource">📦 0</span>
-            <span class="version-pill" id="inv-badge-equipment">🎒 0</span>
-            <span class="version-pill" id="inv-badge-vehicle">🚙 0</span>
-            <span class="version-pill" id="inv-badge-mech">🤖 0</span>
-            <span class="version-pill" id="inv-badge-warship">🚀 0</span>
-          </div>
-          <strong>v0.0.07 (MOBILE + MINDUSTRY EDITION):</strong> Tap <strong>🏪 工廠 Shop</strong> or <strong>⚔️ 戰場 War Front</strong> to switch views, expand <strong>🪐 6 Mindustry Bases</strong>, and research the <strong>🌟 Visual Mindustry Tech Tree</strong>!
-        </div>
-
         <div class="mobile-action-cluster">
           <button class="action-circle-btn trash-btn" id="btn-clear-stack" title="Clear Hand Stack (R)">🗑️<span>DUMP</span></button>
           <button class="action-circle-btn sprint-btn" id="btn-sprint" title="Jet-Boot Sprint Boost (Shift)">⚡<span>SPRINT</span></button>
@@ -250,7 +266,7 @@
         </div>
         <div class="modal-body">
           <p style="font-size:0.82rem; color:#cbd5e1; line-height:1.4;">
-            Live 60FPS animated preview of all <strong>17 CarbotAnimations Helldivers 2 (Ep1–Ep10+) 2D vector characters, Smart SEAF Staff, Terminids (Scavenger Hunter, Charger, Bile Spewer, Bile Titan), Automatons (Trooper, Rocket Devastator, Flame-Saw Hulk, Factory Strider), Vehicles, Mechs, and Sentries</strong> in <code>v0.0.07</code>.
+            Live 60FPS animated preview of all <strong>17 CarbotAnimations Helldivers 2 (Ep1–Ep10+) 2D vector characters, Smart SEAF Staff, Terminids (Scavenger Hunter, Charger, Bile Spewer, Bile Titan), Automatons (Trooper, Rocket Devastator, Flame-Saw Hulk, Factory Strider), Vehicles, Mechs, and Sentries</strong> in <code>v0.0.08</code>.
           </p>
           <div class="char-showcase-grid" id="char-showcase-grid"></div>
         </div>
@@ -335,7 +351,7 @@
     <div class="modal-backdrop" id="modal-save">
       <div class="modal-card">
         <div class="modal-header">
-          <div class="modal-title">💾 SAVE / EXPORT COMMAND PROGRESS (v0.0.07)</div>
+          <div class="modal-title">💾 SAVE / EXPORT COMMAND PROGRESS (v0.0.08)</div>
           <button class="modal-close-btn modal-close" id="btn-close-save">✕</button>
         </div>
         <div class="modal-body">
@@ -356,12 +372,12 @@
     <div class="modal-backdrop" id="modal-github">
       <div class="modal-card">
         <div class="modal-header">
-          <div class="modal-title">📦 GITHUB &amp; GITHUB PAGES REPOSITORY PACKAGER (v0.0.07)</div>
+          <div class="modal-title">📦 GITHUB &amp; GITHUB PAGES REPOSITORY PACKAGER (v0.0.08)</div>
           <button class="modal-close-btn modal-close" id="btn-close-github">✕</button>
         </div>
         <div class="modal-body">
           <p style="font-size:0.84rem; color:#cbd5e1; line-height:1.45;">
-            Download a clean, modular GitHub repository archive ready for <strong>GitHub Pages</strong> deployment. Includes <code>index.html</code>, <code>css/style.css</code>, <code>js/config.js</code>, <code>js/audio.js</code>, <code>js/world.js</code>, <code>js/game.js</code>, and <code>README.md</code> (with full <code>v0.0.00</code>–<code>v0.0.07</code> changelog history).
+            Download a clean, modular GitHub repository archive ready for <strong>GitHub Pages</strong> deployment. Includes <code>index.html</code>, <code>css/style.css</code>, <code>js/config.js</code>, <code>js/audio.js</code>, <code>js/world.js</code>, <code>js/game.js</code>, and <code>README.md</code> (with full <code>v0.0.00</code>–<code>v0.0.08</code> changelog history).
           </p>
           <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:4px;">
             <button class="upg-buy-btn hud-btn btn-primary" id="btn-ingame-dl-full">

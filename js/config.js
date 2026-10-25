@@ -5,8 +5,8 @@
 // ============================================================================
 
 window.GameConfig = {
-  VERSION: 'v0.0.07',
-  STORAGE_KEY: 'helldivers_please_save_v0007',
+  VERSION: 'v0.0.08',
+  STORAGE_KEY: 'helldivers_please_save_v0008',
   MAX_LEVEL: 20,
 
   // Expanded 4600 x 4000 2D Factorio + Carbot World for 7 Full Horizontal Lanes
@@ -49,7 +49,7 @@ window.GameConfig = {
     {
       id: 'planet_1',
       index: 1,
-      name: 'Sector 1: Angel\'s Venture (安傑爾冒險星)',
+      name: 'Sector 1: Angels Venture (安傑爾冒險星)',
       waveStart: 1,
       waveEnd: 5,
       reqMult: 1.0,
@@ -143,7 +143,7 @@ window.GameConfig = {
     { id: 'ms_unlock_e710_pump', name: 'Element-710 Pipeline', desc: 'Unlock the Auto E-710 Fuel Pump (Lv.1+).', check: (g) => (g.rawExtractors.raw_e710?.level || 0) >= 1, rewardMedals: 1 },
     { id: 'ms_first_belt', name: 'Factorio Initiate', desc: 'Unlock your first Conveyor Belt (Lv.1+).', check: (g) => Object.values(g.conveyorLevels || {}).some((v) => v >= 1), rewardMedals: 2 },
     { id: 'ms_split_raw_belts', name: 'Dual-Resource Logistics', desc: 'Unlock both the E-710 Belt and Iron Belt (Lv.1+).', check: (g) => (g.conveyorLevels?.conv_raw_e710 >= 1) && (g.conveyorLevels?.conv_raw_iron >= 1), rewardMedals: 3 },
-    { id: 'ms_wave_5', name: 'Angel\'s Venture Veteran', desc: 'Clear Enemy Wave 5.', check: (g) => g.waveNumber > 5, rewardMedals: 3 },
+    { id: 'ms_wave_5', name: 'Angels Venture Veteran', desc: 'Clear Enemy Wave 5.', check: (g) => g.waveNumber > 5, rewardMedals: 3 },
     { id: 'ms_wave_15', name: 'Heeth Survivor', desc: 'Clear Enemy Wave 15.', check: (g) => g.waveNumber > 15, rewardMedals: 5 },
     { id: 'ms_wave_30', name: 'Hero of Tien Kwan', desc: 'Clear Enemy Wave 30.', check: (g) => g.waveNumber > 30, rewardMedals: 8 },
     { id: 'ms_wave_50', name: 'Legend of Malevelon Creek', desc: 'Clear Enemy Wave 50.', check: (g) => g.waveNumber > 50, rewardMedals: 15 },
@@ -1158,6 +1158,9 @@ window.GameConfig = {
   LOCATIONS: {
     armoryLoadoutPad: { x: -160, z: -40, radius: 95 },
     trashCanZone: { x: -1820, z: 1680, radius: 85 },
+    cashRegisterZone: { x: 720, z: 120, radius: 105 },
+    counterDropZone: { x: 310, z: 120, radius: 105 },
+    customerQueueStart: { x: 920, z: 120 },
     customerSpawn: { x: 2050, z: 660 },
     customerExit: { x: 2050, z: -60 },
     brazierWest: { x: -760, z: -1540, radius: 95, cost: 3 },

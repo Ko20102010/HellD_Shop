@@ -1,36 +1,38 @@
-# HELLDIVERS PLEASE! — Super Earth Arsenal, Mindustry Multi-Base & 2D Factorio Tycoon (`v0.0.07`)
+# HELLDIVERS PLEASE! — SES Super Destroyer Warship, Mindustry Multi-Base & 2D Factorio Tycoon (`v0.0.08`)
 
 An arcade factory-automation, Mindustry multi-base logistics, and 3-layer sequential war-front web game inspired by **Burger Please!**, **Whiteout Survival Playable Ads**, **Factorio**, **Mindustry**, and **CarbotAnimations' Helldivers 2 cartoons** (across **all episodes Ep1–Ep10+**, including [Pro vs Noobs | Helldivers 2 Ep7](http://www.youtube.com/watch?v=bn0GTO_zvAg)), built from the [Modular Game Prompt Library](https://docs.google.com/document/d/1ZoW7Oou5QpTyvwD6vrczKuXv0nW42JgLJC-au62H7Pw/edit?usp=drivesdk&ouid=114024991701964609548).
 
 ---
 
-## 🎮 Core Gameplay Features (`v0.0.07` — Mobile-First HUD, Mindustry Multi-Base, Visual Tech Tree & Split Shop/War Front Edition)
+## 🎮 Core Gameplay Features (`v0.0.08` — Minimalist 1-Row HUD, True Split Scenes, SES Super Destroyer Warship Deck & Freeze Fix Edition)
 
-1. **Mobile-First Playable Portrait HUD (`100% Phone-Playable — Collapsible ☰ Menu Drawer & Pinch Zoom`)**:
-   - On mobile phones (`<= 900px`), the top HUD condenses into a sleek 2-row micro-bar (`<10%` of screen height) while all secondary modal buttons collapse into a toggleable **`☰ 選單 (Menu)`** drawer so **88%+ of the mobile screen is unobstructed 2D Canvas**.
-   - Repositioned the Virtual Joystick cleanly above the iOS Safari bottom toolbar, added **2-finger Pinch-to-Zoom**, and auto-scaled the portrait mobile camera zoom (`0.36x`) so the factory and war front are immediately readable on phones.
-2. **Split Shop vs. War Front Architecture + 4 Dedicated War-Only Functions (`🏪 工廠 Shop Base` | `⚔️ 戰場 War Front`)**:
-   - Switch instantly between **`🏪 工廠 Shop Base`** (Quarry, 7 Production Lanes, and 7 Dedicated Item Counters) and **`⚔️ 戰場 War Front`** (3-Layer Defense Corridor + **`#war-command-dock`**).
-   - **4 New War-Only Tactical Functions** bridge your Factory output directly into active War Front combat:
-     - **`🪖 +SEAF Squad`**: Consumes `1x 🔫 Gun` from your factory/counter (or `$80`) to deploy an autonomous Carbot SEAF Rifleman on the War Front.
-     - **`🚙 +Recon Buggy`**: Consumes `1x 🚙 Vehicle` (or `$180`) to deploy an autonomous HMG Recon Buggy patrolling the active Front Gate.
-     - **`🤖 +Patriot Mech`**: Consumes `1x 🤖 Patriot Mech` (or `$320`) to deploy a heavy bipedal Exosuit Walker that fires rockets and miniguns at Bile Titans, Hulks, and Factory Striders.
-     - **`💚 Mend Tower (Lv.0–20)`**: Builds Mindustry-style green **Mend Projectors** behind all 3 Gate Layers that continuously heal Gate HP and reload turret ammo.
-3. **Mindustry Multi-Base Planetary Sector Network (`🪐 多基地 Bases` — 6 Conquerable Sector Bases)**:
-   - Establish and switch between **6 Planetary Sector Bases** (*Sector Alpha-01: Angel's Venture Core*, *Sector Beta-02: Heeth Cryo-Refinery*, *Sector Gamma-03: Tien Kwan Mech Foundry*, *Sector Delta-04: Malevelon Creek Fortress*, *Sector Epsilon-05: Meridia Bio-Core*, and *Sector Zeta-06: Cyberstan Mega-Citadel*).
-   - Each base features distinct resource deposit multipliers (`⛏️ Iron`, `🛢️ E-710`, `💵 Sell Value`) and operates a **Mindustry Orbital Launch Pad** that passively beams `$REQ/s`, `🛢️ E-710`, `⛏️ Iron`, and `🧱 Ammo` to your active base!
-4. **Mindustry-Style Visual Node Tech Tree (`🌟 Mindustry 科技樹` — 13 Connected Schematic Nodes)**:
-   - Interactive 2D schematic canvas starting from **`🏛️ Core: Super Earth Shard`** with parent-to-child conduit pipes branching across **Extraction & Launch Pads**, **Silicon Foundry & Overdrive Dome**, **Plastanium Walls & Mend Projectors**, and **Commander & Allied War Units** (researchable with either `⭐ Medals` or `💵 $REQ`).
+1. **Instant Playability & 60FPS Loop Protection (`Fixed Freeze on Open`)**:
+   - Fixed the frame-1 `LOCATIONS.cashRegisterZone` undefined reference that halted the `requestAnimationFrame` loop on load in `v0.0.07`, and wrapped the 60FPS update/render loop in defensive error guards so gameplay never freezes.
+2. **Ultra-Clean Minimalist 1-Row Top Pill Bar (`< 8%` Screen Footprint — 90%+ of UI Hidden by Default)**:
+   - **Single Top Pill Bar**: Displays only the essentials during active gameplay: **`💵 $Cash`**, **`⭐ Medals`**, **`🎒 Carry`**, **`🏪 工廠 Shop Base`** | **`⚔️ 戰場 War Front`**, and **`☰ 選單`**.
+   - **Unified Command Center Drawer (`☰ 選單`)**: Over 90% of secondary stats, wave/gate status pills, quick teleports, inventory badges, and modal buttons (`🪐 多基地 Bases`, `🌟 Mindustry 科技樹`, `🪖 SEAF & Upgrades`, `🛡️ 裝備 Loadout`, `🎭 角色 Preview`, `🦅 500KG`, `📦 GitHub ZIP`, `💾 Save`) stay tucked inside the collapsible drawer until tapped.
+   - **Proximity-Aware World Labels**: Floor pads on the 2D canvas show only a clean 1-line icon + cost/stock badge from afar, revealing their detailed 2nd-line recipe/subtitle only when your Commander stands within `250px`.
+3. **True Split Scene Rendering (`🏪 Shop Base` vs. `⚔️ War Front` — Zero Visual Bleed)**:
+   - When **`🏪 工廠 Shop Base`** is active, the canvas renders **ONLY the SES Super Destroyer Orbital Warship Deck**—the Planetary War Zone and 3 Gate Layers are completely separated and never visible above the shop.
+   - When **`⚔️ 戰場 War Front`** is active, the canvas renders **ONLY the Planetary 3-Layer Defense Corridor** (Gates 3/2/1, Dual Sentries, Mindustry Mend Projectors, Allied Squads/Buggies/Mechs, and Enemies), while both simulations continue running in the background.
+4. **Authentic *Helldivers 2* SES Super Destroyer Orbital Warship Shop Deck**:
+   - The Shop is housed aboard an orbital **SES Super Destroyer Warship** complete with a **deep-space twinkling starfield**, **glowing planetary horizon curvature in low orbit**, **2 flanking allied Super Destroyers (`SES Wings of Liberty` & `SES Fist of Democracy`)**, **4 stern ion thruster plumes**, **forward panoramic bridge viewport windows**, the **Galactic War Holotable & Mindustry Core**, and **4 glowing Hellpod Drop Tubes**.
 
 ---
 
-## 📜 Complete Version History & Changelog (`v0.0.00` – `v0.0.07`)
+## 📜 Complete Version History & Changelog (`v0.0.00` – `v0.0.08`)
+
+### `v0.0.08` — Startup Freeze Fix, Minimalist 1-Row HUD (90%+ Clutter Hidden), True Split Scene Rendering & SES Super Destroyer Warship Deck
+- **Fixed Game Freeze on Open (`LOCATIONS.cashRegisterZone` Fix)**: Restored safe `cashRegisterZone`, `counterDropZone`, and `customerQueueStart` coordinates in `GameConfig.LOCATIONS` and added defensive guards in `updatePlayerInteractions()` and `loop(now)` so the 60FPS loop runs immediately on startup.
+- **Minimalist Single-Row Floating HUD (`< 8%` Screen Footprint)**: Moved over 90% of always-on HUD banners, wave/gate status pills, quick teleports, and modal buttons into the collapsible **`☰ 選單`** Command Drawer, leaving only a single sleek top pill bar (`💵`, `⭐`, `🎒`, `🏪 Shop`, `⚔️ War`, `☰ 選單`) and proximity-aware 2D pad labels.
+- **True Split Scene Rendering (`Shop` vs. `War`)**: Completely separated Shop rendering (`drawSuperDestroyerWarshipDeck`) and War rendering (`drawPlanetaryWarFrontTerrain`) so the War Zone is never visible from the Shop Deck and player movement is cleanly bounded to the active scene.
+- ***Helldivers 2* SES Super Destroyer Orbital Warship Background**: Redesigned the Shop environment as an orbital Super Destroyer warship interior & hull with deep-space starfield, glowing planetary limb, flanking allied Destroyers, stern ion thrusters, bridge viewports, and 4 Hellpod launch tubes.
 
 ### `v0.0.07` — Mobile-First Portrait HUD Fix, Mindustry Multi-Base Sector Network, Mindustry Visual Node Tech Tree & Split Shop / War Front Architecture
-- **Fixed Mobile Phone Playability (`image.png` Fix)**: Collapsed the 9 rows of wrapping top buttons on mobile screens into a toggleable **`☰ 選單 (Menu)`** drawer, hid verbose stat labels on narrow screens so all key stats fit on a single compact row, raised the Virtual Joystick above the mobile browser bottom bar, and added 2-finger pinch-to-zoom + `0.36x` mobile default zoom.
+- **Mobile Portrait HUD Drawer & Pinch Zoom**: Added collapsible menu drawer (`☰ 選單`) and 2-finger pinch-to-zoom.
 - **Mindustry Multi-Base System (`🪐 多基地 Bases`)**: Added 6 conquerable/switchable Planetary Sector Bases (`Alpha` through `Zeta`) with per-base deposit multipliers (`⛏️ Iron`, `🛢️ E-710`, `💵 Sell Price`) and background **Orbital Launch Pad** exports (`+$REQ/s`, `+🛢️`, `+⛏️`, `+🧱`).
 - **Mindustry Visual Node Tech Tree (`🌟 Mindustry 科技樹`)**: Built an interactive 2D node-and-branch schematic tech tree (`#mindustry-tree-canvas`) rooted at `Core: Super Earth Shard` with 13 connected research nodes across 4 branches.
-- **Split Shop vs. War Front Mode Switcher + 4 War-Only Functions**: Added a 1-tap `🏪 工廠 Shop Base` / `⚔️ 戰場 War Front` mode switcher and the **War Command Deployment Dock** (`🪖 +SEAF Squad`, `🚙 +Recon Buggy`, `🤖 +Patriot Mech`, and `💚 Mindustry Mend Tower`).
+- **Split Shop vs. War Front Mode Switcher + 4 War-Only Functions**: Added `🏪 工廠 Shop Base` / `⚔️ 戰場 War Front` mode switcher and the **War Command Deployment Dock** (`🪖 +SEAF Squad`, `🚙 +Recon Buggy`, `🤖 +Patriot Mech`, and `💚 Mindustry Mend Tower`).
 
 ### `v0.0.06` — All-Episode Carbot Art (`Ep1–Ep10+`), Real-Item-Only Split Belts, 7 Dedicated Item Counters & Smart SEAF AI
 - **All-Episode CarbotAnimations Art (`Ep1–Ep10+`)**: Added Scavenger Hunter Bug, Bile Spewer, Bile Titan Boss, Rocket Devastator, Factory Strider Mega-Boss, Eagle-1 500KG Flyover Jet Shadow, and 17 animated units in `🎭 角色 Preview`.

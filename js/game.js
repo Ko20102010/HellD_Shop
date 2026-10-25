@@ -1,6 +1,6 @@
 // ============================================================================
 // HELLDIVERS PLEASE! — Super Earth Arsenal & 2D Factorio War-Zone Tycoon
-// Version: v0.0.07 (All-Episode Carbot Art, Real-Item-Only Split Belts,
+// Version: v0.0.08 (All-Episode Carbot Art, Real-Item-Only Split Belts,
 //                   7 Dedicated Item Counters & Smart SEAF AI Edition)
 // Module: Core Simulation, Anti-Crush Obstacle Ejection, 1-Item Start,
 //         Real-Packet Belt System (No Fake Items on Empty Belts),
@@ -743,8 +743,19 @@
       this.ejectEntityFromObstacles(entity, radius);
 
       const W = CFG.WORLD;
+      let minZBound = W.minZ + 32;
+      let maxZBound = W.maxZ - 32;
+      if (entity === this.player) {
+        if (this.viewMode === 'war') {
+          minZBound = W.minZ + 32;
+          maxZBound = -130;
+        } else {
+          minZBound = -105;
+          maxZBound = 1880;
+        }
+      }
       const nx = Math.max(W.minX + 32, Math.min(W.maxX - 32, entity.x + dx));
-      const nz = Math.max(W.minZ + 32, Math.min(W.maxZ - 32, entity.z + dz));
+      const nz = Math.max(minZBound, Math.min(maxZBound, entity.z + dz));
 
       let canX = true;
       for (const b of this.obstacles) {
@@ -769,11 +780,15 @@
       const dt = Math.min(0.08, Math.max(0.001, (now - this.lastTime) / 1000));
       this.lastTime = now;
 
-      if (!this.isDefeated) {
-        this.update(dt);
+      try {
+        if (!this.isDefeated) {
+          this.update(dt);
+        }
+        this.world.render(this, dt);
+        this.renderCharacterShowcaseFrame(dt);
+      } catch (err) {
+        console.error('Game loop frame error:', err);
       }
-      this.world.render(this, dt);
-      this.renderCharacterShowcaseFrame(dt);
 
       requestAnimationFrame((t) => this.loop(t));
     }
@@ -1302,7 +1317,7 @@
       }
 
       // Fallback: if cashOnGround was set directly by tests/legacy, allow collecting near Counter #1
-      if (this.cashOnGround > 0 && Math.hypot(p.x - L.cashRegisterZone.x, p.z - L.cashRegisterZone.z) < L.cashRegisterZone.radius) {
+      if (this.cashOnGround > 0 && L.cashRegisterZone && Math.hypot(p.x - L.cashRegisterZone.x, p.z - L.cashRegisterZone.z) < L.cashRegisterZone.radius) {
         const collect = this.cashOnGround;
         this.cash += collect;
         for (const k of Object.keys(this.counterCash)) this.counterCash[k] = 0;
@@ -3528,14 +3543,17 @@
         this.world.setZoom(0.54);
       });
 
-      // Quick Teleport / Camera Snap Buttons for the 4600x4000 Base
+      // Quick Teleport / Camera Snap Buttons for the Super Destroyer Deck
       document.getElementById('btn-snap-quarry')?.addEventListener('click', () => {
+        if (this.viewMode !== 'shop') this.setViewMode('shop');
         this.pointerTarget = { x: -1650, z: 420 };
       });
       document.getElementById('btn-snap-factory')?.addEventListener('click', () => {
+        if (this.viewMode !== 'shop') this.setViewMode('shop');
         this.pointerTarget = { x: -450, z: 390 };
       });
       document.getElementById('btn-snap-counter')?.addEventListener('click', () => {
+        if (this.viewMode !== 'shop') this.setViewMode('shop');
         this.pointerTarget = { x: 520, z: 390 };
       });
       document.getElementById('btn-snap-gates')?.addEventListener('click', () => {

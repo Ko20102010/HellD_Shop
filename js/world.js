@@ -56,6 +56,21 @@
         this.craters.push({ x: rx, z: rz, r: rad });
       }
 
+      // Deep-space starfield for SES Super Destroyer Orbital Warship backdrop
+      this.spaceStars = [];
+      for (let i = 0; i < 140; i++) {
+        const s1 = (i * 7919 + 104729) % 100000;
+        const s2 = (i * 15485863 + 32452843) % 100000;
+        this.spaceStars.push({
+          x: -3600 + (s1 / 100000) * 7600,
+          z: -1400 + (s2 / 100000) * 4400,
+          r: 1.2 + (i % 4) * 0.9,
+          speed: 1.5 + (i % 5) * 0.7,
+          color: i % 7 === 0 ? '#38bdf8' : (i % 5 === 0 ? '#fde047' : '#f8fafc')
+        });
+      }
+      this.lastPlayerPos = { x: -100, z: 220 };
+
       this.handleResize();
       window.addEventListener('resize', () => this.handleResize());
 
@@ -173,7 +188,10 @@
       ctx.save();
       ctx.scale(this.dpr, this.dpr);
 
-      ctx.fillStyle = '#090d14';
+      this.lastPlayerPos = { x: state.player.x, z: state.player.z };
+      const isWarMode = state.viewMode === 'war';
+
+      ctx.fillStyle = isWarMode ? '#090d14' : '#03060c';
       ctx.fillRect(0, 0, this.width, this.height);
 
       ctx.save();
@@ -181,22 +199,35 @@
       ctx.scale(this.zoom, this.zoom);
       ctx.translate(-this.camX, -this.camZ);
 
-      this.drawTerrainAndGrid(ctx, state);
-      this.drawConveyorNetwork(ctx, state);
-      this.drawFloorPads(ctx, state);
-      this.drawThreeLayerGates(ctx, state);
-      this.drawRawQuarryAndAmmoPress(ctx, state);
-      this.drawArsenalFactories(ctx, state);
-      this.drawDedicatedCountersAndCash(ctx, state);
-      this.drawBeltPackets(ctx, state);
-      this.drawWarZoneObjects(ctx, state);
-      this.drawSortedEntities(ctx, state);
-      this.drawProjectilesAndArcs(ctx, state);
-      this.drawEagleFlyover(ctx, state);
+      if (isWarMode) {
+        // TRUE SPLIT WAR FRONT SCENE: Render ONLY the Planetary 3-Layer War Front!
+        this.drawPlanetaryWarFrontTerrain(ctx, state);
+        this.drawConveyorNetwork(ctx, state, 'war');
+        this.drawFloorPads(ctx, state, 'war');
+        this.drawThreeLayerGates(ctx, state);
+        this.drawBeltPackets(ctx, state, 'war');
+        this.drawWarZoneObjects(ctx, state);
+        this.drawSortedEntities(ctx, state, 'war');
+        this.drawProjectilesAndArcs(ctx, state);
+        this.drawEagleFlyover(ctx, state);
+      } else {
+        // TRUE SPLIT SHOP SCENE: Render ONLY the SES Super Destroyer Orbital Warship Deck!
+        this.drawSuperDestroyerWarshipDeck(ctx, state);
+        this.drawConveyorNetwork(ctx, state, 'shop');
+        this.drawFloorPads(ctx, state, 'shop');
+        this.drawRawQuarryAndAmmoPress(ctx, state);
+        this.drawArsenalFactories(ctx, state);
+        this.drawDedicatedCountersAndCash(ctx, state);
+        this.drawBeltPackets(ctx, state, 'shop');
+        this.drawSortedEntities(ctx, state, 'shop');
+        this.drawProjectilesAndArcs(ctx, state);
+      }
       ctx.restore();
 
-      // Draw Live Tactical Mini-Map Radar in Screen Space (Bottom-Right above buttons)
-      this.drawMiniMapRadar(ctx, state);
+      // Draw Live Tactical Mini-Map Radar on wider screens only
+      if (this.width >= 900) {
+        this.drawMiniMapRadar(ctx, state);
+      }
 
       ctx.restore();
     }
@@ -551,38 +582,295 @@
     }
 
     // ========================================================================
-    // 1. TERRAIN, SECTORS & 3-LAYER WAR CORRIDOR (4600 x 4000 ZERO OVERLAP)
+    // 1A. SES SUPER DESTROYER ORBITAL WARSHIP DECK (SHOP MODE — NO WAR ZONE!)
+    //     Authentic Helldivers 2 Orbital Warship Bridge, Hull, Starfield & Planet
     // ========================================================================
-    drawTerrainAndGrid(ctx, state) {
+    drawSuperDestroyerWarshipDeck(ctx, state) {
+      const activeBaseCfg = state.getActiveBaseConfig ? state.getActiveBaseConfig() : { color: '#38bdf8', code: 'SECTOR ALPHA-01', floorTint: '#111927' };
+      const planetColor = activeBaseCfg.color || '#38bdf8';
+
+      // 1. Deep Space Starfield Backdrop around the Super Destroyer
+      ctx.fillStyle = '#03060d';
+      ctx.fillRect(-3800, -1600, 8000, 4600);
+
+      for (let i = 0; i < this.spaceStars.length; i++) {
+        const st = this.spaceStars[i];
+        const twinkle = 0.45 + 0.55 * Math.sin(this.time * st.speed + i);
+        ctx.fillStyle = st.color;
+        ctx.globalAlpha = twinkle;
+        ctx.beginPath();
+        ctx.arc(st.x, st.z, st.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1.0;
+
+      // 2. Glowing Planetary Horizon Limb in Low Orbit ahead of the Warship Bow (z < -200)
+      ctx.save();
+      const limbGrad = ctx.createRadialGradient(0, -2500, 1400, 0, -2500, 2380);
+      limbGrad.addColorStop(0, '#071324');
+      limbGrad.addColorStop(0.76, '#0c223d');
+      limbGrad.addColorStop(0.93, planetColor);
+      limbGrad.addColorStop(0.97, 'rgba(56, 189, 248, 0.25)');
+      limbGrad.addColorStop(1, 'rgba(3, 6, 13, 0)');
+      ctx.fillStyle = limbGrad;
+      ctx.beginPath();
+      ctx.arc(0, -2500, 2380, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      // 3. Flanking Allied SES Super Destroyers cruising in Low Orbit (Port & Starboard)
+      this.drawAlliedOrbitingDestroyer(ctx, -2560, 420 + Math.sin(this.time * 0.6) * 25, 0.85, 'SES WINGS OF LIBERTY');
+      this.drawAlliedOrbitingDestroyer(ctx, 2660, 680 + Math.cos(this.time * 0.5) * 25, 0.85, 'SES FIST OF DEMOCRACY');
+
+      // 4. Main SES Super Destroyer Outer Armored Hull Silhouette & Stern Engine Thrusters
+      ctx.save();
+      // Ion Engine Plumes at the Stern (z = 1970)
+      for (const ex of [-1150, -450, 450, 1150]) {
+        const thrustLen = 190 + Math.sin(this.time * 16 + ex) * 28;
+        const tGrad = ctx.createLinearGradient(ex, 1960, ex, 1960 + thrustLen);
+        tGrad.addColorStop(0, '#38bdf8');
+        tGrad.addColorStop(0.4, 'rgba(56, 189, 248, 0.55)');
+        tGrad.addColorStop(1, 'rgba(56, 189, 248, 0)');
+        ctx.fillStyle = tGrad;
+        ctx.beginPath();
+        ctx.moveTo(ex - 95, 1960);
+        ctx.lineTo(ex + 95, 1960);
+        ctx.lineTo(ex + 45, 1960 + thrustLen);
+        ctx.lineTo(ex - 45, 1960 + thrustLen);
+        ctx.closePath();
+        ctx.fill();
+
+        // Thruster nozzle housing
+        ctx.fillStyle = '#1e293b';
+        ctx.strokeStyle = '#475569';
+        ctx.lineWidth = 4;
+        ctx.fillRect(ex - 105, 1935, 210, 32);
+        ctx.strokeRect(ex - 105, 1935, 210, 32);
+      }
+
+      // Outer Armored Warship Hull Polygon (Angled Destroyer Bow + Broad Hangar Wings)
+      ctx.fillStyle = '#1e293b';
+      ctx.strokeStyle = '#64748b';
+      ctx.lineWidth = 10;
+      ctx.beginPath();
+      ctx.moveTo(-980, -280);
+      ctx.lineTo(980, -280);
+      ctx.lineTo(2290, -80);
+      ctx.lineTo(2290, 1950);
+      ctx.lineTo(-2190, 1950);
+      ctx.lineTo(-2190, -80);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // Inner Hangar Deck Floor (Metallic Gunmetal Plating)
+      ctx.fillStyle = '#0e1524';
+      ctx.strokeStyle = '#facc15';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(-920, -220);
+      ctx.lineTo(920, -220);
+      ctx.lineTo(2210, -40);
+      ctx.lineTo(2210, 1900);
+      ctx.lineTo(-2110, 1900);
+      ctx.lineTo(-2110, -40);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+
+      // 5. Forward Panoramic Bridge Viewport Windows (Looking out into Orbit at z = -220..-155)
+      ctx.save();
+      for (let wi = -3; wi <= 3; wi++) {
+        const wx = wi * 230;
+        const glassGrad = ctx.createLinearGradient(wx, -218, wx, -155);
+        glassGrad.addColorStop(0, 'rgba(56, 189, 248, 0.35)');
+        glassGrad.addColorStop(1, 'rgba(15, 23, 42, 0.85)');
+        ctx.fillStyle = glassGrad;
+        ctx.strokeStyle = '#475569';
+        ctx.lineWidth = 4;
+        ctx.fillRect(wx - 104, -215, 208, 56);
+        ctx.strokeRect(wx - 104, -215, 208, 56);
+      }
+      ctx.fillStyle = '#fde047';
+      ctx.font = '900 14px Orbitron, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(`🚀 SES SUPER DESTROYER BRIDGE — ORBITING ${activeBaseCfg.code}`, 0, -182);
+      ctx.restore();
+
+      // 6. Subtle Gunmetal Deck Plating Seams & Super Earth Emblem Watermark
+      ctx.save();
+      ctx.strokeStyle = 'rgba(148, 163, 184, 0.06)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      for (let x = -2080; x <= 2160; x += 160) {
+        ctx.moveTo(x, -40);
+        ctx.lineTo(x, 1890);
+      }
+      for (let z = -40; z <= 1890; z += 135) {
+        ctx.moveTo(-2080, z);
+        ctx.lineTo(2160, z);
+      }
+      ctx.stroke();
+
+      // Watermarked Super Earth Skull & Wings Emblem in Hangar Center
+      ctx.translate(-460, 930);
+      ctx.fillStyle = 'rgba(250, 204, 21, 0.035)';
+      ctx.beginPath();
+      ctx.arc(0, 0, 280, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(250, 204, 21, 0.07)';
+      ctx.lineWidth = 6;
+      ctx.stroke();
+      ctx.restore();
+
+      // 7. Three Clean Hangar Bay Deck Zones (Port Extraction Bay, Center Arsenal Bay, Starboard Requisition Bay)
+      this.drawFloorSector(
+        ctx,
+        -2080,
+        -25,
+        1040,
+        1890,
+        'rgba(17, 34, 54, 0.55)',
+        '#38bdf8',
+        '⛏️ PORT CARGO BAY: RAW ORE & AMMO'
+      );
+
+      this.drawFloorSector(
+        ctx,
+        -990,
+        -25,
+        1040,
+        1890,
+        'rgba(27, 36, 52, 0.55)',
+        '#facc15',
+        '⚙️ CENTER HANGAR: 7 ARSENAL LANES'
+      );
+
+      this.drawFloorSector(
+        ctx,
+        100,
+        -25,
+        2060,
+        1890,
+        'rgba(20, 41, 36, 0.55)',
+        '#22c55e',
+        '💵 STARBOARD DECK: 7 HELLDIVER COUNTERS'
+      );
+
+      // 8. Bridge Galactic War Hologram Table, Mindustry Core & 4 Hellpod Drop Tubes
+      this.drawMindustryCoreAndPortal(ctx, state);
+      this.drawBridgeHellpodLaunchBay(ctx, state);
+    }
+
+    drawAlliedOrbitingDestroyer(ctx, x, z, scale, shipName) {
+      ctx.save();
+      ctx.translate(x, z);
+      ctx.scale(scale, scale);
+
+      // Thruster glow
+      ctx.fillStyle = 'rgba(56, 189, 248, 0.45)';
+      ctx.beginPath();
+      ctx.ellipse(0, 210, 42, 70, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Wedge Destroyer Silhouette
+      ctx.fillStyle = '#1e293b';
+      ctx.strokeStyle = '#64748b';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(0, -220);
+      ctx.lineTo(110, 180);
+      ctx.lineTo(40, 200);
+      ctx.lineTo(-40, 200);
+      ctx.lineTo(-110, 180);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // Gold Super Earth hull stripe
+      ctx.strokeStyle = '#facc15';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(0, -170);
+      ctx.lineTo(0, 160);
+      ctx.stroke();
+
+      ctx.fillStyle = 'rgba(250, 204, 21, 0.65)';
+      ctx.font = '900 11px Orbitron, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(shipName, 0, 245);
+      ctx.restore();
+    }
+
+    drawBridgeHellpodLaunchBay(ctx, state) {
+      ctx.save();
+      ctx.translate(220, -100);
+
+      ctx.fillStyle = '#111827';
+      ctx.strokeStyle = '#ef4444';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.roundRect(-210, -48, 420, 92, 12);
+      ctx.fill();
+      ctx.stroke();
+
+      // 4 Circular Hellpod Launch Tubes
+      for (let i = 0; i < 4; i++) {
+        const hx = -135 + i * 90;
+        const pulse = 0.65 + 0.35 * Math.sin(this.time * 5 + i);
+        ctx.fillStyle = '#090d14';
+        ctx.strokeStyle = `rgba(250, 204, 21, ${pulse})`;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(hx, 6, 24, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.font = '18px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('🚀', hx, 7);
+      }
+
+      ctx.fillStyle = '#fca5a5';
+      ctx.font = '900 11px Orbitron, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('🚀 4x HELLPOD DROP TUBES (TAP ⚔️ WAR FRONT TO DROP)', 0, -28);
+      ctx.restore();
+    }
+
+    // ========================================================================
+    // 1B. PLANETARY WAR FRONT TERRAIN (WAR MODE ONLY — NO SHOP VISIBLE!)
+    // ========================================================================
+    drawPlanetaryWarFrontTerrain(ctx, state) {
       const W = window.GameConfig.WORLD;
 
-      const warGrad = ctx.createLinearGradient(0, W.minZ, 0, W.wallZ);
-      warGrad.addColorStop(0, '#1a1025');
-      warGrad.addColorStop(0.5, '#231f33');
-      warGrad.addColorStop(1, '#2b3248');
+      const warGrad = ctx.createLinearGradient(0, W.minZ - 200, 0, W.wallZ + 220);
+      warGrad.addColorStop(0, '#140c1c');
+      warGrad.addColorStop(0.5, '#1e1b2e');
+      warGrad.addColorStop(1, '#273042');
       ctx.fillStyle = warGrad;
-      ctx.fillRect(W.minX - 150, W.minZ - 150, (W.maxX - W.minX) + 300, (W.wallZ - W.minZ) + 150);
+      ctx.fillRect(W.minX - 250, W.minZ - 250, (W.maxX - W.minX) + 500, (W.wallZ - W.minZ) + 520);
 
+      // Flanking Canyon Walls outside the 3-Layer Defense Corridor
       ctx.fillStyle = '#0f172a';
       ctx.strokeStyle = '#334155';
       ctx.lineWidth = 4;
-      ctx.fillRect(W.minX, W.minZ, W.corridorMinX - W.minX, W.wallZ - W.minZ);
-      ctx.strokeRect(W.minX, W.minZ, W.corridorMinX - W.minX, W.wallZ - W.minZ);
-      ctx.fillRect(W.corridorMaxX, W.minZ, W.maxX - W.corridorMaxX, W.wallZ - W.minZ);
-      ctx.strokeRect(W.corridorMaxX, W.minZ, W.maxX - W.corridorMaxX, W.wallZ - W.minZ);
+      ctx.fillRect(W.minX, W.minZ, W.corridorMinX - W.minX, (W.wallZ - W.minZ) + 160);
+      ctx.strokeRect(W.minX, W.minZ, W.corridorMinX - W.minX, (W.wallZ - W.minZ) + 160);
+      ctx.fillRect(W.corridorMaxX, W.minZ, W.maxX - W.corridorMaxX, (W.wallZ - W.minZ) + 160);
+      ctx.strokeRect(W.corridorMaxX, W.minZ, W.maxX - W.corridorMaxX, (W.wallZ - W.minZ) + 160);
 
+      // Clean Wave Header at North Edge
       ctx.save();
-      ctx.fillStyle = 'rgba(248, 113, 113, 0.28)';
-      ctx.font = '900 22px Orbitron, sans-serif';
+      ctx.fillStyle = 'rgba(248, 113, 113, 0.45)';
+      ctx.font = '900 20px Orbitron, sans-serif';
       ctx.textAlign = 'center';
       const waveBanner = state.waveState === 'rest'
-        ? `⏳ WAVE ${state.waveNumber} INCOMING IN ${Math.ceil(state.waveTimer)}s (REST & REPAIR TIME)`
-        : `🚨 WAVE ${state.waveNumber} ACTIVE — ${state.enemies.length + state.waveEnemiesToSpawn} ENEMIES REMAINING!`;
+        ? `⏳ WAVE ${state.waveNumber} IN ${Math.ceil(state.waveTimer)}s`
+        : `🚨 WAVE ${state.waveNumber} — ${state.enemies.length + state.waveEnemiesToSpawn} HOSTILES`;
       ctx.fillText(waveBanner, 0, -1760);
-      ctx.fillStyle = 'rgba(251, 146, 60, 0.25)';
-      ctx.fillText('🛡️ OUTER DEFENSE ZONE (BETWEEN GATE 3 & GATE 2)', 0, -1040);
-      ctx.fillStyle = 'rgba(56, 189, 248, 0.25)';
-      ctx.fillText('🛡️ INNER CITADEL ZONE (BETWEEN GATE 2 & CORE GATE 1)', 0, -560);
       ctx.restore();
 
       for (const c of this.craters) {
@@ -598,79 +886,50 @@
         ctx.restore();
       }
 
-      const activeBaseCfg = state.getActiveBaseConfig ? state.getActiveBaseConfig() : null;
-      ctx.fillStyle = activeBaseCfg?.floorTint || '#141c2b';
-      ctx.fillRect(W.minX, W.wallZ, W.maxX - W.minX, W.maxZ - W.wallZ);
+      // Mindustry Mend Projectors behind Gate Layers if unlocked
+      const mendLvl = state.mendProjectorLevel || 0;
+      if (mendLvl > 0) {
+        for (const g of window.GameConfig.GATES) {
+          ctx.save();
+          ctx.translate(g.x + 210, g.z + 75);
+          const ringR = 26 + ((this.time * 45) % 90);
+          const alpha = Math.max(0, 1 - (ringR - 26) / 90) * 0.45;
+          ctx.strokeStyle = `rgba(74, 222, 128, ${alpha})`;
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.arc(0, 0, ringR, 0, Math.PI * 2);
+          ctx.stroke();
 
-      // Mindustry Core & Orbital Launch Pad Receiver at (-160, -140)
-      this.drawMindustryCoreAndPortal(ctx, state);
-
-      // Sector A: Raw Quarry & Munitions Press (West)
-      this.drawFloorSector(
-        ctx,
-        -2120,
-        -120,
-        1080,
-        2050,
-        '#112236',
-        '#38bdf8',
-        'SECTOR A: MANUAL HARVEST QUARRY, SPLIT AUTO-DRILLS (🛢️ E-710 / ⛏️ IRON) & AMMO PRESS'
-      );
-
-      // Sector B: 7 Parallel Arsenal Production Lanes (Center)
-      this.drawFloorSector(
-        ctx,
-        -1000,
-        -120,
-        1060,
-        2050,
-        '#1b2434',
-        '#facc15',
-        'SECTOR B: 7 ARSENAL PRODUCTION LANES (SPLIT RAW HOPPERS ➔ FABRICATOR ➔ OUTPUT PAD)'
-      );
-
-      // Sector C: 7 Dedicated Item Sales Counters, Cash Stacks & Customer Queues (East)
-      this.drawFloorSector(
-        ctx,
-        100,
-        -120,
-        2150,
-        2050,
-        '#142924',
-        '#22c55e',
-        'SECTOR C: 7 DEDICATED ITEM SALES COUNTERS (1 ITEM = 1 COUNTER + DEDICATED QUEUE & CASH STACK)'
-      );
-
-      // Subtle horizontal lane dividers across Sector B & Sector C for each of the 7 items
-      for (const item of window.GameConfig.ITEMS) {
-        const rz = item.stationPos.z;
-        ctx.save();
-        ctx.strokeStyle = state.unlocked[item.id] ? 'rgba(250, 204, 21, 0.14)' : 'rgba(148, 163, 184, 0.06)';
-        ctx.lineWidth = 2;
-        ctx.setLineDash([12, 10]);
-        ctx.beginPath();
-        ctx.moveTo(-980, rz - 135);
-        ctx.lineTo(2150, rz - 135);
-        ctx.stroke();
-        ctx.restore();
+          ctx.fillStyle = '#064e3b';
+          ctx.strokeStyle = '#4ade80';
+          ctx.lineWidth = 3;
+          ctx.fillRect(-22, -22, 44, 44);
+          ctx.strokeRect(-22, -22, 44, 44);
+          ctx.fillStyle = '#4ade80';
+          ctx.font = '900 10px Orbitron, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText(`💚 MEND Lv.${mendLvl}`, 0, -28);
+          ctx.font = '16px sans-serif';
+          ctx.fillText('💚', 0, 5);
+          ctx.restore();
+        }
       }
 
-      ctx.strokeStyle = 'rgba(148, 163, 184, 0.08)';
-      ctx.lineWidth = 1.5;
+      // Southern Citadel Trench & Hellpod Extraction Beacon back to Super Destroyer Shop
+      ctx.save();
+      ctx.translate(0, -140);
+      ctx.fillStyle = '#0f172a';
+      ctx.strokeStyle = '#22c55e';
+      ctx.lineWidth = 3;
       ctx.beginPath();
-      for (let x = W.minX; x <= W.maxX; x += 80) {
-        ctx.moveTo(x, W.wallZ);
-        ctx.lineTo(x, W.maxZ);
-      }
-      for (let z = W.wallZ; z <= W.maxZ; z += 80) {
-        ctx.moveTo(W.minX, z);
-        ctx.lineTo(W.maxX, z);
-      }
+      ctx.roundRect(-240, -32, 480, 64, 12);
+      ctx.fill();
       ctx.stroke();
-
-      ctx.strokeStyle = '#475569';
-      ctx.lineWidth = 16;
-      ctx.strokeRect(W.minX, W.minZ, W.maxX - W.minX, W.maxZ - W.minZ);
+      ctx.fillStyle = '#4ade80';
+      ctx.font = '900 12px Orbitron, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('🚀 PELICAN-1 / HELLPOD UPLINK — TAP 🏪 SHOP TO RETURN TO WARSHIP', 0, 4);
+      ctx.restore();
     }
 
     drawFloorSector(ctx, x, z, w, h, bg, accent, title) {
@@ -678,15 +937,13 @@
       ctx.fillStyle = bg;
       ctx.fillRect(x, z, w, h);
       ctx.strokeStyle = accent;
-      ctx.globalAlpha = 0.38;
-      ctx.lineWidth = 3.5;
-      ctx.setLineDash([14, 9]);
+      ctx.globalAlpha = 0.28;
+      ctx.lineWidth = 2.5;
       ctx.strokeRect(x, z, w, h);
-      ctx.setLineDash([]);
-      ctx.globalAlpha = 0.88;
+      ctx.globalAlpha = 0.72;
       ctx.fillStyle = accent;
-      ctx.font = '900 14.5px Orbitron, sans-serif';
-      ctx.fillText(title, x + 20, z + 30);
+      ctx.font = '900 13px Orbitron, sans-serif';
+      ctx.fillText(title, x + 18, z + 26);
       ctx.restore();
     }
 
@@ -697,9 +954,22 @@
     //    - Belt 3: conv_counter_auto (Green)      -> 7 Horizontal Lane Belts (Pickup -> Counter #1..7)
     //    - Belts 4–6: conv_gate_1/2/3             -> Ammo Press -> Gate Layers 1/2/3
     // ========================================================================
-    drawConveyorNetwork(ctx, state) {
+    drawConveyorNetwork(ctx, state, mode = 'shop') {
       const AP = window.GameConfig.AMMO_PRESS;
       const gates = window.GameConfig.GATES;
+
+      if (mode === 'war') {
+        for (const g of gates) {
+          const beltLvl = state.conveyorLevels?.[g.conveyorId] || 0;
+          const path = [
+            { x: -560, z: -150 },
+            { x: -560, z: g.turretZ },
+            { x: g.leftTurretX, z: g.turretZ }
+          ];
+          this.drawBeltPath(ctx, path, beltLvl, g.color);
+        }
+        return;
+      }
 
       // 1. PURPLE E-710 FUEL BELT (conv_raw_e710): Connects ONLY E-710 Auto-Pump (-1200, 240) along x = -960
       const e710BeltLvl = state.conveyorLevels?.conv_raw_e710 || 0;
@@ -744,17 +1014,7 @@
         ], ironBeltLvl, '#38bdf8');
       }
 
-      // 3. GATE TURRET AMMO BELTS (conv_gate_1, conv_gate_2, conv_gate_3)
-      for (const g of gates) {
-        const beltLvl = state.conveyorLevels?.[g.conveyorId] || 0;
-        const path = [
-          { x: AP.padX, z: AP.padZ },
-          { x: -860, z: AP.padZ },
-          { x: -860, z: g.turretZ },
-          { x: g.leftTurretX, z: g.turretZ }
-        ];
-        this.drawBeltPath(ctx, path, beltLvl, g.color);
-      }
+      // Gate Turret Ammo Belts are rendered in War Mode ('war') only
 
       // 4. 7 DEDICATED HORIZONTAL OUTPUT-TO-COUNTER BELTS (conv_counter_auto)
       const counterBeltLvl = state.conveyorLevels?.conv_counter_auto || 0;
@@ -835,9 +1095,12 @@
     }
 
     // Draws ONLY REAL IN-TRANSIT ITEMS (`state.beltPackets`) moving along unlocked belts!
-    drawBeltPackets(ctx, state) {
+    drawBeltPackets(ctx, state, mode = 'shop') {
       if (!state.beltPackets || state.beltPackets.length === 0) return;
       for (const pkt of state.beltPackets) {
+        const isGateBelt = pkt.beltId && pkt.beltId.startsWith('conv_gate_');
+        if (mode === 'shop' && isGateBelt) continue;
+        if (mode === 'war' && !isGateBelt) continue;
         const pt = this.getPointAlongPath(pkt.path, pkt.progress);
         ctx.save();
         ctx.translate(pt.x, pt.z);
@@ -867,22 +1130,35 @@
     // ========================================================================
     // 3. INTERACTIVE TRIGGER PADS (SAFE OFFSETS — NEVER CRUSH PLAYER!)
     // ========================================================================
-    drawFloorPads(ctx, state) {
+    drawFloorPads(ctx, state, mode = 'shop') {
       const L = window.GameConfig.LOCATIONS;
+
+      if (mode === 'war') {
+        for (const c of window.GameConfig.CONVEYORS) {
+          if (!c.gateId) continue;
+          const lvl = state.conveyorLevels?.[c.id] || 0;
+          const isMax = lvl >= c.maxLevel;
+          const rem = Math.max(0, state.conveyorRemaining?.[c.id] ?? state.getConveyorUpgradeCost(c.id));
+          const title = isMax ? `${c.icon} MAX Lv.20` : (lvl === 0 ? `🔓 BELT $${rem}` : `⬆️ BELT Lv.${lvl + 1} ($${rem})`);
+          this.drawPadBox(ctx, c.padX, c.padZ, 162, 68, c.color, title, c.name);
+        }
+        return;
+      }
 
       this.drawPadBox(
         ctx,
         L.armoryLoadoutPad.x,
         L.armoryLoadoutPad.z,
-        168,
-        104,
+        156,
+        74,
         '#a855f7',
-        '🛡️ EQUIP LOADOUT',
+        '🛡️ ARMORY LOADOUT',
         'Weapons, Guard Dog & Mechs'
       );
 
-      // Conveyor Belt Pads (Lv.0 Locked -> Lv.1..20 Upgrade!)
+      // Shop Conveyor Belt Pads (Only non-gate belts in Shop Mode!)
       for (const c of window.GameConfig.CONVEYORS) {
+        if (c.gateId) continue;
         const lvl = state.conveyorLevels?.[c.id] || 0;
         const isMax = lvl >= c.maxLevel;
         const rem = Math.max(0, state.conveyorRemaining?.[c.id] ?? state.getConveyorUpgradeCost(c.id));
@@ -967,26 +1243,32 @@
     }
 
     drawPadBox(ctx, x, z, w, h, color, title, subtitle) {
+      const p = this.lastPlayerPos || { x: 0, z: 0 };
+      const isNear = Math.hypot(p.x - x, p.z - z) < 250;
+
       ctx.save();
       ctx.translate(x, z);
-      ctx.fillStyle = 'rgba(15, 23, 42, 0.86)';
-      ctx.fillRect(-w / 2, -h / 2, w, h);
+      ctx.fillStyle = isNear ? 'rgba(15, 23, 42, 0.94)' : 'rgba(15, 23, 42, 0.78)';
+      ctx.beginPath();
+      ctx.roundRect(-w / 2, -h / 2, w, h, 8);
+      ctx.fill();
 
       ctx.strokeStyle = color;
-      ctx.lineWidth = 3;
-      ctx.setLineDash([8, 6]);
-      ctx.strokeRect(-w / 2, -h / 2, w, h);
+      ctx.lineWidth = isNear ? 3 : 2;
+      if (!isNear) ctx.setLineDash([8, 6]);
+      ctx.stroke();
       ctx.setLineDash([]);
 
       ctx.fillStyle = color;
-      ctx.font = '900 12px Orbitron, sans-serif';
+      ctx.font = '900 11.5px Orbitron, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(title, 0, -5);
+      ctx.textBaseline = 'middle';
+      ctx.fillText(title, 0, (isNear && subtitle) ? -7 : 1);
 
-      if (subtitle) {
+      if (isNear && subtitle) {
         ctx.fillStyle = '#e2e8f0';
-        ctx.font = '700 11px Rajdhani, sans-serif';
-        ctx.fillText(subtitle, 0, 14);
+        ctx.font = '700 10.5px Rajdhani, sans-serif';
+        ctx.fillText(subtitle, 0, 11);
       }
       ctx.restore();
     }
@@ -1713,7 +1995,7 @@
       }
     }
 
-    drawSortedEntities(ctx, state) {
+    drawSortedEntities(ctx, state, mode = 'shop') {
       const renderList = [];
 
       renderList.push({
@@ -1721,34 +2003,37 @@
         draw: () => this.drawPlayerCommander(ctx, state)
       });
 
-      for (const w of state.workers) {
-        renderList.push({
-          z: w.z,
-          draw: () => this.drawSeafWorker(ctx, w)
-        });
-      }
-
-      for (const c of state.customers) {
-        renderList.push({
-          z: c.z,
-          draw: () => this.drawHelldiverCustomer(ctx, c)
-        });
-      }
-
-      if (state.alliedUnits) {
-        for (const u of state.alliedUnits) {
+      if (mode !== 'war') {
+        for (const w of state.workers) {
+          if (w.z < -180) continue;
           renderList.push({
-            z: u.z,
-            draw: () => this.drawAlliedWarUnit(ctx, u)
+            z: w.z,
+            draw: () => this.drawSeafWorker(ctx, w)
           });
         }
-      }
 
-      for (const e of state.enemies) {
-        renderList.push({
-          z: e.z,
-          draw: () => this.drawEnemy(ctx, e)
-        });
+        for (const c of state.customers) {
+          renderList.push({
+            z: c.z,
+            draw: () => this.drawHelldiverCustomer(ctx, c)
+          });
+        }
+      } else {
+        if (state.alliedUnits) {
+          for (const u of state.alliedUnits) {
+            renderList.push({
+              z: u.z,
+              draw: () => this.drawAlliedWarUnit(ctx, u)
+            });
+          }
+        }
+
+        for (const e of state.enemies) {
+          renderList.push({
+            z: e.z,
+            draw: () => this.drawEnemy(ctx, e)
+          });
+        }
       }
 
       renderList.sort((a, b) => a.z - b.z);

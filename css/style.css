@@ -1,8 +1,9 @@
 /* ==========================================================================
-   HELLDIVERS PLEASE! — Super Earth Arsenal & 2D Factorio War-Zone Tycoon
-   Version: v0.0.07 (Mobile-First HUD, Mindustry Multi-Base & Visual Tech Tree)
-   Stylesheet: Ultra-Clean Mobile Portrait HUD (Collapsible Drawer),
-               Split Shop/War Mode Switcher, War Command Dock & Mindustry Tree
+   HELLDIVERS PLEASE! — Super Destroyer Warship & Mindustry War-Zone Tycoon
+   Version: v0.0.08 (Minimalist 1-Row HUD, True Split Shop/War & Warship Deck)
+   Stylesheet: Ultra-Clean Single-Row Floating Pill Bar (<8% Screen Footprint),
+               Unified Command Drawer (Hides 90%+ of UI Clutter),
+               True Split Shop/War Switcher & Mindustry Tech Tree
    ========================================================================== */
 
 :root {
@@ -13,8 +14,8 @@
   --hd-green: #22c55e;
   --hd-cyan: #38bdf8;
   --hd-purple: #a855f7;
-  --hd-dark: #090d14;
-  --hd-panel: rgba(15, 23, 42, 0.92);
+  --hd-dark: #060911;
+  --hd-panel: rgba(12, 18, 32, 0.90);
   --hd-border: rgba(250, 204, 21, 0.45);
   --font-display: 'Orbitron', 'Impact', sans-serif;
   --font-body: 'Rajdhani', system-ui, -apple-system, sans-serif;
@@ -67,151 +68,86 @@ html, body {
   position: absolute;
   font-family: var(--font-display);
   font-weight: 900;
-  font-size: 0.88rem;
+  font-size: 0.85rem;
   text-shadow: 0 2px 6px rgba(0, 0, 0, 0.95);
   pointer-events: none;
   white-space: nowrap;
   transform: translate(-50%, -50%);
-  animation: floatUpFade 1.15s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: floatUpFade 1.1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 @keyframes floatUpFade {
   0% { opacity: 1; transform: translate(-50%, 0) scale(0.88); }
-  20% { opacity: 1; transform: translate(-50%, -14px) scale(1.06); }
-  100% { opacity: 0; transform: translate(-50%, -46px) scale(0.95); }
+  20% { opacity: 1; transform: translate(-50%, -14px) scale(1.05); }
+  100% { opacity: 0; transform: translate(-50%, -44px) scale(0.95); }
 }
 
 /* ==========================================================================
-   TOP BAR HUD & SPLIT SHOP/WAR MODE SWITCHER
+   MINIMALIST SINGLE-ROW TOP HUD BAR (< 8% SCREEN FOOTPRINT)
    ========================================================================== */
 #hud-top {
   position: absolute;
   top: max(6px, env(safe-area-inset-top, 6px));
   left: 8px;
   right: 8px;
-  z-index: 15;
+  z-index: 20;
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  align-items: center;
+  gap: 6px;
   pointer-events: none;
 }
 
 .hud-row-main {
+  width: 100%;
+  max-width: 980px;
+  background: rgba(9, 14, 26, 0.88);
+  backdrop-filter: blur(8px);
+  border: 1.5px solid rgba(250, 204, 21, 0.42);
+  border-radius: 999px;
+  padding: 4px 8px;
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: space-between;
   gap: 6px;
-  pointer-events: none;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.65);
+  pointer-events: auto;
 }
 
 .hud-group {
   display: flex;
   align-items: center;
   gap: 5px;
-  flex-wrap: wrap;
   pointer-events: auto;
 }
 
-/* Split Shop vs War Front Mode Switcher Bar */
-#mode-switcher-bar {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  pointer-events: auto;
-  flex-wrap: wrap;
+.hud-essentials {
+  flex-shrink: 0;
 }
 
-.mode-tab-btn {
-  cursor: pointer;
-  background: rgba(15, 23, 42, 0.92);
-  color: #cbd5e1;
-  border: 1.5px solid rgba(148, 163, 184, 0.4);
-  border-radius: 8px;
-  padding: 5px 11px;
-  font-family: var(--font-display);
-  font-size: 0.72rem;
-  font-weight: 900;
+/* Compact Stat Pills inside the Single Top Bar */
+.stat-pill {
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  border-radius: 999px;
+  padding: 2px 8px;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.55);
-  transition: all 0.14s ease;
-}
-
-.mode-tab-btn.active-shop {
-  background: linear-gradient(135deg, #22c55e, #15803d);
-  color: #052e16;
-  border-color: #86efac;
-}
-
-.mode-tab-btn.active-war {
-  background: linear-gradient(135deg, #ef4444, #b91c1c);
-  color: #ffffff;
-  border-color: #fca5a5;
-}
-
-.mode-tab-btn.tab-bases {
-  border-color: #38bdf8;
-  color: #7dd3fc;
-}
-
-.mode-tab-btn.tab-tech {
-  border-color: #a855f7;
-  color: #e9d5ff;
-}
-
-#btn-toggle-menu {
-  display: none;
-}
-
-.brand-badge {
-  background: var(--hd-panel);
-  border: 2px solid var(--hd-yellow);
-  border-radius: 9px;
-  padding: 4px 9px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.65);
-}
-
-.brand-title {
-  font-family: var(--font-display);
-  font-size: 0.86rem;
-  font-weight: 900;
-  color: var(--hd-yellow);
-  letter-spacing: 0.4px;
-}
-
-.version-pill {
-  background: rgba(250, 204, 21, 0.18);
-  color: #fde047;
-  border: 1px solid var(--hd-yellow);
-  font-family: monospace;
-  font-size: 0.7rem;
-  font-weight: 700;
-  padding: 1px 5px;
-  border-radius: 5px;
-}
-
-.stat-pill {
-  background: var(--hd-panel);
-  border: 1.5px solid rgba(148, 163, 184, 0.35);
-  border-radius: 9px;
-  padding: 3px 8px;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.55);
+  gap: 4px;
 }
 
 .stat-pill.cash-pill { border-color: var(--hd-green); }
 .stat-pill.medal-pill { border-color: var(--hd-yellow); }
-.stat-pill.gate-pill { border-color: var(--hd-cyan); }
+.stat-pill.gate-pill { border-color: var(--hd-cyan); border-radius: 8px; padding: 3px 8px; }
+
+/* Hide verbose stat labels in the top bar so only clean icon + value shows! */
+.hud-row-main .stat-label {
+  display: none;
+}
 
 .stat-label {
-  font-size: 0.6rem;
+  font-size: 0.58rem;
   text-transform: uppercase;
   color: #94a3b8;
   font-weight: 700;
@@ -219,8 +155,153 @@ html, body {
 
 .stat-val {
   font-family: var(--font-display);
-  font-size: 0.84rem;
+  font-size: 0.78rem;
   font-weight: 900;
+  white-space: nowrap;
+}
+
+/* Split Shop vs War Front Mode Switcher Pill */
+#mode-switcher-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  pointer-events: auto;
+}
+
+.mode-tab-btn {
+  cursor: pointer;
+  background: rgba(30, 41, 59, 0.85);
+  color: #cbd5e1;
+  border: 1.5px solid rgba(148, 163, 184, 0.35);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-family: var(--font-display);
+  font-size: 0.68rem;
+  font-weight: 900;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  transition: all 0.14s ease;
+}
+
+.mode-tab-btn.active-shop {
+  background: linear-gradient(135deg, #22c55e, #15803d);
+  color: #052e16;
+  border-color: #86efac;
+  box-shadow: 0 0 12px rgba(34, 197, 94, 0.45);
+}
+
+.mode-tab-btn.active-war {
+  background: linear-gradient(135deg, #ef4444, #b91c1c);
+  color: #ffffff;
+  border-color: #fca5a5;
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.5);
+}
+
+.mode-tab-btn.tab-bases {
+  border-color: #38bdf8;
+  color: #7dd3fc;
+  border-radius: 8px;
+}
+
+.mode-tab-btn.tab-tech {
+  border-color: #a855f7;
+  color: #e9d5ff;
+  border-radius: 8px;
+}
+
+#btn-toggle-menu {
+  display: inline-flex;
+  background: linear-gradient(135deg, #facc15, #eab308);
+  color: #090d14;
+  border-color: #fef08a;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 0.72rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+/* ==========================================================================
+   COLLAPSIBLE COMMAND CENTER DRAWER (HIDDEN UNTIL ☰ 選單 IS TAPPED!)
+   Hides 90%+ of UI clutter during normal gameplay on both phone & desktop!
+   ========================================================================== */
+#hud-menu-drawer {
+  display: none;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  width: 100%;
+  max-width: 960px;
+  max-height: 78vh;
+  overflow-y: auto;
+  background: rgba(9, 13, 24, 0.96);
+  backdrop-filter: blur(12px);
+  border: 2px solid var(--hd-yellow);
+  border-radius: 14px;
+  padding: 10px 12px;
+  box-shadow: 0 16px 42px rgba(0, 0, 0, 0.92);
+  pointer-events: auto;
+}
+
+#hud-menu-drawer.drawer-open {
+  display: flex;
+}
+
+.drawer-section-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.22);
+}
+
+.drawer-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.drawer-footer-info {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(148, 163, 184, 0.22);
+}
+
+.brand-badge {
+  background: rgba(15, 23, 42, 0.95);
+  border: 1.5px solid var(--hd-yellow);
+  border-radius: 8px;
+  padding: 3px 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.brand-title {
+  font-family: var(--font-display);
+  font-size: 0.76rem;
+  font-weight: 900;
+  color: var(--hd-yellow);
+}
+
+.version-pill {
+  background: rgba(250, 204, 21, 0.18);
+  color: #fde047;
+  border: 1px solid var(--hd-yellow);
+  font-family: monospace;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 5px;
 }
 
 /* ==========================================================================
@@ -235,13 +316,12 @@ html, body {
   border-radius: 8px;
   padding: 5px 9px;
   font-family: var(--font-display);
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   font-weight: 800;
   display: inline-flex;
   align-items: center;
   gap: 4px;
   transition: transform 0.12s ease, background 0.15s ease;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.55);
 }
 
 .hud-btn:hover {
@@ -279,50 +359,41 @@ html, body {
   border-color: #7dd3fc;
 }
 
-/* ==========================================================================
-   OBJECTIVE & GATE ALERT BANNER
-   ========================================================================== */
 #objective-banner {
-  position: absolute;
-  top: 86px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 9;
-  background: rgba(15, 23, 42, 0.88);
-  border: 1.5px solid var(--hd-yellow);
-  border-radius: 999px;
-  padding: 4px 14px;
-  font-size: 0.78rem;
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(250, 204, 21, 0.5);
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 0.74rem;
   font-weight: 700;
   color: #fef08a;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
-  pointer-events: none;
-  white-space: nowrap;
-  max-width: 92vw;
-  overflow: hidden;
-  text-overflow: ellipsis;
+}
+
+.controls-hint {
+  font-size: 0.72rem;
+  color: #cbd5e1;
 }
 
 /* ==========================================================================
-   WAR-FRONT TACTICAL DEPLOYMENT DOCK (NEW IN v0.0.07)
+   WAR-FRONT TACTICAL DEPLOYMENT DOCK (ONLY VISIBLE IN WAR FRONT MODE)
    ========================================================================== */
 #war-command-dock {
   position: absolute;
-  bottom: max(18px, env(safe-area-inset-bottom, 14px));
+  bottom: max(14px, env(safe-area-inset-bottom, 12px));
   left: 50%;
   transform: translateX(-50%);
   z-index: 14;
-  background: rgba(15, 23, 42, 0.94);
-  border: 2px solid #ef4444;
+  background: rgba(12, 18, 32, 0.92);
+  border: 1.5px solid #ef4444;
   border-radius: 12px;
-  padding: 6px 10px;
+  padding: 5px 8px;
   display: none;
   align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
+  gap: 5px;
+  flex-wrap: nowrap;
   justify-content: center;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85);
   pointer-events: auto;
@@ -338,41 +409,45 @@ html, body {
   background: rgba(30, 41, 59, 0.95);
   border: 1.5px solid #f97316;
   border-radius: 8px;
-  padding: 5px 9px;
+  padding: 4px 8px;
   color: #f8fafc;
   font-family: var(--font-display);
-  font-size: 0.68rem;
+  font-size: 0.64rem;
   font-weight: 800;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
-  min-width: 82px;
+  gap: 1px;
 }
 
 .war-deploy-btn span.sub-cost {
   font-family: var(--font-body);
-  font-size: 0.66rem;
+  font-size: 0.62rem;
   color: #fde047;
   font-weight: 700;
 }
 
-.war-deploy-btn:active {
-  transform: scale(0.95);
-}
-
 /* ==========================================================================
-   ZOOM & CAMERA CONTROLS (RIGHT SIDE)
+   ULTRA-CLEAN 2-BUTTON ZOOM CONTROLS (RIGHT EDGE)
    ========================================================================== */
 #zoom-controls {
   position: absolute;
   right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
+  top: 56px;
   z-index: 10;
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 4px;
+  opacity: 0.78;
+}
+
+#zoom-controls .hud-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  padding: 0;
+  justify-content: center;
+  font-size: 0.9rem;
 }
 
 /* ==========================================================================
@@ -380,65 +455,48 @@ html, body {
    ========================================================================== */
 #hud-bottom {
   position: absolute;
-  bottom: max(12px, env(safe-area-inset-bottom, 12px));
-  left: 12px;
+  bottom: max(14px, env(safe-area-inset-bottom, 12px));
   right: 12px;
   z-index: 10;
   display: flex;
   align-items: flex-end;
-  justify-content: space-between;
   pointer-events: none;
-}
-
-.controls-hint {
-  background: var(--hd-panel);
-  border: 1px solid rgba(148, 163, 184, 0.3);
-  border-radius: 10px;
-  padding: 6px 11px;
-  font-size: 0.75rem;
-  color: #cbd5e1;
-  max-width: 450px;
-  pointer-events: auto;
-}
-
-.controls-hint strong {
-  color: var(--hd-yellow);
 }
 
 .mobile-action-cluster {
   display: flex;
-  gap: 8px;
+  gap: 7px;
   pointer-events: auto;
 }
 
 .action-circle-btn {
-  width: 52px;
-  height: 52px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
-  background: var(--hd-panel);
-  border: 2px solid var(--hd-yellow);
+  background: rgba(12, 18, 32, 0.85);
+  border: 1.5px solid var(--hd-yellow);
   color: #fff;
   font-family: var(--font-display);
-  font-size: 0.64rem;
+  font-size: 0.56rem;
   font-weight: 900;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.7);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.65);
 }
 
 #joystick-zone {
   position: absolute;
   left: 14px;
-  bottom: max(74px, calc(env(safe-area-inset-bottom, 14px) + 64px));
-  width: 104px;
-  height: 104px;
+  bottom: max(14px, env(safe-area-inset-bottom, 12px));
+  width: 84px;
+  height: 84px;
   z-index: 12;
   border-radius: 50%;
-  background: rgba(15, 23, 42, 0.48);
-  border: 2px dashed rgba(250, 204, 21, 0.55);
+  background: rgba(15, 23, 42, 0.36);
+  border: 1.5px dashed rgba(250, 204, 21, 0.42);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -447,12 +505,12 @@ html, body {
 }
 
 #joystick-knob {
-  width: 42px;
-  height: 42px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   background: radial-gradient(circle at 30% 30%, #fde047, #ca8a04);
   border: 2px solid #fff;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.65);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.6);
   pointer-events: none;
 }
 
@@ -507,7 +565,7 @@ html, body {
 
 .modal-title {
   font-family: var(--font-display);
-  font-size: 0.92rem;
+  font-size: 0.88rem;
   font-weight: 900;
   color: var(--hd-yellow);
 }
@@ -712,140 +770,51 @@ html, body {
 }
 
 /* ==========================================================================
-   MOBILE PORTRAIT & PHONE ERGONOMICS (FIXES SCREEN OVERLAP 100%!)
-   On phones (<= 900px), secondary modal buttons collapse into a toggleable
-   menu drawer (`#hud-menu-drawer`) so 88%+ of the screen is unobstructed!
+   MOBILE PORTRAIT EXTRA-COMPACT TUNING
    ========================================================================== */
-@media (max-width: 900px) {
+@media (max-width: 768px) {
   #hud-top {
     top: max(4px, env(safe-area-inset-top, 4px));
-    left: 6px;
-    right: 6px;
-    gap: 4px;
+    left: 4px;
+    right: 4px;
   }
 
-  .brand-badge {
+  .hud-row-main {
     padding: 3px 6px;
     gap: 4px;
   }
 
-  .brand-title {
-    display: none; /* Keep compact eagle + v0.0.07 pill on phone */
-  }
-
   .stat-pill {
-    padding: 2px 6px;
-    gap: 4px;
-    border-radius: 7px;
-  }
-
-  .stat-label {
-    display: none; /* Icon + number only on phone so all stats fit on 1 row! */
+    padding: 2px 5px;
+    gap: 3px;
   }
 
   .stat-val {
-    font-size: 0.74rem;
-  }
-
-  .pill-seaf-served {
-    display: none;
-  }
-
-  #btn-toggle-menu {
-    display: inline-flex;
-    background: linear-gradient(135deg, #facc15, #eab308);
-    color: #090d14;
-    border-color: #fef08a;
-    padding: 4px 8px;
-    font-size: 0.72rem;
-  }
-
-  /* Secondary buttons collapse into a dropdown drawer on phones! */
-  #hud-menu-drawer {
-    display: none;
-    background: rgba(9, 13, 20, 0.96);
-    border: 2px solid #facc15;
-    border-radius: 12px;
-    padding: 8px;
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.9);
-    width: 100%;
-    justify-content: center;
-    gap: 6px;
-  }
-
-  #hud-menu-drawer.drawer-open {
-    display: flex;
+    font-size: 0.68rem;
   }
 
   .mode-tab-btn {
-    padding: 4px 7px;
+    padding: 3px 7px;
+    font-size: 0.6rem;
+  }
+
+  #btn-toggle-menu {
+    padding: 3px 7px;
     font-size: 0.64rem;
-    flex: 1 1 auto;
-    justify-content: center;
-  }
-
-  #objective-banner {
-    top: 66px;
-    font-size: 0.66rem;
-    padding: 2px 10px;
-    max-width: 84vw;
-  }
-
-  #zoom-controls {
-    right: 6px;
-    top: 102px;
-    transform: none;
-    gap: 4px;
-  }
-
-  #zoom-controls .hud-btn {
-    padding: 4px 6px;
-    font-size: 0.64rem;
-    min-width: 34px;
-    justify-content: center;
-  }
-
-  .controls-hint {
-    display: none;
-  }
-
-  #joystick-zone {
-    left: 12px;
-    bottom: max(18px, calc(env(safe-area-inset-bottom, 12px) + 12px));
-    width: 92px;
-    height: 92px;
-  }
-
-  #joystick-knob {
-    width: 38px;
-    height: 38px;
-  }
-
-  #hud-bottom {
-    bottom: max(18px, calc(env(safe-area-inset-bottom, 12px) + 12px));
-    right: 10px;
-    left: auto;
-  }
-
-  .action-circle-btn {
-    width: 46px;
-    height: 46px;
-    font-size: 0.58rem;
   }
 
   #war-command-dock {
-    bottom: max(118px, calc(env(safe-area-inset-bottom, 12px) + 112px));
-    padding: 5px 6px;
+    bottom: max(106px, calc(env(safe-area-inset-bottom, 10px) + 96px));
+    padding: 4px 6px;
     gap: 4px;
   }
 
   .war-deploy-btn {
-    min-width: 72px;
-    padding: 4px 6px;
-    font-size: 0.62rem;
+    padding: 3px 5px;
+    font-size: 0.58rem;
   }
 
   #mindustry-tree-canvas {
-    height: 260px;
+    height: 250px;
   }
 }
