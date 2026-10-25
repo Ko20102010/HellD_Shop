@@ -1,9 +1,11 @@
 // ============================================================================
 // HELLDIVERS PLEASE! — Super Earth Arsenal & 2D Factorio War-Zone Tycoon
-// Version: v0.0.05 (20+ Hour Long-Term Campaign & 20-Level Automation Edition)
-// Module: High-DPI 2D Factorio + CarbotAnimations Vector World,
-//         4200x3800 Zero-Overlap Layout, Safe Unlock Pads (Never Crush Player),
-//         20-Level Stations & Belts, 3-Layer Gates & Live Tactical Mini-Map Radar
+// Version: v0.0.06 (All-Episode Carbot Art, Real-Item-Only Split Belts,
+//                   7 Dedicated Item Counters & Smart SEAF AI Edition)
+// Module: High-DPI 2D Factorio + CarbotAnimations Ep1–Ep10+ Vector World,
+//         4600x4000 Zero-Overlap Layout, Real-Packet Conveyor Rendering,
+//         Split Raw Belts (Purple E-710 / Cyan Iron), 7 Dedicated Sales Counters,
+//         Eagle-1 500kg Flyover Jet Shadow & Live Tactical Mini-Map Radar
 // ============================================================================
 
 (function () {
@@ -34,8 +36,8 @@
 
       this.camX = -120;
       this.camZ = 220;
-      this.zoom = 0.56;
-      this.targetZoom = 0.56;
+      this.zoom = 0.54;
+      this.targetZoom = 0.54;
       this.shakeTimer = 0;
       this.shakeIntensity = 0;
 
@@ -43,9 +45,9 @@
       this.time = 0;
 
       this.craters = [];
-      for (let i = 0; i < 64; i++) {
+      for (let i = 0; i < 68; i++) {
         const seed = (i * 9301 + 49297) % 233280;
-        const rx = ((seed / 233280) - 0.5) * 3100;
+        const rx = ((seed / 233280) - 0.5) * 3400;
         const rz = -260 - ((i * 4177) % 1580);
         const rad = 26 + (i % 6) * 12;
         this.craters.push({ x: rx, z: rz, r: rad });
@@ -62,7 +64,7 @@
     }
 
     setZoom(z) {
-      this.targetZoom = Math.max(0.28, Math.min(1.35, z));
+      this.targetZoom = Math.max(0.26, Math.min(1.35, z));
     }
 
     handleResize() {
@@ -91,6 +93,37 @@
       const sx = (wx - this.camX) * this.zoom + this.width * 0.5;
       const sy = (wz - this.camZ) * this.zoom + this.height * 0.5;
       return { x: sx, y: sy };
+    }
+
+    getPointAlongPath(pts, progress) {
+      if (!pts || pts.length === 0) return { x: 0, z: 0, angle: 0 };
+      if (pts.length === 1) return { x: pts[0].x, z: pts[0].z, angle: 0 };
+      const clamped = Math.max(0, Math.min(1, progress));
+      let totalLen = 0;
+      const segLens = [];
+      for (let i = 0; i < pts.length - 1; i++) {
+        const d = Math.hypot(pts[i + 1].x - pts[i].x, pts[i + 1].z - pts[i].z);
+        segLens.push(d);
+        totalLen += d;
+      }
+      if (totalLen <= 0.001) return { x: pts[0].x, z: pts[0].z, angle: 0 };
+      let targetDist = clamped * totalLen;
+      for (let i = 0; i < segLens.length; i++) {
+        const sLen = segLens[i];
+        if (targetDist <= sLen || i === segLens.length - 1) {
+          const t = sLen > 0 ? (targetDist / sLen) : 0;
+          const a = pts[i];
+          const b = pts[i + 1];
+          return {
+            x: a.x + (b.x - a.x) * t,
+            z: a.z + (b.z - a.z) * t,
+            angle: Math.atan2(b.z - a.z, b.x - a.x)
+          };
+        }
+        targetDist -= sLen;
+      }
+      const last = pts[pts.length - 1];
+      return { x: last.x, z: last.z, angle: 0 };
     }
 
     render(state, dt) {
@@ -129,10 +162,12 @@
       this.drawThreeLayerGates(ctx, state);
       this.drawRawQuarryAndAmmoPress(ctx, state);
       this.drawArsenalFactories(ctx, state);
-      this.drawCounterAndCashTowers(ctx, state);
+      this.drawDedicatedCountersAndCash(ctx, state);
+      this.drawBeltPackets(ctx, state);
       this.drawWarZoneObjects(ctx, state);
       this.drawSortedEntities(ctx, state);
       this.drawProjectilesAndArcs(ctx, state);
+      this.drawEagleFlyover(ctx, state);
       ctx.restore();
 
       // Draw Live Tactical Mini-Map Radar in Screen Space (Bottom-Right above buttons)
@@ -142,12 +177,12 @@
     }
 
     // ========================================================================
-    // LIVE TACTICAL MINI-MAP RADAR (Helps Navigate 4200x3800 Base in 20hr+ Play)
+    // LIVE TACTICAL MINI-MAP RADAR (4600x4000 Base with 7 Lanes & 3 Gates)
     // ========================================================================
     drawMiniMapRadar(ctx, state) {
       if (this.width < 640) return;
-      const mw = 156;
-      const mh = 142;
+      const mw = 164;
+      const mh = 148;
       const mx = this.width - mw - 14;
       const my = this.height - mh - 76;
       const W = window.GameConfig.WORLD;
@@ -158,7 +193,7 @@
       const toMiniY = (wz) => my + ((wz - W.minZ) / worldH) * mh;
 
       ctx.save();
-      ctx.fillStyle = 'rgba(9, 13, 20, 0.88)';
+      ctx.fillStyle = 'rgba(9, 13, 20, 0.90)';
       ctx.strokeStyle = '#facc15';
       ctx.lineWidth = 2;
       ctx.beginPath();
@@ -166,15 +201,15 @@
       ctx.fill();
       ctx.stroke();
 
-      // Sector tint boxes on minimap
+      // Sector A (Quarry)
       ctx.fillStyle = 'rgba(56, 189, 248, 0.18)';
-      ctx.fillRect(toMiniX(-2000), toMiniY(-120), (960 / worldW) * mw, (1820 / worldH) * mh);
+      ctx.fillRect(toMiniX(-2080), toMiniY(-120), (1050 / worldW) * mw, (2050 / worldH) * mh);
+      // Sector B (7 Factory Lanes)
       ctx.fillStyle = 'rgba(250, 204, 21, 0.16)';
-      ctx.fillRect(toMiniX(-940), toMiniY(-120), (1300 / worldW) * mw, (1820 / worldH) * mh);
+      ctx.fillRect(toMiniX(-990), toMiniY(-120), (1040 / worldW) * mw, (2050 / worldH) * mh);
+      // Sector C (7 Dedicated Item Counters & Queues)
       ctx.fillStyle = 'rgba(34, 197, 94, 0.18)';
-      ctx.fillRect(toMiniX(460), toMiniY(-120), (1540 / worldW) * mw, (840 / worldH) * mh);
-      ctx.fillStyle = 'rgba(249, 115, 22, 0.18)';
-      ctx.fillRect(toMiniX(460), toMiniY(820), (1540 / worldW) * mw, (880 / worldH) * mh);
+      ctx.fillRect(toMiniX(120), toMiniY(-120), (2080 / worldW) * mw, (2050 / worldH) * mh);
 
       // 3 Gate Layers on minimap
       for (const g of window.GameConfig.GATES) {
@@ -188,11 +223,18 @@
         ctx.stroke();
       }
 
-      // Enemies on minimap (red dots)
-      ctx.fillStyle = '#ef4444';
+      // 7 Dedicated Counters on minimap (green dots)
+      for (const item of window.GameConfig.ITEMS) {
+        if (!state.unlocked[item.id]) continue;
+        ctx.fillStyle = item.color;
+        ctx.fillRect(toMiniX(item.counterPos.x) - 2, toMiniY(item.counterPos.z) - 1.5, 4, 3);
+      }
+
+      // Enemies on minimap (red/purple dots)
       for (const e of state.enemies) {
+        ctx.fillStyle = (e.type === 'titan' || e.type === 'strider') ? '#a855f7' : '#ef4444';
         ctx.beginPath();
-        ctx.arc(toMiniX(e.x), toMiniY(e.z), e.type === 'hulk' ? 3.2 : 2.2, 0, Math.PI * 2);
+        ctx.arc(toMiniX(e.x), toMiniY(e.z), (e.type === 'titan' || e.type === 'strider' || e.type === 'hulk') ? 3.5 : 2.2, 0, Math.PI * 2);
         ctx.fill();
       }
 
@@ -210,12 +252,12 @@
       ctx.fillStyle = '#fde047';
       ctx.font = '900 9.5px Orbitron, sans-serif';
       ctx.textAlign = 'left';
-      ctx.fillText('📡 RADAR (4200x3800)', mx + 6, my + 12);
+      ctx.fillText('📡 RADAR (7 LANES)', mx + 6, my + 12);
       ctx.restore();
     }
 
     // ========================================================================
-    // LIVE ANIMATED 2D CHARACTER SHOWCASE CARD RENDERER (角色預覽圖鑑)
+    // LIVE ANIMATED 2D CHARACTER SHOWCASE CARD RENDERER (16 UNITS — EP1 TO EP10+)
     // ========================================================================
     renderCharacterPreviewCard(canvas, charDef, phase) {
       if (!canvas) return;
@@ -266,7 +308,7 @@
           hasRifle: ro.hasRifle,
           weaponId: 'w_liberator',
           walkPhase: phase * 6,
-          scale: 1.42,
+          scale: 1.40,
           label: '',
           stack: ro.stack || []
         });
@@ -294,13 +336,16 @@
         }
       } else if (charDef.renderType === 'enemy') {
         const type = charDef.renderOpts?.type || 'trooper';
+        let previewScale = 1.45;
+        if (type === 'titan' || type === 'strider') previewScale = 1.18;
+        else if (type === 'hulk' || type === 'devastator' || type === 'spewer') previewScale = 1.38;
         this.drawEnemy(ctx, {
           type,
           x: cx,
-          z: cy + 4,
+          z: cy + 6,
           hp: 100,
           maxHp: 100,
-          previewScale: type === 'hulk' ? 1.55 : 1.5,
+          previewScale,
           phase
         });
       } else if (charDef.renderType === 'mech') {
@@ -481,7 +526,7 @@
     }
 
     // ========================================================================
-    // 1. TERRAIN, SECTORS & 3-LAYER WAR CORRIDOR (4200 x 3800 ZERO OVERLAP)
+    // 1. TERRAIN, SECTORS & 3-LAYER WAR CORRIDOR (4600 x 4000 ZERO OVERLAP)
     // ========================================================================
     drawTerrainAndGrid(ctx, state) {
       const W = window.GameConfig.WORLD;
@@ -531,46 +576,55 @@
       ctx.fillStyle = '#141c2b';
       ctx.fillRect(W.minX, W.wallZ, W.maxX - W.minX, W.maxZ - W.wallZ);
 
+      // Sector A: Raw Quarry & Munitions Press (West)
       this.drawFloorSector(
         ctx,
-        -2000,
+        -2120,
         -120,
-        960,
-        1820,
+        1080,
+        2050,
         '#112236',
         '#38bdf8',
-        'SECTOR A: MANUAL HARVEST QUARRY, AUTO-DRILLS (Lv.1–20) & AMMO PRESS'
+        'SECTOR A: MANUAL HARVEST QUARRY, SPLIT AUTO-DRILLS (🛢️ E-710 / ⛏️ IRON) & AMMO PRESS'
       );
+
+      // Sector B: 7 Parallel Arsenal Production Lanes (Center)
       this.drawFloorSector(
         ctx,
-        -940,
+        -1000,
         -120,
-        1300,
-        1820,
+        1060,
+        2050,
         '#1b2434',
         '#facc15',
-        'SECTOR B: ARSENAL PRODUCTION LINES (Lv.1–20 | HOPPER ➔ MACHINE ➔ OUTPUT)'
+        'SECTOR B: 7 ARSENAL PRODUCTION LANES (SPLIT RAW HOPPERS ➔ FABRICATOR ➔ OUTPUT PAD)'
       );
+
+      // Sector C: 7 Dedicated Item Sales Counters, Cash Stacks & Customer Queues (East)
       this.drawFloorSector(
         ctx,
-        460,
+        100,
         -120,
-        1540,
-        840,
+        2150,
+        2050,
         '#142924',
         '#22c55e',
-        'SECTOR C: QUARTERMASTER SALES COUNTER, QUEUE PLAZA & CASH VAULT'
+        'SECTOR C: 7 DEDICATED ITEM SALES COUNTERS (1 ITEM = 1 COUNTER + DEDICATED QUEUE & CASH STACK)'
       );
-      this.drawFloorSector(
-        ctx,
-        460,
-        820,
-        1540,
-        940,
-        '#241a2c',
-        '#f97316',
-        'SECTOR D: HEAVY VEHICLE, PATRIOT MECH & SUPER DESTROYER HANGAR (Lv.1–20)'
-      );
+
+      // Subtle horizontal lane dividers across Sector B & Sector C for each of the 7 items
+      for (const item of window.GameConfig.ITEMS) {
+        const rz = item.stationPos.z;
+        ctx.save();
+        ctx.strokeStyle = state.unlocked[item.id] ? 'rgba(250, 204, 21, 0.14)' : 'rgba(148, 163, 184, 0.06)';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([12, 10]);
+        ctx.beginPath();
+        ctx.moveTo(-980, rz - 135);
+        ctx.lineTo(2150, rz - 135);
+        ctx.stroke();
+        ctx.restore();
+      }
 
       ctx.strokeStyle = 'rgba(148, 163, 184, 0.08)';
       ctx.lineWidth = 1.5;
@@ -600,48 +654,92 @@
       ctx.setLineDash([14, 9]);
       ctx.strokeRect(x, z, w, h);
       ctx.setLineDash([]);
-      ctx.globalAlpha = 0.85;
+      ctx.globalAlpha = 0.88;
       ctx.fillStyle = accent;
-      ctx.font = '900 15px Orbitron, sans-serif';
+      ctx.font = '900 14.5px Orbitron, sans-serif';
       ctx.fillText(title, x + 20, z + 30);
       ctx.restore();
     }
 
     // ========================================================================
-    // 2. FACTORIO CONVEYOR BELT NETWORK (ALL START AT Lv.0 LOCKED -> Lv.20!)
+    // 2. SPLIT CONVEYOR BELT NETWORK (NO FAKE ITEMS WHEN EMPTY!)
+    //    - Belt 1: conv_raw_e710 (Purple #a855f7) -> ONLY E-710 Stations
+    //    - Belt 2: conv_raw_iron (Cyan #38bdf8)   -> ONLY Iron Stations & Ammo Press
+    //    - Belt 3: conv_counter_auto (Green)      -> 7 Horizontal Lane Belts (Pickup -> Counter #1..7)
+    //    - Belts 4–6: conv_gate_1/2/3             -> Ammo Press -> Gate Layers 1/2/3
     // ========================================================================
     drawConveyorNetwork(ctx, state) {
       const AP = window.GameConfig.AMMO_PRESS;
       const gates = window.GameConfig.GATES;
 
-      const rawBeltLvl = state.conveyorLevels?.conv_raw_feed || 0;
+      // 1. PURPLE E-710 FUEL BELT (conv_raw_e710): Connects ONLY E-710 Auto-Pump (-1200, 240) along x = -960
+      const e710BeltLvl = state.conveyorLevels?.conv_raw_e710 || 0;
+      const e710Items = window.GameConfig.ITEMS.filter((it) => it.recipe.raw_e710 && (state.unlocked[it.id] || it.id === 'cloth'));
+      const maxE710Z = e710Items.length > 0 ? Math.max(...e710Items.map((it) => it.inputPos.z)) : 660;
       this.drawBeltPath(ctx, [
-        { x: -1150, z: 180 },
-        { x: -1150, z: 680 },
-        { x: -640, z: 680 },
-        { x: -640, z: 160 }
-      ], rawBeltLvl, '#38bdf8', '⛏️');
+        { x: -1200, z: 240 },
+        { x: -960, z: 240 },
+        { x: -960, z: 120 },
+        { x: -960, z: maxE710Z }
+      ], e710BeltLvl, '#a855f7');
 
+      for (const item of e710Items) {
+        this.drawBeltPath(ctx, [
+          { x: -960, z: item.inputPos.z - 12 },
+          { x: item.inputPos.x, z: item.inputPos.z - 12 }
+        ], e710BeltLvl, '#a855f7');
+      }
+
+      // 2. CYAN SUPER IRON BELT (conv_raw_iron): Connects ONLY Super Iron Auto-Drill (-1200, 780) along x = -910
+      const ironBeltLvl = state.conveyorLevels?.conv_raw_iron || 0;
+      const ironItems = window.GameConfig.ITEMS.filter((it) => it.recipe.raw_iron && (state.unlocked[it.id] || it.id === 'gun'));
+      const maxIronZ = ironItems.length > 0 ? Math.max(1320, ...ironItems.map((it) => it.inputPos.z)) : 1320;
+      this.drawBeltPath(ctx, [
+        { x: -1200, z: 780 },
+        { x: -910, z: 780 },
+        { x: -910, z: 390 },
+        { x: -910, z: maxIronZ }
+      ], ironBeltLvl, '#38bdf8');
+
+      // Branch from Iron Belt to Munitions Ammo Press Hopper
+      this.drawBeltPath(ctx, [
+        { x: -1200, z: 780 },
+        { x: -1360, z: 780 },
+        { x: AP.inputPos.x, z: AP.inputPos.z }
+      ], ironBeltLvl, '#38bdf8');
+
+      for (const item of ironItems) {
+        this.drawBeltPath(ctx, [
+          { x: -910, z: item.inputPos.z + 12 },
+          { x: item.inputPos.x, z: item.inputPos.z + 12 }
+        ], ironBeltLvl, '#38bdf8');
+      }
+
+      // 3. GATE TURRET AMMO BELTS (conv_gate_1, conv_gate_2, conv_gate_3)
       for (const g of gates) {
         const beltLvl = state.conveyorLevels?.[g.conveyorId] || 0;
         const path = [
           { x: AP.padX, z: AP.padZ },
-          { x: -820, z: AP.padZ },
-          { x: -820, z: g.turretZ },
+          { x: -860, z: AP.padZ },
+          { x: -860, z: g.turretZ },
           { x: g.leftTurretX, z: g.turretZ }
         ];
-        this.drawBeltPath(ctx, path, beltLvl, g.color, '🧱');
+        this.drawBeltPath(ctx, path, beltLvl, g.color);
       }
 
+      // 4. 7 DEDICATED HORIZONTAL OUTPUT-TO-COUNTER BELTS (conv_counter_auto)
       const counterBeltLvl = state.conveyorLevels?.conv_counter_auto || 0;
-      this.drawBeltPath(ctx, [
-        { x: -120, z: 520 },
-        { x: -120, z: 220 },
-        { x: 640, z: 220 }
-      ], counterBeltLvl, '#22c55e', '🦺');
+      for (const item of window.GameConfig.ITEMS) {
+        if (!state.unlocked[item.id]) continue;
+        this.drawBeltPath(ctx, [
+          { x: item.pickupPos.x, z: item.pickupPos.z },
+          { x: item.counterPos.x, z: item.counterPos.z }
+        ], counterBeltLvl, item.color);
+      }
     }
 
-    drawBeltPath(ctx, pts, level, color, itemIcon) {
+    // Draws ONLY the physical conveyor belt track & animated directional rollers (NO FAKE ITEMS!)
+    drawBeltPath(ctx, pts, level, color) {
       if (pts.length < 2) return;
       ctx.save();
 
@@ -653,10 +751,11 @@
 
       if (!level || level <= 0) {
         // Lv.0 Locked Blueprint Path (NOT automated yet!)
-        ctx.strokeStyle = 'rgba(148, 163, 184, 0.14)';
-        ctx.lineWidth = 20;
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.11)';
+        ctx.lineWidth = 16;
         ctx.stroke();
-        ctx.strokeStyle = 'rgba(250, 204, 21, 0.22)';
+        ctx.strokeStyle = color || 'rgba(250, 204, 21, 0.22)';
+        ctx.globalAlpha = 0.28;
         ctx.lineWidth = 2;
         ctx.setLineDash([8, 8]);
         ctx.stroke();
@@ -665,16 +764,16 @@
       }
 
       ctx.strokeStyle = '#0f172a';
-      ctx.lineWidth = 28;
+      ctx.lineWidth = 24;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
       ctx.stroke();
 
-      ctx.strokeStyle = '#334155';
-      ctx.lineWidth = 22;
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 18;
       ctx.stroke();
 
-      const speedMult = 1 + (level - 1) * 0.15;
+      const speedMult = 1 + (level - 1) * 0.14;
       for (let i = 0; i < pts.length - 1; i++) {
         const a = pts[i];
         const b = pts[i + 1];
@@ -689,41 +788,51 @@
         ctx.rotate(ang);
 
         ctx.strokeStyle = color || '#facc15';
-        ctx.lineWidth = 2.5;
-        const step = 24;
+        ctx.globalAlpha = 0.72;
+        ctx.lineWidth = 2.4;
+        const step = 26;
         const phase = (this.beltPhase * speedMult) % step;
         for (let d = phase; d < len - 6; d += step) {
           ctx.beginPath();
-          ctx.moveTo(d - 5, -6);
+          ctx.moveTo(d - 5, -5);
           ctx.lineTo(d + 3, 0);
-          ctx.lineTo(d - 5, 6);
+          ctx.lineTo(d - 5, 5);
           ctx.stroke();
         }
-
-        const itemStep = Math.max(38, 82 - level * 2);
-        const itemPhase = (this.time * 52 * speedMult) % itemStep;
-        ctx.font = '15px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        for (let d = itemPhase; d < len - 12; d += itemStep) {
-          ctx.save();
-          ctx.translate(d, 0);
-          ctx.rotate(-ang);
-          ctx.fillStyle = '#1e293b';
-          ctx.beginPath();
-          ctx.arc(0, 0, 10, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.strokeStyle = color;
-          ctx.lineWidth = 1.5;
-          ctx.stroke();
-          ctx.fillText(itemIcon, 0, 1);
-          ctx.restore();
-        }
-
         ctx.restore();
       }
 
       ctx.restore();
+    }
+
+    // Draws ONLY REAL IN-TRANSIT ITEMS (`state.beltPackets`) moving along unlocked belts!
+    drawBeltPackets(ctx, state) {
+      if (!state.beltPackets || state.beltPackets.length === 0) return;
+      for (const pkt of state.beltPackets) {
+        const pt = this.getPointAlongPath(pkt.path, pkt.progress);
+        ctx.save();
+        ctx.translate(pt.x, pt.z);
+
+        ctx.fillStyle = '#0f172a';
+        ctx.beginPath();
+        ctx.arc(0, 0, 12, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = pkt.color || '#facc15';
+        ctx.lineWidth = 2.2;
+        ctx.stroke();
+
+        ctx.font = '15px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(pkt.icon || '📦', 0, 1);
+
+        if (pkt.qty && pkt.qty > 1) {
+          ctx.fillStyle = '#fde047';
+          ctx.font = '900 9px Orbitron, sans-serif';
+          ctx.fillText(`x${pkt.qty}`, 11, -9);
+        }
+        ctx.restore();
+      }
     }
 
     // ========================================================================
@@ -734,32 +843,10 @@
 
       this.drawPadBox(
         ctx,
-        L.counterDropZone.x,
-        L.counterDropZone.z,
-        150,
-        140,
-        '#22c55e',
-        '📦 DROP / SELL',
-        'Stock Counter or Direct Sell'
-      );
-
-      this.drawPadBox(
-        ctx,
-        L.cashRegisterZone.x,
-        L.cashRegisterZone.z,
-        150,
-        110,
-        '#facc15',
-        '💵 COLLECT $REQ',
-        'Walk Here to Vacuum Cash'
-      );
-
-      this.drawPadBox(
-        ctx,
         L.armoryLoadoutPad.x,
         L.armoryLoadoutPad.z,
-        165,
-        110,
+        168,
+        104,
         '#a855f7',
         '🛡️ EQUIP LOADOUT',
         'Weapons, Guard Dog & Mechs'
@@ -770,14 +857,17 @@
         const lvl = state.conveyorLevels?.[c.id] || 0;
         const isMax = lvl >= c.maxLevel;
         const rem = Math.max(0, state.conveyorRemaining?.[c.id] ?? state.getConveyorUpgradeCost(c.id));
+        const activeCount = (state.beltPackets || []).filter((p) => p.beltId === c.id).length;
         const title = isMax
           ? `${c.icon} BELT MAX (Lv.20)`
           : (lvl === 0 ? `🔓 UNLOCK BELT $${rem}` : `⬆️ BELT Lv.${lvl + 1}/20 ($${rem})`);
-        const sub = lvl === 0 ? `${c.name} (Currently Off)` : `Active Lv.${lvl}/20 — Stand to Upgrade`;
-        this.drawPadBox(ctx, c.padX, c.padZ, 172, 84, c.color, title, sub);
+        const sub = lvl === 0
+          ? `${c.name} (Off)`
+          : (activeCount > 0 ? `Lv.${lvl}/20 — Moving ${activeCount} Load(s)` : `Lv.${lvl}/20 — Idle (Waiting Stock)`);
+        this.drawPadBox(ctx, c.padX, c.padZ, 184, 82, c.color, title, sub);
       }
 
-      // Item Unlock & Machine Level 1..20 Upgrade Pads (Safely offset +145px South of stationPos!)
+      // Item Unlock & Machine Level 1..20 Upgrade Pads (Safely offset +118px South of stationPos!)
       for (const item of window.GameConfig.ITEMS) {
         const isUnlocked = !!state.unlocked[item.id];
         const st = state.stations[item.id];
@@ -799,7 +889,23 @@
           ctx.textAlign = 'center';
           ctx.fillText(`🔒 ${item.icon} ${item.shortName.toUpperCase()}`, 0, -4);
           ctx.font = '700 11px Rajdhani, sans-serif';
-          ctx.fillText(` Blueprint Site (Stand Below to Build)`, 0, 14);
+          ctx.fillText(`Blueprint Site (Stand Below to Build)`, 0, 14);
+          ctx.restore();
+
+          // Locked Counter Blueprint Placeholder in Sector C
+          ctx.save();
+          ctx.translate(item.counterPos.x, item.counterPos.z);
+          ctx.fillStyle = 'rgba(15, 23, 42, 0.35)';
+          ctx.strokeStyle = 'rgba(148, 163, 184, 0.25)';
+          ctx.lineWidth = 2;
+          ctx.setLineDash([6, 6]);
+          ctx.fillRect(-70, -44, 140, 88);
+          ctx.strokeRect(-70, -44, 140, 88);
+          ctx.setLineDash([]);
+          ctx.fillStyle = '#64748b';
+          ctx.font = '900 11px Orbitron, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText(`🔒 ${item.icon} COUNTER #${item.tier}`, 0, 4);
           ctx.restore();
 
           const rem = Math.max(0, state.unlockRemaining[item.id] ?? item.unlockCost);
@@ -807,8 +913,8 @@
             ctx,
             item.unlockPos.x,
             item.unlockPos.z,
-            182,
-            88,
+            184,
+            82,
             item.color,
             `🔓 UNLOCK ${item.icon} $${rem}`,
             `${item.shortName} (${item.recipeText})`
@@ -821,8 +927,8 @@
             ctx,
             item.unlockPos.x,
             item.unlockPos.z,
-            182,
-            74,
+            184,
+            72,
             isMax ? '#4ade80' : item.color,
             isMax ? `✅ ${item.icon} MAX Lv.20` : `⬆️ UPGRADE ${item.icon} Lv.${lvl + 1}/20 ($${upgCost})`,
             `Lv.${lvl}/20 | +15% Speed & +12% Value`
@@ -834,7 +940,7 @@
     drawPadBox(ctx, x, z, w, h, color, title, subtitle) {
       ctx.save();
       ctx.translate(x, z);
-      ctx.fillStyle = 'rgba(15, 23, 42, 0.84)';
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.86)';
       ctx.fillRect(-w / 2, -h / 2, w, h);
 
       ctx.strokeStyle = color;
@@ -844,7 +950,7 @@
       ctx.setLineDash([]);
 
       ctx.fillStyle = color;
-      ctx.font = '900 12.5px Orbitron, sans-serif';
+      ctx.font = '900 12px Orbitron, sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText(title, 0, -5);
 
@@ -902,6 +1008,13 @@
 
         const hpRatio = Math.max(0, Math.min(1, gs.hp / gs.maxHp));
         const underAttack = (this.time - (gs.lastHitTime || -10)) < 0.6;
+
+        // Carbot panic sweat drops when gate HP is low!
+        if (!isBroken && hpRatio < 0.45) {
+          ctx.font = '16px sans-serif';
+          ctx.fillText('💧', -halfOpen - 28, -22 + Math.sin(this.time * 9) * 5);
+          ctx.fillText('💧', halfOpen + 24, -22 + Math.cos(this.time * 9) * 5);
+        }
 
         if (isBroken) {
           ctx.fillStyle = 'rgba(239, 68, 68, 0.28)';
@@ -1065,7 +1178,7 @@
     drawRawQuarryAndAmmoPress(ctx, state) {
       for (const raw of window.GameConfig.RAW_EXTRACTORS) {
         const rs = state.rawExtractors[raw.id];
-        const lvl = rs ? rs.level : 0; // Starts at Lv.0!
+        const lvl = rs ? rs.level : 0;
         const isMax = lvl >= (raw.maxLevel || 20);
         const stock = rs ? rs.stock : 0;
         const maxBuf = rs ? rs.maxBuffer : raw.baseBuffer;
@@ -1190,7 +1303,7 @@
             raw.pickupX,
             raw.pickupZ,
             152,
-            84,
+            80,
             raw.color,
             `📤 PICKUP ${raw.itemIcon} (${stock}/${maxBuf})`,
             `Take Raw ${raw.shortName} to Hoppers`
@@ -1202,7 +1315,7 @@
           raw.padX,
           raw.padZ,
           184,
-          82,
+          80,
           isMax ? '#4ade80' : raw.color,
           isMax ? `✅ MAX SCALE Lv.20` : (lvl === 0 ? `🔓 UNLOCK AUTO ${raw.itemIcon} ($${upgradeCost})` : `⬆️ UPGRADE Lv.${lvl + 1}/20 ($${upgradeCost})`),
           lvl === 0 ? `Automates ${raw.shortName} Extraction` : `Expand Rigs, Buffer & Speed`
@@ -1243,7 +1356,7 @@
           AP.inputPos.x,
           AP.inputPos.z,
           155,
-          86,
+          82,
           ammoInIron > 0 ? '#38bdf8' : '#ef4444',
           `📥 AMMO HOPPER: ⛏️${ammoInIron}`,
           ammoInIron > 0 ? `Recipe: 1⛏️ ➔ 3🧱 Ammo` : `⚠️ DROP ⛏️ IRON HERE!`
@@ -1285,20 +1398,19 @@
           AP.padX,
           AP.padZ,
           158,
-          86,
+          82,
           '#f97316',
           `📤 PICKUP 🧱 AMMO (${ammoStock}/${state.ammoPress.maxBuffer})`,
           `Carry (搬) to Gate Layers 3/2/1`
         );
       }
 
-      // Safe Unlock / Upgrade Pad Below Ammo Press (Never crushes player!)
       this.drawPadBox(
         ctx,
         AP.unlockPos.x,
         AP.unlockPos.z,
         182,
-        76,
+        74,
         apMax ? '#4ade80' : '#f97316',
         apMax ? `✅ AMMO PRESS MAX Lv.20` : (apLvl === 0 ? `🔓 UNLOCK 🧱 PRESS ($${apCost})` : `⬆️ UPGRADE PRESS Lv.${apLvl + 1}/20 ($${apCost})`),
         `1x ⛏️ Iron ➔ 3x 🧱 Turret Ammo`
@@ -1327,7 +1439,7 @@
     }
 
     // ========================================================================
-    // 6. SECTOR B & D: ARSENAL PRODUCTION LINES (Lv.1–20 | HOPPER -> MACHINE -> OUTPUT)
+    // 6. SECTOR B: 7 HORIZONTAL ARSENAL PRODUCTION LANES
     // ========================================================================
     drawArsenalFactories(ctx, state) {
       for (const item of window.GameConfig.ITEMS) {
@@ -1353,8 +1465,8 @@
           ctx,
           item.inputPos.x,
           item.inputPos.z,
-          162,
-          84,
+          164,
+          80,
           hasIngredients ? '#38bdf8' : '#ef4444',
           `📥 HOPPER: ${hopperStr}`,
           hasIngredients ? `Recipe: ${item.recipeText}` : `⚠️ FEED RAW ORE HERE!`
@@ -1408,84 +1520,108 @@
           item.pickupPos.x,
           item.pickupPos.z,
           158,
-          84,
+          80,
           isMax ? '#facc15' : item.color,
           `📤 READY: ${stock}/${maxBuf} ${item.icon}`,
-          `Sell Price: $${state.getItemSellPrice(item)}`
+          `Carry to Counter #${item.tier} or Belt`
         );
       }
     }
 
     // ========================================================================
-    // 7. SECTOR C: QUARTERMASTER SALES COUNTER & CASH VAULT (ZERO OVERLAP)
+    // 7. SECTOR C: 7 DEDICATED ITEM SALES COUNTERS, PER-COUNTER CASH & QUEUES
+    //    (1 Item = 1 Dedicated Sales Counter + Drop Pad + Cash Stack + Queue)
     // ========================================================================
-    drawCounterAndCashTowers(ctx, state) {
+    drawDedicatedCountersAndCash(ctx, state) {
       const L = window.GameConfig.LOCATIONS;
-      const T = L.counterTable;
 
-      ctx.save();
-      ctx.translate(T.x, T.z);
-
-      ctx.fillStyle = '#1e293b';
-      ctx.strokeStyle = '#facc15';
-      ctx.lineWidth = 4;
-      ctx.fillRect(-T.width / 2, -T.depth / 2, T.width, T.depth);
-      ctx.strokeRect(-T.width / 2, -T.depth / 2, T.width, T.depth);
-
-      ctx.fillStyle = '#facc15';
-      ctx.font = '900 14px Orbitron, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('🦅 QUARTERMASTER COUNTER', 0, -T.depth / 2 - 14);
-
-      const items = window.GameConfig.ITEMS;
-      let rowY = -T.depth / 2 + 28;
-      for (const item of items) {
+      for (const item of window.GameConfig.ITEMS) {
         if (!state.unlocked[item.id]) continue;
         const count = state.counterBuffer[item.id] || 0;
-        ctx.fillStyle = count > 0 ? 'rgba(34, 197, 94, 0.22)' : 'rgba(15, 23, 42, 0.65)';
-        ctx.fillRect(-T.width / 2 + 12, rowY - 14, T.width - 24, 34);
+        const sellPrice = state.getItemSellPrice(item);
+
+        // 1. Dedicated Drop / Stock Pad on the West side of this item's Counter
+        this.drawPadBox(
+          ctx,
+          item.counterDropPos.x,
+          item.counterDropPos.z,
+          144,
+          82,
+          count > 0 ? '#22c55e' : item.color,
+          `📦 STOCK ${item.icon}`,
+          `Drop ${item.shortName} Here`
+        );
+
+        // 2. Dedicated Counter Table for this specific Item
+        ctx.save();
+        ctx.translate(item.counterPos.x, item.counterPos.z);
+
+        ctx.fillStyle = '#1e293b';
         ctx.strokeStyle = count > 0 ? item.color : '#475569';
-        ctx.lineWidth = 1.5;
-        ctx.strokeRect(-T.width / 2 + 12, rowY - 14, T.width - 24, 34);
+        ctx.lineWidth = 4;
+        ctx.fillRect(-76, -48, 152, 96);
+        ctx.strokeRect(-76, -48, 152, 96);
 
-        ctx.fillStyle = '#ffffff';
-        ctx.font = '700 13px Rajdhani, sans-serif';
-        ctx.textAlign = 'left';
-        ctx.fillText(`${item.icon} ${item.shortName}`, -T.width / 2 + 20, rowY + 7);
+        ctx.fillStyle = count > 0 ? 'rgba(34, 197, 94, 0.22)' : 'rgba(15, 23, 42, 0.72)';
+        ctx.fillRect(-66, -34, 132, 68);
 
-        ctx.fillStyle = count > 0 ? '#4ade80' : '#94a3b8';
-        ctx.font = '900 14px Orbitron, sans-serif';
-        ctx.textAlign = 'right';
-        ctx.fillText(`x${count}`, T.width / 2 - 20, rowY + 7);
-
-        rowY += 42;
-      }
-      ctx.restore();
-
-      const cashVal = state.cashOnGround || 0;
-      const billCount = Math.min(48, Math.ceil(cashVal / 15));
-      if (billCount > 0) {
-        const cx = L.cashRegisterZone.x;
-        const cz = L.cashRegisterZone.z - 22;
-        for (let i = 0; i < billCount; i++) {
-          const col = i % 2;
-          const layer = Math.floor(i / 2);
-          const bx = cx - 24 + col * 48;
-          const by = cz - layer * 4;
-          ctx.fillStyle = '#22c55e';
-          ctx.strokeStyle = '#14532d';
-          ctx.lineWidth = 1.5;
-          ctx.fillRect(bx - 16, by - 8, 32, 14);
-          ctx.strokeRect(bx - 16, by - 8, 32, 14);
-        }
-        ctx.fillStyle = '#4ade80';
-        ctx.font = '900 15px Orbitron, sans-serif';
+        ctx.fillStyle = item.color;
+        ctx.font = '900 11.5px Orbitron, sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText(`💵 +$${cashVal}`, cx, cz - Math.floor(billCount / 2) * 4 - 18);
+        ctx.fillText(`COUNTER #${item.tier}: ${item.shortName.toUpperCase()}`, 0, -56);
+
+        ctx.font = '26px sans-serif';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(item.icon, -54, -2);
+
+        ctx.fillStyle = count > 0 ? '#4ade80' : '#f87171';
+        ctx.font = '900 18px Orbitron, sans-serif';
+        ctx.textAlign = 'right';
+        ctx.fillText(`x${count}`, 56, -6);
+
+        ctx.fillStyle = '#fde047';
+        ctx.font = '700 12px Rajdhani, sans-serif';
+        ctx.textAlign = 'right';
+        ctx.fillText(`$${sellPrice}/ea`, 56, 18);
+
+        ctx.restore();
+
+        // 3. Dedicated Cash Stack for this Counter (`state.counterCash[item.id]`)
+        const cashVal = (state.counterCash && state.counterCash[item.id]) || 0;
+        const cx = item.cashPos.x;
+        const cz = item.cashPos.z;
+
+        this.drawPadBox(
+          ctx,
+          cx,
+          cz,
+          128,
+          76,
+          cashVal > 0 ? '#22c55e' : '#facc15',
+          cashVal > 0 ? `💵 +$${cashVal}` : `💵 CASH #${item.tier}`,
+          cashVal > 0 ? `Walk Here to Collect` : `Counter #${item.tier} Vault`
+        );
+
+        const billCount = Math.min(28, Math.ceil(cashVal / 20));
+        if (billCount > 0) {
+          for (let i = 0; i < billCount; i++) {
+            const col = i % 2;
+            const layer = Math.floor(i / 2);
+            const bx = cx - 18 + col * 36;
+            const by = cz - 26 - layer * 3.5;
+            ctx.fillStyle = '#22c55e';
+            ctx.strokeStyle = '#14532d';
+            ctx.lineWidth = 1.5;
+            ctx.fillRect(bx - 13, by - 6, 26, 11);
+            ctx.strokeRect(bx - 13, by - 6, 26, 11);
+          }
+        }
       }
 
+      // Trash / Clear Stack Pad
       const TC = L.trashCanZone;
-      this.drawPadBox(ctx, TC.x, TC.z, 130, 84, '#ef4444', '🗑️ DUMP / CLEAR', 'Clear Held Stack');
+      this.drawPadBox(ctx, TC.x, TC.z, 136, 82, '#ef4444', '🗑️ DUMP / CLEAR', 'Clear Held Stack');
     }
 
     drawWarZoneObjects(ctx, state) {
@@ -1595,6 +1731,7 @@
         walkPhase = 0,
         scale = 1,
         label = '',
+        subLabel = '',
         stack = []
       } = opts;
 
@@ -1748,9 +1885,15 @@
 
       if (label) {
         ctx.fillStyle = '#ffffff';
-        ctx.font = '900 11px Orbitron, sans-serif';
+        ctx.font = '900 10.5px Orbitron, sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText(label, 0, 34);
+      }
+      if (subLabel) {
+        ctx.fillStyle = '#fde047';
+        ctx.font = '700 10px Rajdhani, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(subLabel, 0, 46);
       }
 
       ctx.restore();
@@ -1828,7 +1971,8 @@
         isCommander: false,
         walkPhase: w.walkPhase || 0,
         scale: 0.94,
-        label: isMiner ? '⛏️ SEAF MINER' : (isAmmo ? '🧱 SEAF ENGINEER' : '🪖 SEAF STAFF'),
+        label: isMiner ? '⛏️ SEAF MINER' : (isAmmo ? '🧱 SEAF ENGINEER' : '🪖 SEAF LOGISTICS'),
+        subLabel: w.taskLabel || '',
         stack: w.inventory
       });
     }
@@ -1851,43 +1995,98 @@
       ctx.save();
       ctx.translate(c.x, c.z - 42);
       ctx.fillStyle = c.state === 'leaving' ? '#16a34a' : '#0f172a';
-      ctx.strokeStyle = c.state === 'leaving' ? '#4ade80' : '#facc15';
+      ctx.strokeStyle = c.state === 'leaving' ? '#4ade80' : (c.item?.color || '#facc15');
       ctx.lineWidth = 2.5;
       ctx.beginPath();
-      ctx.roundRect(-42, -16, 84, 28, 10);
+      ctx.roundRect(-44, -16, 88, 28, 10);
       ctx.fill();
       ctx.stroke();
 
       ctx.fillStyle = '#ffffff';
-      ctx.font = '900 13px Orbitron, sans-serif';
+      ctx.font = '900 12.5px Orbitron, sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       if (c.state === 'leaving') {
         ctx.fillText('😊 DEMOCRACY!', 0, -2);
       } else {
-        ctx.fillText(`${c.item.icon} ${c.received}/${c.qty}`, 0, -2);
+        ctx.fillText(`${c.item.icon} ${c.received}/${c.qty} (#${c.item.tier})`, 0, -2);
       }
       ctx.restore();
     }
 
+    // ========================================================================
+    // ALL-EPISODE CARBOT ANIMATIONS ENEMY SPRITES (Ep1–Ep10+)
+    // Supports:
+    //  - Terminids: hunter (Ep1/2), bug (Charger Ep1/3), spewer (Bile Spewer Ep2/5), titan (Bile Titan Ep1/4)
+    //  - Automatons: trooper (Ep3/7), devastator (Rocket Devastator Ep3/6), hulk (Ep3/7), strider (Factory Strider Ep8/9)
+    // ========================================================================
     drawEnemy(ctx, e) {
       ctx.save();
       ctx.translate(e.x, e.z);
-      const isHulk = e.type === 'hulk';
-      const isBug = e.type === 'bug';
-      const scale = e.previewScale || (isHulk ? 1.45 : (isBug ? 1.0 : 1.05));
+      const type = e.type || 'trooper';
+      let defaultScale = 1.05;
+      if (type === 'hunter') defaultScale = 0.92;
+      else if (type === 'bug') defaultScale = 1.08;
+      else if (type === 'spewer') defaultScale = 1.22;
+      else if (type === 'titan') defaultScale = 1.65;
+      else if (type === 'devastator') defaultScale = 1.22;
+      else if (type === 'hulk') defaultScale = 1.45;
+      else if (type === 'strider') defaultScale = 1.72;
+
+      const scale = e.previewScale || defaultScale;
       const t = e.phase ?? this.time;
       ctx.scale(scale, scale);
 
       ctx.fillStyle = 'rgba(0,0,0,0.45)';
       ctx.beginPath();
-      ctx.ellipse(0, 18, 18, 8, 0, 0, Math.PI * 2);
+      ctx.ellipse(0, 18, type === 'titan' || type === 'strider' ? 26 : 18, 9, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      const wobble = Math.sin(t * 7) * 2;
-      ctx.translate(0, wobble * 0.4);
+      const wobble = Math.sin(t * 7.5) * 2.2;
+      ctx.translate(0, wobble * 0.45);
 
-      if (isBug) {
+      if (type === 'hunter') {
+        // Ep1/Ep2 Carbot Scavenger / Leaping Hunter Bug (Fluttering wings + wagging pink tongue + derpy eyes)
+        const wingFlap = Math.sin(t * 18) * 6;
+        ctx.fillStyle = 'rgba(253, 224, 71, 0.45)';
+        ctx.strokeStyle = '#090d14';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.ellipse(-14, -8 + wingFlap * 0.4, 10, 5, -0.4, 0, Math.PI * 2);
+        ctx.ellipse(14, -8 - wingFlap * 0.4, 10, 5, 0.4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#fb923c';
+        ctx.strokeStyle = '#090d14';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.ellipse(0, 2, 15, 12, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // Wagging pink tongue
+        const tongueX = Math.sin(t * 10) * 4;
+        ctx.fillStyle = '#f472b6';
+        ctx.beginPath();
+        ctx.ellipse(tongueX, 13, 4.5, 7, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // Derpy Carbot Eyes
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(-6, 4, 4.5, 0, Math.PI * 2);
+        ctx.arc(6, 4, 3.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = '#090d14';
+        ctx.beginPath();
+        ctx.arc(-7, 4, 1.8, 0, Math.PI * 2);
+        ctx.arc(7, 3, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (type === 'bug') {
+        // Ep1/Ep3 Carbot Armored Charger Bug
         ctx.strokeStyle = '#090d14';
         ctx.lineWidth = 3;
         for (const side of [-1, 1]) {
@@ -1910,7 +2109,150 @@
         ctx.arc(-8, 12, 4, 0, Math.PI * 2);
         ctx.arc(8, 12, 4, 0, Math.PI * 2);
         ctx.fill();
+      } else if (type === 'spewer') {
+        // Ep2/Ep5 Carbot Bile Spewer (Bloated glowing neon-green acid sac)
+        const pulse = 1 + Math.sin(t * 6) * 0.08;
+        ctx.save();
+        ctx.scale(pulse, 1 / pulse);
+        ctx.fillStyle = '#a3e635';
+        ctx.strokeStyle = '#090d14';
+        ctx.lineWidth = 3.5;
+        ctx.beginPath();
+        ctx.ellipse(0, -4, 21, 17, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#bef264';
+        ctx.beginPath();
+        ctx.arc(-8, -8, 4.5, 0, Math.PI * 2);
+        ctx.arc(7, -10, 3.5, 0, Math.PI * 2);
+        ctx.arc(2, -2, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        // Head + dripping green bile
+        ctx.fillStyle = '#3f6212';
+        ctx.beginPath();
+        ctx.arc(0, 11, 9, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = '#84cc16';
+        ctx.beginPath();
+        ctx.arc(0, 18 + Math.sin(t * 9) * 2, 4, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (type === 'titan') {
+        // Ep1/Ep4 Carbot Bile Titan Boss (4 towering stilted spider legs + glowing acid belly)
+        ctx.strokeStyle = '#090d14';
+        ctx.lineWidth = 4;
+        for (const side of [-1, 1]) {
+          for (const fb of [-1, 1]) {
+            const kneeX = side * 26;
+            const kneeY = fb * 8 - 10 + Math.sin(t * 6 + side + fb) * 4;
+            const footX = side * 34;
+            const footY = fb * 15 + 14;
+            ctx.beginPath();
+            ctx.moveTo(side * 10, fb * 4);
+            ctx.lineTo(kneeX, kneeY);
+            ctx.lineTo(footX, footY);
+            ctx.stroke();
+          }
+        }
+        // Glowing green acid underbelly
+        ctx.fillStyle = '#84cc16';
+        ctx.strokeStyle = '#090d14';
+        ctx.lineWidth = 3.5;
+        ctx.beginPath();
+        ctx.ellipse(0, -6, 16, 20, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // Armored dark carapace crest
+        ctx.fillStyle = '#1e293b';
+        ctx.beginPath();
+        ctx.roundRect(-14, -18, 28, 22, 8);
+        ctx.fill();
+        ctx.stroke();
+
+        // Glowing acid jaws
+        ctx.fillStyle = '#bef264';
+        ctx.beginPath();
+        ctx.arc(-5, 8, 3.5, 0, Math.PI * 2);
+        ctx.arc(5, 8, 3.5, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (type === 'devastator') {
+        // Ep3/Ep6 Malevelon Creek Rocket Devastator (Dual 6-tube shoulder rocket pods!)
+        ctx.fillStyle = '#991b1b';
+        ctx.strokeStyle = '#090d14';
+        ctx.lineWidth = 3.5;
+        // Dual shoulder rocket pods
+        ctx.fillRect(-21, -28, 13, 14);
+        ctx.strokeRect(-21, -28, 13, 14);
+        ctx.fillRect(8, -28, 13, 14);
+        ctx.strokeRect(8, -28, 13, 14);
+        ctx.fillStyle = '#facc15';
+        for (const rx of [-17, -12, 12, 17]) {
+          ctx.beginPath();
+          ctx.arc(rx, -21, 2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // Broad armored torso
+        ctx.fillStyle = '#475569';
+        ctx.beginPath();
+        ctx.roundRect(-19, -16, 38, 32, 8);
+        ctx.fill();
+        ctx.stroke();
+
+        // Skull head & glowing red eyes
+        ctx.fillStyle = '#e2e8f0';
+        ctx.beginPath();
+        ctx.arc(0, -4, 9, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = '#ef4444';
+        ctx.beginPath();
+        ctx.arc(-3.5, -5, 2.8, 0, Math.PI * 2);
+        ctx.arc(3.5, -5, 2.8, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (type === 'strider') {
+        // Ep8/Ep9 Carbot Factory Strider ("AT-AT Mechanical Dog" Mega-Boss!)
+        const legStep = Math.sin(t * 5) * 4;
+        ctx.fillStyle = '#334155';
+        ctx.strokeStyle = '#090d14';
+        ctx.lineWidth = 3.5;
+        // 4 heavy mechanical walker legs
+        ctx.fillRect(-24, 6 + legStep, 9, 16);
+        ctx.strokeRect(-24, 6 + legStep, 9, 16);
+        ctx.fillRect(-10, 8 - legStep, 9, 16);
+        ctx.strokeRect(-10, 8 - legStep, 9, 16);
+        ctx.fillRect(4, 6 + legStep, 9, 16);
+        ctx.strokeRect(4, 6 + legStep, 9, 16);
+        ctx.fillRect(16, 8 - legStep, 9, 16);
+        ctx.strokeRect(16, 8 - legStep, 9, 16);
+
+        // Colossal armored walker body
+        ctx.fillStyle = '#1e293b';
+        ctx.beginPath();
+        ctx.roundRect(-26, -22, 52, 30, 8);
+        ctx.fill();
+        ctx.stroke();
+
+        // Dorsal top cannon turret
+        ctx.fillStyle = '#7f1d1d';
+        ctx.fillRect(-10, -32, 20, 10);
+        ctx.strokeRect(-10, -32, 20, 10);
+        ctx.fillRect(-3, -42, 6, 12);
+        ctx.strokeRect(-3, -42, 6, 12);
+
+        // Glowing red factory bay slit & chin gatling guns
+        ctx.fillStyle = '#ef4444';
+        ctx.fillRect(-16, -6, 32, 6);
+        ctx.fillStyle = '#f97316';
+        ctx.fillRect(-12, 6, 5, 10);
+        ctx.fillRect(7, 6, 5, 10);
       } else {
+        // Ep3/Ep7 Trooper or Flame-Saw Hulk Boss
+        const isHulk = type === 'hulk';
         ctx.fillStyle = isHulk ? '#7f1d1d' : '#334155';
         ctx.strokeStyle = '#090d14';
         ctx.lineWidth = 4;
@@ -1946,9 +2288,9 @@
       if (!e.previewScale) {
         const hpRatio = Math.max(0, Math.min(1, e.hp / e.maxHp));
         ctx.fillStyle = '#090d14';
-        ctx.fillRect(-20, -32, 40, 7);
+        ctx.fillRect(-20, -34, 40, 7);
         ctx.fillStyle = '#ef4444';
-        ctx.fillRect(-19, -31, 38 * hpRatio, 5);
+        ctx.fillRect(-19, -33, 38 * hpRatio, 5);
       }
       ctx.restore();
     }
@@ -1998,6 +2340,44 @@
         ctx.stroke();
         ctx.restore();
       }
+    }
+
+    // Carbot Ep1/Ep7 Eagle-1 500KG Bomb Flyover Jet Silhouette & Red Stratagem Beacon Beam!
+    drawEagleFlyover(ctx, state) {
+      if (!state.eagleFlyover) return;
+      const ef = state.eagleFlyover;
+      const p = Math.min(1, ef.t / ef.duration);
+      const jx = ef.sx + (ef.tx - ef.sx) * p;
+      const jz = ef.sz + (ef.tz - ef.sz) * p;
+
+      // Red vertical stratagem beacon beam at target center
+      ctx.save();
+      ctx.strokeStyle = 'rgba(239, 68, 68, 0.75)';
+      ctx.lineWidth = 6;
+      ctx.beginPath();
+      ctx.moveTo(0, -900);
+      ctx.lineTo(0, -1850);
+      ctx.stroke();
+      ctx.fillStyle = '#ef4444';
+      ctx.font = '900 16px Orbitron, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('🦅 EAGLE-1 500KG INBOUND (⬆️➡️⬇️⬇️⬇️)!', 0, -920);
+
+      // Sweeping jet shadow
+      ctx.translate(jx, jz);
+      ctx.rotate(-0.35);
+      ctx.fillStyle = 'rgba(9, 13, 20, 0.65)';
+      ctx.strokeStyle = '#facc15';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(90, 0);
+      ctx.lineTo(-40, -75);
+      ctx.lineTo(-20, 0);
+      ctx.lineTo(-40, 75);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
     }
   }
 

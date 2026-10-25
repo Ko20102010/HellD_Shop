@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>HELLDIVERS PLEASE! — 2D Factorio &amp; Carbot War-Zone Tycoon (v0.0.05)</title>
+  <title>HELLDIVERS PLEASE! — 2D Factorio &amp; Carbot War-Zone Tycoon (v0.0.06)</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
@@ -16,6 +16,7 @@
     <canvas id="game-canvas"></canvas>
     <div id="world-labels"></div>
     <div id="screen-flash"></div>
+    <span id="conv_raw_feed" style="display:none;"></span>
 
     <div id="hud-layer">
       <!-- TOP HUD -->
@@ -24,7 +25,7 @@
           <div class="brand-badge">
             <span>🦅</span>
             <span class="brand-title">HELLDIVERS PLEASE!</span>
-            <span class="version-pill" id="hud-version">v0.0.05</span>
+            <span class="version-pill" id="hud-version">v0.0.06</span>
           </div>
 
           <div class="stat-pill cash-pill" id="cash-pill-el">
@@ -87,7 +88,7 @@
             <button class="strat-trigger-btn hud-btn btn-stratagem" id="btn-call-stratagem">🦅 500KG BOOST</button>
           </div>
 
-          <button class="hud-btn btn-char" id="btn-open-characters" title="Preview All 12 Carbot Characters, Mechs &amp; Enemies (全角色圖鑑)">
+          <button class="hud-btn btn-char" id="btn-open-characters" title="Preview All 16 Carbot Ep1–Ep10+ Characters, Mechs &amp; Enemies (全角色圖鑑)">
             🎭 角色 Preview
           </button>
           <button class="hud-btn btn-skill" id="btn-open-loadout" title="Equip Weapons, Armor, Guard Dog Drone &amp; Mechs (主角色裝備)">
@@ -106,7 +107,7 @@
       <div id="objective-ticker">
         <div id="objective-banner">
           <span>📡</span>
-          <span id="objective-text">DIRECTIVE: Harvest 🛢️ E-710 in Sector A ➔ Feed 🦺 Cloth Hopper ➔ Sell Cloth to unlock 🔫 Gun &amp; Lv.1–20 Belts!</span>
+          <span id="objective-text">DIRECTIVE: Harvest 🛢️ E-710 in Sector A ➔ Feed 🦺 Cloth Hopper ➔ Sell at Counter #1 to unlock 🔫 Gun &amp; Split Belts!</span>
         </div>
       </div>
 
@@ -117,7 +118,7 @@
         <button class="hud-btn" id="btn-zoom-reset" title="Reset Camera Zoom">🔍</button>
         <button class="hud-btn" id="btn-snap-quarry" title="Walk to Sector A Quarry">⛏️ 礦區</button>
         <button class="hud-btn" id="btn-snap-factory" title="Walk to Sector B Factories">⚙️ 工廠</button>
-        <button class="hud-btn" id="btn-snap-counter" title="Walk to Sector C Counter">💵 櫃檯</button>
+        <button class="hud-btn" id="btn-snap-counter" title="Walk to Sector C 7 Dedicated Counters">💵 櫃檯</button>
         <button class="hud-btn" id="btn-snap-gates" title="Walk to Active Front Gate">🛡️ 城門</button>
       </div>
 
@@ -141,7 +142,7 @@
             <span class="version-pill" id="inv-badge-mech">🤖 0</span>
             <span class="version-pill" id="inv-badge-warship">🚀 0</span>
           </div>
-          <strong>v0.0.05 (20HR+ EDITION):</strong> Start with <strong>🦺 Cloth</strong> ➔ unlock <strong>🔫 Gun, Auto-Drills &amp; Lv.1–20 Belts</strong> ➔ prepare during <strong>⏳ Rest Time</strong> &amp; manually repair broken <strong>Gate Layers 3/2/1</strong>!
+          <strong>v0.0.06 (ALL-EP CARBOT &amp; 7 COUNTERS):</strong> <strong>Split Raw Belts</strong> (Purple 🛢️ E-710 / Cyan ⛏️ Iron) only show <strong>real moving items</strong>, <strong>1 Item = 1 Dedicated Counter (#1–#7)</strong> &amp; <strong>Smart SEAF AI</strong>!
         </div>
 
         <div class="mobile-action-cluster">
@@ -151,9 +152,7 @@
       </footer>
     </div>
 
-    <!-- ======================================================================
-         NEW IN v0.0.05: 20HR+ GALACTIC CAMPAIGN, PRESTIGE ASCENSION & MILESTONES MODAL
-         ====================================================================== -->
+    <!-- 20HR+ GALACTIC CAMPAIGN, PRESTIGE ASCENSION & MILESTONES MODAL -->
     <div class="modal-backdrop" id="modal-campaign">
       <div class="modal-card modal-wide">
         <div class="modal-header">
@@ -193,11 +192,11 @@
       </div>
     </div>
 
-    <!-- ALL 12 CHARACTERS, STAFF, MECHS & ENEMIES PREVIEW MODAL (全角色動態預覽圖鑑) -->
+    <!-- ALL 16 CARBOT EP1–EP10+ CHARACTERS, STAFF, MECHS & ENEMIES PREVIEW MODAL (全角色動態預覽圖鑑) -->
     <div class="modal-backdrop" id="modal-characters">
       <div class="modal-card modal-wide">
         <div class="modal-header">
-          <div class="modal-title">🎭 ALL 12 CARBOT CHARACTERS, STAFF, MECHS &amp; ENEMIES PREVIEW (全角色動態預覽圖鑑)</div>
+          <div class="modal-title">🎭 ALL 16 CARBOT (EP1–EP10+) CHARACTERS, MECHS &amp; ENEMIES PREVIEW (全角色動態預覽圖鑑)</div>
           <div style="display:flex;gap:8px;align-items:center;">
             <button class="hud-btn btn-primary" id="btn-play-from-chars">🎮 Play Game</button>
             <button class="modal-close-btn modal-close" id="btn-close-characters">✕</button>
@@ -205,23 +204,23 @@
         </div>
         <div class="modal-body">
           <p style="font-size:0.84rem; color:#cbd5e1; line-height:1.4;">
-            Live 60FPS animated preview of all <strong>12 CarbotAnimations-style 2D vector characters, SEAF Miners/Engineers, Automaton &amp; Terminid enemies, Vehicles, Mechs, and 3-Layer Defense Sentries</strong> in <code>v0.0.05</code>.
+            Live 60FPS animated preview of all <strong>16 CarbotAnimations Helldivers 2 (Ep1–Ep10+) 2D vector characters, Smart SEAF Staff, Terminids (Scavenger Hunter, Charger, Bile Spewer, Bile Titan), Automatons (Trooper, Rocket Devastator, Flame-Saw Hulk, Factory Strider), Vehicles, Mechs, and Sentries</strong> in <code>v0.0.06</code>.
           </p>
           <div class="char-showcase-grid" id="char-showcase-grid"></div>
         </div>
       </div>
     </div>
 
-    <!-- 20-LEVEL UPGRADES, QUARRY, MACHINES, BELTS & 3-LAYER GATES MODAL -->
+    <!-- 20-LEVEL UPGRADES, QUARRY, MACHINES, SPLIT BELTS & 3-LAYER GATES MODAL -->
     <div class="modal-backdrop" id="modal-seaf">
       <div class="modal-card modal-wide">
         <div class="modal-header">
-          <div class="modal-title">🪖 20-LEVEL FACTORY, QUARRY, CONVEYOR BELT, GATE &amp; SEAF UPGRADES (全設施 Lv.1–20 升級)</div>
+          <div class="modal-title">🪖 20-LEVEL FACTORY, QUARRY, SPLIT CONVEYOR BELTS, 7 COUNTERS &amp; SMART SEAF UPGRADES</div>
           <button class="modal-close-btn modal-close" id="btn-close-seaf">✕</button>
         </div>
         <div class="modal-body">
           <p style="font-size:0.84rem; color:#cbd5e1;">
-            Every <strong>Quarry Auto-Drill, Production Machine, Factorio Conveyor Belt, Gate Layer, and SEAF Staff Role</strong> starts locked (except 🦺 Cloth) and upgrades all the way from <strong>Lv.1 to Lv.20</strong>:
+            Every <strong>Quarry Auto-Drill, Production Machine + Dedicated Counter (#1–#7), Split Factorio Conveyor Belt (🛢️ E-710 / ⛏️ Iron / 🛒 7 Counter Belts / 🧱 Gate Belts), Gate Layer, and Smart SEAF Staff Role</strong> upgrades from <strong>Lv.1 to Lv.20</strong>:
           </p>
           <div class="upgrade-grid" id="upgrades-list"></div>
         </div>
@@ -242,7 +241,7 @@
                 ⭐ PERMANENT WARBOND MEDALS: <span id="skill-modal-medals">3</span>
               </div>
               <div style="font-size:0.78rem; color:#e2e8f0;">
-                Earn ⭐ Medals every 5 customers served, by clearing Waves, eliminating Hulks, completing 🏆 Milestones, or exchanging $150 Requisition below.
+                Earn ⭐ Medals every 5 customers served, by clearing Waves, eliminating Bosses (Hulks/Titans/Striders), completing 🏆 Milestones, or exchanging $150 Requisition below.
               </div>
             </div>
             <button class="buy-btn medal-btn" id="btn-buy-medal">
@@ -262,7 +261,7 @@
         </div>
         <div class="modal-body">
           <p id="defeat-summary-text" style="font-size:0.95rem; color:#f8fafc; line-height:1.45;">
-            Automaton forces broke through Outer Gate 3, Middle Gate 2, and Inner Gate 1! Your current factory run was overrun, but High Command evacuated your <strong>⭐ Warbond Medals</strong>, <strong>🛡️ Commander Loadout Gear</strong>, and <strong>🌟 Permanent Skill Tree</strong> upgrades!
+            Automaton and Terminid forces broke through Outer Gate 3, Middle Gate 2, and Inner Gate 1! Your current factory run was overrun, but High Command evacuated your <strong>⭐ Warbond Medals</strong>, <strong>🛡️ Commander Loadout Gear</strong>, and <strong>🌟 Permanent Skill Tree</strong> upgrades!
           </p>
           <div style="display:flex; gap:10px; flex-wrap:wrap;">
             <button class="hud-btn btn-primary" id="btn-redeploy-now" style="font-size:0.9rem; padding:10px 18px;">
@@ -280,7 +279,7 @@
     <div class="modal-backdrop" id="modal-save">
       <div class="modal-card">
         <div class="modal-header">
-          <div class="modal-title">💾 SAVE / EXPORT COMMAND PROGRESS (v0.0.05)</div>
+          <div class="modal-title">💾 SAVE / EXPORT COMMAND PROGRESS (v0.0.06)</div>
           <button class="modal-close-btn modal-close" id="btn-close-save">✕</button>
         </div>
         <div class="modal-body">
@@ -301,12 +300,12 @@
     <div class="modal-backdrop" id="modal-github">
       <div class="modal-card">
         <div class="modal-header">
-          <div class="modal-title">📦 GITHUB &amp; GITHUB PAGES REPOSITORY PACKAGER (v0.0.05)</div>
+          <div class="modal-title">📦 GITHUB &amp; GITHUB PAGES REPOSITORY PACKAGER (v0.0.06)</div>
           <button class="modal-close-btn modal-close" id="btn-close-github">✕</button>
         </div>
         <div class="modal-body">
           <p style="font-size:0.85rem; color:#cbd5e1; line-height:1.45;">
-            Download a clean, modular GitHub repository archive ready for <strong>GitHub Pages</strong> deployment. Includes <code>index.html</code>, <code>css/style.css</code>, <code>js/config.js</code>, <code>js/audio.js</code>, <code>js/world.js</code>, <code>js/game.js</code>, and <code>README.md</code> (with full <code>v0.0.00</code>–<code>v0.0.05</code> changelog history).
+            Download a clean, modular GitHub repository archive ready for <strong>GitHub Pages</strong> deployment. Includes <code>index.html</code>, <code>css/style.css</code>, <code>js/config.js</code>, <code>js/audio.js</code>, <code>js/world.js</code>, <code>js/game.js</code>, and <code>README.md</code> (with full <code>v0.0.00</code>–<code>v0.0.06</code> changelog history).
           </p>
           <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:4px;">
             <button class="upg-buy-btn hud-btn btn-primary" id="btn-ingame-dl-full">
