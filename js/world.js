@@ -1,9 +1,9 @@
 // ============================================================================
 // HELLDIVERS PLEASE! — Super Earth Arsenal & 2D Factorio War-Zone Tycoon
-// Version: v0.0.04
+// Version: v0.0.05 (20+ Hour Long-Term Campaign & 20-Level Automation Edition)
 // Module: High-DPI 2D Factorio + CarbotAnimations Vector World,
-//         4200x3800 Zero-Overlap Layout, 3-Layer Sequential Defense Gates,
-//         Recipe Hoppers, Expandable Quarry Rigs, Wearable Mechs & Character Preview
+//         4200x3800 Zero-Overlap Layout, Safe Unlock Pads (Never Crush Player),
+//         20-Level Stations & Belts, 3-Layer Gates & Live Tactical Mini-Map Radar
 // ============================================================================
 
 (function () {
@@ -118,6 +118,7 @@
       ctx.fillStyle = '#090d14';
       ctx.fillRect(0, 0, this.width, this.height);
 
+      ctx.save();
       ctx.translate(this.width * 0.5 + shakeX, this.height * 0.5 + shakeY);
       ctx.scale(this.zoom, this.zoom);
       ctx.translate(-this.camX, -this.camZ);
@@ -132,7 +133,84 @@
       this.drawWarZoneObjects(ctx, state);
       this.drawSortedEntities(ctx, state);
       this.drawProjectilesAndArcs(ctx, state);
+      ctx.restore();
 
+      // Draw Live Tactical Mini-Map Radar in Screen Space (Bottom-Right above buttons)
+      this.drawMiniMapRadar(ctx, state);
+
+      ctx.restore();
+    }
+
+    // ========================================================================
+    // LIVE TACTICAL MINI-MAP RADAR (Helps Navigate 4200x3800 Base in 20hr+ Play)
+    // ========================================================================
+    drawMiniMapRadar(ctx, state) {
+      if (this.width < 640) return;
+      const mw = 156;
+      const mh = 142;
+      const mx = this.width - mw - 14;
+      const my = this.height - mh - 76;
+      const W = window.GameConfig.WORLD;
+      const worldW = W.maxX - W.minX;
+      const worldH = W.maxZ - W.minZ;
+
+      const toMiniX = (wx) => mx + ((wx - W.minX) / worldW) * mw;
+      const toMiniY = (wz) => my + ((wz - W.minZ) / worldH) * mh;
+
+      ctx.save();
+      ctx.fillStyle = 'rgba(9, 13, 20, 0.88)';
+      ctx.strokeStyle = '#facc15';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.roundRect(mx, my, mw, mh, 8);
+      ctx.fill();
+      ctx.stroke();
+
+      // Sector tint boxes on minimap
+      ctx.fillStyle = 'rgba(56, 189, 248, 0.18)';
+      ctx.fillRect(toMiniX(-2000), toMiniY(-120), (960 / worldW) * mw, (1820 / worldH) * mh);
+      ctx.fillStyle = 'rgba(250, 204, 21, 0.16)';
+      ctx.fillRect(toMiniX(-940), toMiniY(-120), (1300 / worldW) * mw, (1820 / worldH) * mh);
+      ctx.fillStyle = 'rgba(34, 197, 94, 0.18)';
+      ctx.fillRect(toMiniX(460), toMiniY(-120), (1540 / worldW) * mw, (840 / worldH) * mh);
+      ctx.fillStyle = 'rgba(249, 115, 22, 0.18)';
+      ctx.fillRect(toMiniX(460), toMiniY(820), (1540 / worldW) * mw, (880 / worldH) * mh);
+
+      // 3 Gate Layers on minimap
+      for (const g of window.GameConfig.GATES) {
+        const gs = state.gates[g.id];
+        const gy = toMiniY(g.z);
+        ctx.strokeStyle = gs?.broken ? '#ef4444' : g.color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(toMiniX(W.corridorMinX), gy);
+        ctx.lineTo(toMiniX(W.corridorMaxX), gy);
+        ctx.stroke();
+      }
+
+      // Enemies on minimap (red dots)
+      ctx.fillStyle = '#ef4444';
+      for (const e of state.enemies) {
+        ctx.beginPath();
+        ctx.arc(toMiniX(e.x), toMiniY(e.z), e.type === 'hulk' ? 3.2 : 2.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Player on minimap (pulsing gold dot)
+      const px = toMiniX(state.player.x);
+      const py = toMiniY(state.player.z);
+      ctx.fillStyle = '#fde047';
+      ctx.beginPath();
+      ctx.arc(px, py, 4.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#090d14';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      ctx.fillStyle = '#fde047';
+      ctx.font = '900 9.5px Orbitron, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText('📡 RADAR (4200x3800)', mx + 6, my + 12);
       ctx.restore();
     }
 
@@ -252,7 +330,6 @@
       const bob = Math.sin(phase * 6) * 3;
       ctx.translate(0, bob);
 
-      // Rotor blades
       ctx.strokeStyle = 'rgba(56, 189, 248, 0.75)';
       ctx.lineWidth = 2;
       ctx.beginPath();
@@ -260,7 +337,6 @@
       ctx.arc(12, -6, 7, 0, Math.PI * 2);
       ctx.stroke();
 
-      // Drone body
       ctx.fillStyle = '#eab308';
       ctx.strokeStyle = '#090d14';
       ctx.lineWidth = 2.5;
@@ -269,7 +345,6 @@
       ctx.fill();
       ctx.stroke();
 
-      // Glowing laser eye
       ctx.fillStyle = '#38bdf8';
       ctx.beginPath();
       ctx.arc(0, 0, 4, 0, Math.PI * 2);
@@ -283,13 +358,11 @@
       ctx.scale(scale, scale);
       const step = Math.sin(phase * 5) * 4.5;
 
-      // Shadow
       ctx.fillStyle = 'rgba(0,0,0,0.48)';
       ctx.beginPath();
       ctx.ellipse(0, 26, 28, 12, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      // Mech Legs
       ctx.fillStyle = '#334155';
       ctx.strokeStyle = '#090d14';
       ctx.lineWidth = 3.5;
@@ -298,19 +371,16 @@
       ctx.fillRect(6, 6 - step * 0.5, 11, 18);
       ctx.strokeRect(6, 6 - step * 0.5, 11, 18);
 
-      // Heavy Boxy Carbot Mech Hull
       ctx.fillStyle = '#d97706';
       ctx.beginPath();
       ctx.roundRect(-24, -28, 48, 38, 9);
       ctx.fill();
       ctx.stroke();
 
-      // Yellow Mech Visor Slit
       ctx.fillStyle = '#fef08a';
       ctx.fillRect(-15, -15, 30, 8);
       ctx.strokeRect(-15, -15, 30, 8);
 
-      // Optional Commander Winged Crest on Mech Roof when piloted!
       if (showPilot) {
         ctx.fillStyle = '#facc15';
         ctx.beginPath();
@@ -329,7 +399,6 @@
         ctx.stroke();
       }
 
-      // Left Rocket Pod
       ctx.fillStyle = '#1e293b';
       ctx.fillRect(-36, -24, 12, 26);
       ctx.strokeRect(-36, -24, 12, 26);
@@ -339,12 +408,10 @@
       ctx.arc(-30, -6, 2.8, 0, Math.PI * 2);
       ctx.fill();
 
-      // Right Rotary Gatling Cannon
       ctx.fillStyle = '#475569';
       ctx.fillRect(24, -18, 15, 20);
       ctx.strokeRect(24, -18, 15, 20);
 
-      // Back stack if piloted by player
       if (stack && stack.length > 0) {
         const maxDraw = Math.min(stack.length, 14);
         for (let i = 0; i < maxDraw; i++) {
@@ -374,7 +441,6 @@
 
       ctx.translate(0, -bounce);
 
-      // Off-road tires
       ctx.fillStyle = '#0f172a';
       ctx.strokeStyle = '#090d14';
       ctx.lineWidth = 3;
@@ -384,19 +450,16 @@
       ctx.fill();
       ctx.stroke();
 
-      // Armored Buggy Hull
       ctx.fillStyle = '#4d7c0f';
       ctx.beginPath();
       ctx.roundRect(-28, -12, 56, 24, 8);
       ctx.fill();
       ctx.stroke();
 
-      // Roll Cage & Windshield
       ctx.fillStyle = '#facc15';
       ctx.fillRect(-14, -23, 28, 12);
       ctx.strokeRect(-14, -23, 28, 12);
 
-      // Roof HMG Turret
       ctx.fillStyle = '#334155';
       ctx.fillRect(4, -30, 24, 6);
       ctx.strokeRect(4, -30, 24, 6);
@@ -423,7 +486,6 @@
     drawTerrainAndGrid(ctx, state) {
       const W = window.GameConfig.WORLD;
 
-      // Northern War-Zone Scorched Battlefield (z: -1950 to -200)
       const warGrad = ctx.createLinearGradient(0, W.minZ, 0, W.wallZ);
       warGrad.addColorStop(0, '#1a1025');
       warGrad.addColorStop(0.5, '#231f33');
@@ -431,7 +493,6 @@
       ctx.fillStyle = warGrad;
       ctx.fillRect(W.minX - 150, W.minZ - 150, (W.maxX - W.minX) + 300, (W.wallZ - W.minZ) + 150);
 
-      // Flanking canyon walls outside the 3-Layer War Corridor
       ctx.fillStyle = '#0f172a';
       ctx.strokeStyle = '#334155';
       ctx.lineWidth = 4;
@@ -440,12 +501,14 @@
       ctx.fillRect(W.corridorMaxX, W.minZ, W.maxX - W.corridorMaxX, W.wallZ - W.minZ);
       ctx.strokeRect(W.corridorMaxX, W.minZ, W.maxX - W.corridorMaxX, W.wallZ - W.minZ);
 
-      // War Corridor Zone Labels
       ctx.save();
-      ctx.fillStyle = 'rgba(248, 113, 113, 0.25)';
+      ctx.fillStyle = 'rgba(248, 113, 113, 0.28)';
       ctx.font = '900 22px Orbitron, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('⚠️ AUTOMATON & TERMINID DROP ZONE — ATTACKS GATE 3 FIRST!', 0, -1760);
+      const waveBanner = state.waveState === 'rest'
+        ? `⏳ WAVE ${state.waveNumber} INCOMING IN ${Math.ceil(state.waveTimer)}s (REST & REPAIR TIME)`
+        : `🚨 WAVE ${state.waveNumber} ACTIVE — ${state.enemies.length + state.waveEnemiesToSpawn} ENEMIES REMAINING!`;
+      ctx.fillText(waveBanner, 0, -1760);
       ctx.fillStyle = 'rgba(251, 146, 60, 0.25)';
       ctx.fillText('🛡️ OUTER DEFENSE ZONE (BETWEEN GATE 3 & GATE 2)', 0, -1040);
       ctx.fillStyle = 'rgba(56, 189, 248, 0.25)';
@@ -465,11 +528,9 @@
         ctx.restore();
       }
 
-      // Southern Super Earth Mega-Factory Floor (z: -200 to +1850)
       ctx.fillStyle = '#141c2b';
       ctx.fillRect(W.minX, W.wallZ, W.maxX - W.minX, W.maxZ - W.wallZ);
 
-      // 4 Non-Overlapping Industrial Sectors with Generous Walkways
       this.drawFloorSector(
         ctx,
         -2000,
@@ -478,7 +539,7 @@
         1820,
         '#112236',
         '#38bdf8',
-        'SECTOR A: RAW HARVEST QUARRY, AUTO-DRILLS & MUNITIONS PRESS'
+        'SECTOR A: MANUAL HARVEST QUARRY, AUTO-DRILLS (Lv.1–20) & AMMO PRESS'
       );
       this.drawFloorSector(
         ctx,
@@ -488,7 +549,7 @@
         1820,
         '#1b2434',
         '#facc15',
-        'SECTOR B: ARSENAL PRODUCTION LINES (RAW HOPPER ➔ MACHINE ➔ OUTPUT)'
+        'SECTOR B: ARSENAL PRODUCTION LINES (Lv.1–20 | HOPPER ➔ MACHINE ➔ OUTPUT)'
       );
       this.drawFloorSector(
         ctx,
@@ -505,13 +566,12 @@
         460,
         820,
         1540,
-        880,
+        940,
         '#241a2c',
         '#f97316',
-        'SECTOR D: HEAVY VEHICLE, PATRIOT MECH & SUPER DESTROYER HANGAR'
+        'SECTOR D: HEAVY VEHICLE, PATRIOT MECH & SUPER DESTROYER HANGAR (Lv.1–20)'
       );
 
-      // Factorio Blueprint Grid
       ctx.strokeStyle = 'rgba(148, 163, 184, 0.08)';
       ctx.lineWidth = 1.5;
       ctx.beginPath();
@@ -525,7 +585,6 @@
       }
       ctx.stroke();
 
-      // World Outer Boundary Frame
       ctx.strokeStyle = '#475569';
       ctx.lineWidth = 16;
       ctx.strokeRect(W.minX, W.minZ, W.maxX - W.minX, W.maxZ - W.minZ);
@@ -543,49 +602,46 @@
       ctx.setLineDash([]);
       ctx.globalAlpha = 0.85;
       ctx.fillStyle = accent;
-      ctx.font = '900 16px Orbitron, sans-serif';
+      ctx.font = '900 15px Orbitron, sans-serif';
       ctx.fillText(title, x + 20, z + 30);
       ctx.restore();
     }
 
     // ========================================================================
-    // 2. FACTORIO CONVEYOR BELT NETWORK
+    // 2. FACTORIO CONVEYOR BELT NETWORK (ALL START AT Lv.0 LOCKED -> Lv.20!)
     // ========================================================================
     drawConveyorNetwork(ctx, state) {
       const AP = window.GameConfig.AMMO_PRESS;
       const gates = window.GameConfig.GATES;
 
-      // Raw Quarry -> Factory Input Hoppers Conveyor Belt
-      const rawUnlocked = !!state.conveyors.conv_raw_feed;
+      const rawBeltLvl = state.conveyorLevels?.conv_raw_feed || 0;
       this.drawBeltPath(ctx, [
         { x: -1150, z: 180 },
         { x: -1150, z: 680 },
         { x: -640, z: 680 },
         { x: -640, z: 160 }
-      ], rawUnlocked, '#38bdf8', '⛏️');
+      ], rawBeltLvl, '#38bdf8', '⛏️');
 
-      // Munitions Press -> 3 Gate Layers Conveyor Spine
       for (const g of gates) {
-        const unlocked = !!state.conveyors[g.conveyorId];
+        const beltLvl = state.conveyorLevels?.[g.conveyorId] || 0;
         const path = [
           { x: AP.padX, z: AP.padZ },
           { x: -820, z: AP.padZ },
           { x: -820, z: g.turretZ },
           { x: g.leftTurretX, z: g.turretZ }
         ];
-        this.drawBeltPath(ctx, path, unlocked, g.color, '🧱');
+        this.drawBeltPath(ctx, path, beltLvl, g.color, '🧱');
       }
 
-      // Factory Output -> Sales Counter Conveyor Belt
-      const counterBelt = !!state.conveyors.conv_counter_auto;
+      const counterBeltLvl = state.conveyorLevels?.conv_counter_auto || 0;
       this.drawBeltPath(ctx, [
         { x: -120, z: 520 },
         { x: -120, z: 220 },
         { x: 640, z: 220 }
-      ], counterBelt, '#22c55e', '🔫');
+      ], counterBeltLvl, '#22c55e', '🦺');
     }
 
-    drawBeltPath(ctx, pts, active, color, itemIcon) {
+    drawBeltPath(ctx, pts, level, color, itemIcon) {
       if (pts.length < 2) return;
       ctx.save();
 
@@ -595,11 +651,12 @@
         ctx.lineTo(pts[i].x, pts[i].z);
       }
 
-      if (!active) {
-        ctx.strokeStyle = 'rgba(148, 163, 184, 0.18)';
-        ctx.lineWidth = 22;
+      if (!level || level <= 0) {
+        // Lv.0 Locked Blueprint Path (NOT automated yet!)
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.14)';
+        ctx.lineWidth = 20;
         ctx.stroke();
-        ctx.strokeStyle = 'rgba(250, 204, 21, 0.25)';
+        ctx.strokeStyle = 'rgba(250, 204, 21, 0.22)';
         ctx.lineWidth = 2;
         ctx.setLineDash([8, 8]);
         ctx.stroke();
@@ -617,6 +674,7 @@
       ctx.lineWidth = 22;
       ctx.stroke();
 
+      const speedMult = 1 + (level - 1) * 0.15;
       for (let i = 0; i < pts.length - 1; i++) {
         const a = pts[i];
         const b = pts[i + 1];
@@ -633,7 +691,8 @@
         ctx.strokeStyle = color || '#facc15';
         ctx.lineWidth = 2.5;
         const step = 24;
-        for (let d = this.beltPhase; d < len - 6; d += step) {
+        const phase = (this.beltPhase * speedMult) % step;
+        for (let d = phase; d < len - 6; d += step) {
           ctx.beginPath();
           ctx.moveTo(d - 5, -6);
           ctx.lineTo(d + 3, 0);
@@ -641,8 +700,8 @@
           ctx.stroke();
         }
 
-        const itemStep = 76;
-        const itemPhase = (this.time * 58) % itemStep;
+        const itemStep = Math.max(38, 82 - level * 2);
+        const itemPhase = (this.time * 52 * speedMult) % itemStep;
         ctx.font = '15px sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
@@ -668,7 +727,7 @@
     }
 
     // ========================================================================
-    // 3. INTERACTIVE TRIGGER PADS (ZERO OVERLAP)
+    // 3. INTERACTIVE TRIGGER PADS (SAFE OFFSETS — NEVER CRUSH PLAYER!)
     // ========================================================================
     drawFloorPads(ctx, state) {
       const L = window.GameConfig.LOCATIONS;
@@ -706,25 +765,69 @@
         'Weapons, Guard Dog & Mechs'
       );
 
+      // Conveyor Belt Pads (Lv.0 Locked -> Lv.1..20 Upgrade!)
       for (const c of window.GameConfig.CONVEYORS) {
-        if (state.conveyors[c.id]) continue;
-        const rem = Math.max(0, state.conveyorRemaining[c.id] ?? c.cost);
-        this.drawPadBox(ctx, c.padX, c.padZ, 155, 86, c.color, `${c.icon} BELT $${rem}`, c.name);
+        const lvl = state.conveyorLevels?.[c.id] || 0;
+        const isMax = lvl >= c.maxLevel;
+        const rem = Math.max(0, state.conveyorRemaining?.[c.id] ?? state.getConveyorUpgradeCost(c.id));
+        const title = isMax
+          ? `${c.icon} BELT MAX (Lv.20)`
+          : (lvl === 0 ? `🔓 UNLOCK BELT $${rem}` : `⬆️ BELT Lv.${lvl + 1}/20 ($${rem})`);
+        const sub = lvl === 0 ? `${c.name} (Currently Off)` : `Active Lv.${lvl}/20 — Stand to Upgrade`;
+        this.drawPadBox(ctx, c.padX, c.padZ, 172, 84, c.color, title, sub);
       }
 
+      // Item Unlock & Machine Level 1..20 Upgrade Pads (Safely offset +145px South of stationPos!)
       for (const item of window.GameConfig.ITEMS) {
-        if (state.unlocked[item.id]) continue;
-        const rem = Math.max(0, state.unlockRemaining[item.id] ?? item.unlockCost);
-        this.drawPadBox(
-          ctx,
-          item.unlockPos.x,
-          item.unlockPos.z,
-          175,
-          104,
-          item.color,
-          `🔓 UNLOCK ${item.icon} $${rem}`,
-          `${item.shortName} (${item.recipeText})`
-        );
+        const isUnlocked = !!state.unlocked[item.id];
+        const st = state.stations[item.id];
+        const lvl = st ? (st.level || 0) : 0;
+
+        if (!isUnlocked) {
+          // Draw blueprint placeholder box at stationPos (Non-solid until unlocked!)
+          ctx.save();
+          ctx.translate(item.stationPos.x, item.stationPos.z);
+          ctx.fillStyle = 'rgba(15, 23, 42, 0.45)';
+          ctx.strokeStyle = 'rgba(148, 163, 184, 0.35)';
+          ctx.lineWidth = 2.5;
+          ctx.setLineDash([8, 6]);
+          ctx.fillRect(-56, -56, 112, 112);
+          ctx.strokeRect(-56, -56, 112, 112);
+          ctx.setLineDash([]);
+          ctx.fillStyle = '#94a3b8';
+          ctx.font = '900 12px Orbitron, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText(`🔒 ${item.icon} ${item.shortName.toUpperCase()}`, 0, -4);
+          ctx.font = '700 11px Rajdhani, sans-serif';
+          ctx.fillText(` Blueprint Site (Stand Below to Build)`, 0, 14);
+          ctx.restore();
+
+          const rem = Math.max(0, state.unlockRemaining[item.id] ?? item.unlockCost);
+          this.drawPadBox(
+            ctx,
+            item.unlockPos.x,
+            item.unlockPos.z,
+            182,
+            88,
+            item.color,
+            `🔓 UNLOCK ${item.icon} $${rem}`,
+            `${item.shortName} (${item.recipeText})`
+          );
+        } else {
+          // Machine is unlocked -> Show Lv.1..20 Upgrade Pad at item.unlockPos!
+          const isMax = lvl >= item.maxLevel;
+          const upgCost = state.getStationUpgradeCost ? state.getStationUpgradeCost(item.id) : 100;
+          this.drawPadBox(
+            ctx,
+            item.unlockPos.x,
+            item.unlockPos.z,
+            182,
+            74,
+            isMax ? '#4ade80' : item.color,
+            isMax ? `✅ ${item.icon} MAX Lv.20` : `⬆️ UPGRADE ${item.icon} Lv.${lvl + 1}/20 ($${upgCost})`,
+            `Lv.${lvl}/20 | +15% Speed & +12% Value`
+          );
+        }
       }
     }
 
@@ -741,20 +844,20 @@
       ctx.setLineDash([]);
 
       ctx.fillStyle = color;
-      ctx.font = '900 13px Orbitron, sans-serif';
+      ctx.font = '900 12.5px Orbitron, sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText(title, 0, -5);
 
       if (subtitle) {
         ctx.fillStyle = '#e2e8f0';
-        ctx.font = '700 11.5px Rajdhani, sans-serif';
+        ctx.font = '700 11px Rajdhani, sans-serif';
         ctx.fillText(subtitle, 0, 14);
       }
       ctx.restore();
     }
 
     // ========================================================================
-    // 4. THREE SEQUENTIAL DEFENSE GATE LAYERS (GATE 3 -> GATE 2 -> GATE 1)
+    // 4. THREE SEQUENTIAL DEFENSE GATE LAYERS (Lv.1–20 | BROKEN = NO AUTO-HEAL)
     // ========================================================================
     drawThreeLayerGates(ctx, state) {
       const W = window.GameConfig.WORLD;
@@ -767,33 +870,28 @@
         const gs = state.gates[g.id];
         if (!gs) continue;
         const wallY = g.z;
-        const isBroken = gs.hp <= 0;
+        const isBroken = !!gs.broken || gs.hp <= 0;
         const defLvl = gs.defenseLevel || 1;
+        const isMax = defLvl >= (g.maxLevel || 20);
         const upgCost = state.getGateUpgradeCost ? state.getGateUpgradeCost(g.id) : 160;
 
         ctx.save();
-        // Left & Right Armored Blast Walls across the War Corridor
         ctx.fillStyle = isBroken ? '#334155' : '#1e293b';
         ctx.strokeStyle = '#090d14';
         ctx.lineWidth = 4;
 
-        // Left wall segment (cMinX to -halfOpen)
         ctx.fillRect(cMinX, wallY - 22, (-halfOpen) - cMinX, 44);
         ctx.strokeRect(cMinX, wallY - 22, (-halfOpen) - cMinX, 44);
 
-        // Right wall segment (+halfOpen to cMaxX)
         ctx.fillRect(halfOpen, wallY - 22, cMaxX - halfOpen, 44);
         ctx.strokeRect(halfOpen, wallY - 22, cMaxX - halfOpen, 44);
 
-        // Hazard stripes along wall segments
         ctx.fillStyle = g.color;
         ctx.fillRect(cMinX + 16, wallY - 5, (-halfOpen) - cMinX - 32, 10);
         ctx.fillRect(halfOpen + 16, wallY - 5, cMaxX - halfOpen - 32, 10);
 
-        // Central Blast Gate Doorway (-halfOpen to +halfOpen)
         ctx.translate(g.x, g.z);
 
-        // Gate Pillars
         ctx.fillStyle = '#0f172a';
         ctx.strokeStyle = g.color;
         ctx.lineWidth = 3.5;
@@ -806,7 +904,6 @@
         const underAttack = (this.time - (gs.lastHitTime || -10)) < 0.6;
 
         if (isBroken) {
-          // Broken / Breached Gate Barrier
           ctx.fillStyle = 'rgba(239, 68, 68, 0.28)';
           ctx.fillRect(-halfOpen + 12, -14, W.gateOpeningWidth - 24, 28);
           ctx.strokeStyle = '#ef4444';
@@ -816,11 +913,10 @@
           ctx.setLineDash([]);
 
           ctx.fillStyle = '#fca5a5';
-          ctx.font = '900 14px Orbitron, sans-serif';
+          ctx.font = '900 13px Orbitron, sans-serif';
           ctx.textAlign = 'center';
-          ctx.fillText(`💥 ${g.shortName.toUpperCase()} BREACHED! (STAND ON PAD TO REBUILD)`, 0, 5);
+          ctx.fillText(`💥 ${g.shortName.toUpperCase()} BROKEN! (NO AUTO-HEAL — REPAIR ON PAD!)`, 0, 5);
         } else {
-          // Active Laser/Blast Shield Gate
           ctx.fillStyle = underAttack ? 'rgba(239, 68, 68, 0.48)' : 'rgba(56, 189, 248, 0.24)';
           ctx.fillRect(-halfOpen + 12, -14, W.gateOpeningWidth - 24, 28);
           ctx.strokeStyle = underAttack ? '#ef4444' : g.color;
@@ -830,8 +926,7 @@
           ctx.setLineDash([]);
         }
 
-        // Gate Layer HP Bar Overhead
-        const barW = 280;
+        const barW = 300;
         const barH = 20;
         ctx.fillStyle = '#090d14';
         ctx.fillRect(-barW / 2, -58, barW, barH);
@@ -842,47 +937,44 @@
         ctx.strokeRect(-barW / 2, -58, barW, barH);
 
         ctx.fillStyle = '#ffffff';
-        ctx.font = '900 12px Orbitron, sans-serif';
+        ctx.font = '900 11.5px Orbitron, sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText(
-          `🛡️ LAYER ${g.layerOrder} — ${g.shortName.toUpperCase()} (Lv.${defLvl}): ${Math.ceil(gs.hp)}/${gs.maxHp} HP`,
+          `🛡️ LAYER ${g.layerOrder} — ${g.shortName.toUpperCase()} (Lv.${defLvl}/20): ${Math.ceil(gs.hp)}/${gs.maxHp} HP`,
           0,
           -44
         );
         ctx.restore();
 
-        // Central Load Ammo + Repair/Rebuild Pad
         this.drawPadBox(
           ctx,
           g.ammoPadX,
           g.ammoPadZ,
-          170,
+          178,
           76,
           isBroken ? '#ef4444' : '#f97316',
-          isBroken ? `🔧 REBUILD ${g.shortName.toUpperCase()}` : `🧱 LOAD AMMO & REPAIR`,
-          `Ammo: ${gs.ammo}/${g.maxAmmo} | +HP Repair`
+          isBroken ? `🔧 MANUAL REBUILD (${Math.ceil(gs.hp)}/${gs.maxHp})` : `🧱 LOAD AMMO & REPAIR`,
+          isBroken ? `Stand Here to Repair Broken Gate!` : `Ammo: ${gs.ammo}/${gs.maxAmmo || g.maxAmmo} | +HP Repair`
         );
 
-        // Left Upgrade Gate Defense Level Pad
         this.drawPadBox(
           ctx,
           g.upgradePadX,
           g.upgradePadZ,
-          170,
+          176,
           76,
-          g.color,
-          `⬆️ FORTIFY Lv.${defLvl + 1} ($${upgCost})`,
+          isMax ? '#4ade80' : g.color,
+          isMax ? `✅ FORTIFIED MAX Lv.20` : `⬆️ FORTIFY Lv.${defLvl + 1}/20 ($${upgCost})`,
           `+Max HP & Dual Turret DMG`
         );
 
-        // Dual Sentry Turrets (Left & Right of the Gate Opening!)
         this.drawSingleTurretMount(
           ctx,
           g.leftTurretX,
           g.turretZ,
           g.color,
           gs.ammo,
-          g.maxAmmo,
+          gs.maxAmmo || g.maxAmmo,
           gs.turretAngle ?? -Math.PI / 2,
           gs.lastFireTime,
           `${g.shortName} L-Sentry`
@@ -893,7 +985,7 @@
           g.turretZ,
           g.color,
           gs.ammo,
-          g.maxAmmo,
+          gs.maxAmmo || g.maxAmmo,
           gs.turretAngle ?? -Math.PI / 2,
           gs.lastFireTime,
           `${g.shortName} R-Sentry`
@@ -968,17 +1060,18 @@
     }
 
     // ========================================================================
-    // 5. SECTOR A: MANUAL HARVEST QUARRY + EXPANDABLE AUTO-MINING RIGS
+    // 5. SECTOR A: MANUAL HARVEST QUARRY + AUTO-MINING RIGS (Lv.0 Locked -> Lv.20)
     // ========================================================================
     drawRawQuarryAndAmmoPress(ctx, state) {
       for (const raw of window.GameConfig.RAW_EXTRACTORS) {
         const rs = state.rawExtractors[raw.id];
-        const lvl = rs ? rs.level : 1;
+        const lvl = rs ? rs.level : 0; // Starts at Lv.0!
+        const isMax = lvl >= (raw.maxLevel || 20);
         const stock = rs ? rs.stock : 0;
         const maxBuf = rs ? rs.maxBuffer : raw.baseBuffer;
-        const upgradeCost = state.getRawUpgradeCost ? state.getRawUpgradeCost(raw.id) : 100;
+        const upgradeCost = state.getRawUpgradeCost ? state.getRawUpgradeCost(raw.id) : 110;
 
-        // A. Manual Harvest Field (Rich Ore Veins / E-710 Geysers at raw.harvestPos)
+        // A. Manual Harvest Field (Available at Start!)
         const hp = raw.harvestPos;
         ctx.save();
         ctx.translate(hp.x, hp.z);
@@ -994,7 +1087,6 @@
         ctx.stroke();
         ctx.setLineDash([]);
 
-        // Draw 6 animated ore crystal / geyser nodes inside the harvest circle
         for (let i = 0; i < 6; i++) {
           const ang = (i / 6) * Math.PI * 2 + this.time * 0.25;
           const nx = Math.cos(ang) * 68;
@@ -1026,149 +1118,190 @@
         ctx.fillText(`✋ Walk Inside to Harvest ${raw.itemIcon} by Hand!`, 0, -hp.radius - 2);
         ctx.restore();
 
-        // B. Expandable Multi-Rig Auto-Extractor Array (Scale Lv.1 -> up to 5 visible rigs!)
-        const visibleRigs = Math.min(5, lvl);
+        // B. Auto-Extractor Rig Bay (Starts at Lv.0 Locked -> Upgrades Lv.1..20)
         ctx.save();
         ctx.translate(raw.x, raw.z);
 
-        ctx.fillStyle = '#1e293b';
-        ctx.strokeStyle = '#090d14';
+        ctx.fillStyle = lvl > 0 ? '#1e293b' : 'rgba(15, 23, 42, 0.45)';
+        ctx.strokeStyle = lvl > 0 ? '#090d14' : 'rgba(148, 163, 184, 0.35)';
         ctx.lineWidth = 4;
         ctx.fillRect(-105, -75, 210, 150);
         ctx.strokeRect(-105, -75, 210, 150);
 
-        // Render 1..5 animated drill rigs based on Scale Level!
-        const rigOffsets = [
-          { x: 0, z: 0 },
-          { x: -55, z: -28 },
-          { x: 55, z: -28 },
-          { x: -55, z: 28 },
-          { x: 55, z: 28 }
-        ];
-        for (let rIdx = 0; rIdx < visibleRigs; rIdx++) {
-          const ro = rigOffsets[rIdx];
-          ctx.save();
-          ctx.translate(ro.x, ro.z);
-          const rigScale = visibleRigs === 1 ? 0.95 : 0.62;
-          ctx.scale(rigScale, rigScale);
-          ctx.rotate(this.time * (2.0 + lvl * 0.35) + rIdx);
-          ctx.fillStyle = raw.color;
-          ctx.strokeStyle = '#090d14';
-          ctx.lineWidth = 3;
-          for (let i = 0; i < 6; i++) {
-            ctx.rotate(Math.PI / 3);
-            ctx.fillRect(-7, -38, 14, 76);
-            ctx.strokeRect(-7, -38, 14, 76);
+        if (lvl <= 0) {
+          ctx.fillStyle = '#94a3b8';
+          ctx.font = '900 13px Orbitron, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText(`🔒 AUTO ${raw.shortName.toUpperCase()} (LOCKED Lv.0/20)`, 0, -6);
+          ctx.fillStyle = '#fde047';
+          ctx.font = '700 12px Rajdhani, sans-serif';
+          ctx.fillText(`Stand on Pad Below ($${upgradeCost}) to Build Auto-Rig!`, 0, 16);
+        } else {
+          const visibleRigs = Math.min(5, 1 + Math.floor((lvl - 1) / 4));
+          const rigOffsets = [
+            { x: 0, z: 0 },
+            { x: -55, z: -28 },
+            { x: 55, z: -28 },
+            { x: -55, z: 28 },
+            { x: 55, z: 28 }
+          ];
+          for (let rIdx = 0; rIdx < visibleRigs; rIdx++) {
+            const ro = rigOffsets[rIdx];
+            ctx.save();
+            ctx.translate(ro.x, ro.z);
+            const rigScale = visibleRigs === 1 ? 0.95 : 0.62;
+            ctx.scale(rigScale, rigScale);
+            ctx.rotate(this.time * (2.0 + lvl * 0.25) + rIdx);
+            ctx.fillStyle = raw.color;
+            ctx.strokeStyle = '#090d14';
+            ctx.lineWidth = 3;
+            for (let i = 0; i < 6; i++) {
+              ctx.rotate(Math.PI / 3);
+              ctx.fillRect(-7, -38, 14, 76);
+              ctx.strokeRect(-7, -38, 14, 76);
+            }
+            ctx.beginPath();
+            ctx.arc(0, 0, 18, 0, Math.PI * 2);
+            ctx.fillStyle = '#0f172a';
+            ctx.fill();
+            ctx.stroke();
+            ctx.restore();
           }
-          ctx.beginPath();
-          ctx.arc(0, 0, 18, 0, Math.PI * 2);
-          ctx.fillStyle = '#0f172a';
-          ctx.fill();
-          ctx.stroke();
-          ctx.restore();
+
+          const prog = rs ? (rs.progress / rs.cycleTime) : 0;
+          ctx.fillStyle = '#090d14';
+          ctx.fillRect(-90, 56, 180, 12);
+          ctx.fillStyle = raw.color;
+          ctx.fillRect(-88, 58, 176 * Math.min(1, prog), 8);
+
+          ctx.fillStyle = '#ffffff';
+          ctx.font = '900 13px Orbitron, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText(`${raw.icon} AUTO ${raw.shortName.toUpperCase()} (Lv.${lvl}/20 — ${visibleRigs} RIGS)`, 0, -88);
+          ctx.fillStyle = '#facc15';
+          ctx.font = '700 12px Rajdhani, sans-serif';
+          ctx.fillText(`Auto Rate: ${(1 / (rs?.cycleTime || 1.5)).toFixed(1)}/s | Stored: ${stock}/${maxBuf}`, 0, -72);
         }
-
-        const prog = rs ? (rs.progress / rs.cycleTime) : 0;
-        ctx.fillStyle = '#090d14';
-        ctx.fillRect(-90, 56, 180, 12);
-        ctx.fillStyle = raw.color;
-        ctx.fillRect(-88, 58, 176 * Math.min(1, prog), 8);
-
-        ctx.fillStyle = '#ffffff';
-        ctx.font = '900 13px Orbitron, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText(`${raw.icon} AUTO ${raw.shortName.toUpperCase()} (SCALE Lv.${lvl} — ${visibleRigs} RIGS)`, 0, -88);
-        ctx.fillStyle = '#facc15';
-        ctx.font = '700 12px Rajdhani, sans-serif';
-        ctx.fillText(`Auto Rate: ${(1 / (rs?.cycleTime || 1.5)).toFixed(1)}/s | Stored: ${stock}/${maxBuf}`, 0, -72);
         ctx.restore();
 
-        // C. Raw Output Pickup Pad (Take raw ore from Auto-Drill buffer)
-        this.drawPadBox(
-          ctx,
-          raw.pickupX,
-          raw.pickupZ,
-          148,
-          86,
-          raw.color,
-          `📤 PICKUP ${raw.itemIcon} (${stock}/${maxBuf})`,
-          `Take Raw ${raw.shortName} to Hoppers`
-        );
+        if (lvl > 0) {
+          this.drawPadBox(
+            ctx,
+            raw.pickupX,
+            raw.pickupZ,
+            152,
+            84,
+            raw.color,
+            `📤 PICKUP ${raw.itemIcon} (${stock}/${maxBuf})`,
+            `Take Raw ${raw.shortName} to Hoppers`
+          );
+        }
 
-        // D. Expand Quarry Scale & Speed Pad
         this.drawPadBox(
           ctx,
           raw.padX,
           raw.padZ,
-          178,
+          184,
           82,
-          raw.color,
-          `⬆️ EXPAND SCALE Lv.${lvl + 1} ($${upgradeCost})`,
-          `Add Drill Rig & +35% Speed`
+          isMax ? '#4ade80' : raw.color,
+          isMax ? `✅ MAX SCALE Lv.20` : (lvl === 0 ? `🔓 UNLOCK AUTO ${raw.itemIcon} ($${upgradeCost})` : `⬆️ UPGRADE Lv.${lvl + 1}/20 ($${upgradeCost})`),
+          lvl === 0 ? `Automates ${raw.shortName} Extraction` : `Expand Rigs, Buffer & Speed`
         );
       }
 
-      // E. Munitions Ammo Press with Input Hopper (Requires 1x ⛏️ Iron -> 3x 🧱 Ammo)
+      // E. Munitions Ammo Press (Starts Locked Lv.0 -> Upgrades Lv.1..20!)
       const AP = window.GameConfig.AMMO_PRESS;
+      const apLvl = state.ammoPress.level || 0;
+      const apMax = apLvl >= (AP.maxLevel || 20);
       const ammoStock = state.ammoPress.stock;
       const ammoInIron = state.ammoPress.inputStock?.raw_iron || 0;
       const ammoProg = state.ammoPress.progress / state.ammoPress.cycleTime;
+      const apCost = state.getAmmoPressUpgradeCost ? state.getAmmoPressUpgradeCost() : AP.unlockCost;
 
-      // Connector pipe from Input Hopper -> Ammo Press -> Output Pad
-      this.drawStationConnectorPipe(ctx, AP.inputPos, { x: AP.x, z: AP.z }, { x: AP.padX, z: AP.padZ }, '#f97316');
+      if (apLvl <= 0) {
+        ctx.save();
+        ctx.translate(AP.x, AP.z);
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.45)';
+        ctx.strokeStyle = 'rgba(249, 115, 22, 0.4)';
+        ctx.lineWidth = 3;
+        ctx.setLineDash([8, 6]);
+        ctx.fillRect(-60, -60, 120, 120);
+        ctx.strokeRect(-60, -60, 120, 120);
+        ctx.setLineDash([]);
+        ctx.fillStyle = '#fdba74';
+        ctx.font = '900 12px Orbitron, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(`🔒 🧱 MUNITIONS PRESS (Lv.0/20)`, 0, -4);
+        ctx.font = '700 11px Rajdhani, sans-serif';
+        ctx.fillText(`Unlock Below ($${apCost}) to Craft Turret Ammo`, 0, 14);
+        ctx.restore();
+      } else {
+        this.drawStationConnectorPipe(ctx, AP.inputPos, { x: AP.x, z: AP.z }, { x: AP.padX, z: AP.padZ }, '#f97316');
 
-      // Ammo Press Input Hopper Pad
+        this.drawPadBox(
+          ctx,
+          AP.inputPos.x,
+          AP.inputPos.z,
+          155,
+          86,
+          ammoInIron > 0 ? '#38bdf8' : '#ef4444',
+          `📥 AMMO HOPPER: ⛏️${ammoInIron}`,
+          ammoInIron > 0 ? `Recipe: 1⛏️ ➔ 3🧱 Ammo` : `⚠️ DROP ⛏️ IRON HERE!`
+        );
+
+        ctx.save();
+        ctx.translate(AP.x, AP.z);
+        ctx.fillStyle = '#27272a';
+        ctx.strokeStyle = '#090d14';
+        ctx.lineWidth = 4;
+        ctx.fillRect(-62, -62, 124, 124);
+        ctx.strokeRect(-62, -62, 124, 124);
+
+        const stampScale = ammoInIron > 0 ? (0.85 + 0.15 * Math.sin(this.time * 8)) : 0.9;
+        ctx.save();
+        ctx.scale(stampScale, stampScale);
+        ctx.fillStyle = '#f97316';
+        ctx.fillRect(-32, -32, 64, 64);
+        ctx.strokeRect(-32, -32, 64, 64);
+        ctx.restore();
+
+        ctx.font = '26px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('🧱', 0, -2);
+
+        ctx.fillStyle = '#090d14';
+        ctx.fillRect(-52, 42, 104, 12);
+        ctx.fillStyle = ammoInIron > 0 ? '#f97316' : '#ef4444';
+        ctx.fillRect(-50, 44, 100 * Math.min(1, ammoProg), 8);
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '900 12.5px Orbitron, sans-serif';
+        ctx.fillText(`🧱 MUNITIONS PRESS (Lv.${apLvl}/20)`, 0, -72);
+        ctx.restore();
+
+        this.drawPadBox(
+          ctx,
+          AP.padX,
+          AP.padZ,
+          158,
+          86,
+          '#f97316',
+          `📤 PICKUP 🧱 AMMO (${ammoStock}/${state.ammoPress.maxBuffer})`,
+          `Carry (搬) to Gate Layers 3/2/1`
+        );
+      }
+
+      // Safe Unlock / Upgrade Pad Below Ammo Press (Never crushes player!)
       this.drawPadBox(
         ctx,
-        AP.inputPos.x,
-        AP.inputPos.z,
-        155,
-        88,
-        ammoInIron > 0 ? '#38bdf8' : '#ef4444',
-        `📥 AMMO HOPPER: ⛏️${ammoInIron}`,
-        ammoInIron > 0 ? `Recipe: 1⛏️ ➔ 3🧱 Ammo` : `⚠️ DROP ⛏️ IRON HERE!`
-      );
-
-      ctx.save();
-      ctx.translate(AP.x, AP.z);
-      ctx.fillStyle = '#27272a';
-      ctx.strokeStyle = '#090d14';
-      ctx.lineWidth = 4;
-      ctx.fillRect(-62, -62, 124, 124);
-      ctx.strokeRect(-62, -62, 124, 124);
-
-      const stampScale = ammoInIron > 0 ? (0.85 + 0.15 * Math.sin(this.time * 8)) : 0.9;
-      ctx.save();
-      ctx.scale(stampScale, stampScale);
-      ctx.fillStyle = '#f97316';
-      ctx.fillRect(-32, -32, 64, 64);
-      ctx.strokeRect(-32, -32, 64, 64);
-      ctx.restore();
-
-      ctx.font = '26px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('🧱', 0, -2);
-
-      ctx.fillStyle = '#090d14';
-      ctx.fillRect(-52, 42, 104, 12);
-      ctx.fillStyle = ammoInIron > 0 ? '#f97316' : '#ef4444';
-      ctx.fillRect(-50, 44, 100 * Math.min(1, ammoProg), 8);
-
-      ctx.fillStyle = '#ffffff';
-      ctx.font = '900 13px Orbitron, sans-serif';
-      ctx.fillText(`🧱 MUNITIONS PRESS (1⛏️ ➔ 3🧱)`, 0, -72);
-      ctx.restore();
-
-      this.drawPadBox(
-        ctx,
-        AP.padX,
-        AP.padZ,
-        155,
-        88,
-        '#f97316',
-        `📤 PICKUP 🧱 AMMO (${ammoStock})`,
-        `Carry (搬) to Gate Layers 3/2/1`
+        AP.unlockPos.x,
+        AP.unlockPos.z,
+        182,
+        76,
+        apMax ? '#4ade80' : '#f97316',
+        apMax ? `✅ AMMO PRESS MAX Lv.20` : (apLvl === 0 ? `🔓 UNLOCK 🧱 PRESS ($${apCost})` : `⬆️ UPGRADE PRESS Lv.${apLvl + 1}/20 ($${apCost})`),
+        `1x ⛏️ Iron ➔ 3x 🧱 Turret Ammo`
       );
     }
 
@@ -1194,21 +1327,21 @@
     }
 
     // ========================================================================
-    // 6. SECTOR B & D: ARSENAL PRODUCTION LINES (HOPPER -> MACHINE -> OUTPUT)
+    // 6. SECTOR B & D: ARSENAL PRODUCTION LINES (Lv.1–20 | HOPPER -> MACHINE -> OUTPUT)
     // ========================================================================
     drawArsenalFactories(ctx, state) {
       for (const item of window.GameConfig.ITEMS) {
         if (!state.unlocked[item.id]) continue;
         const st = state.stations[item.id];
+        const lvl = st ? (st.level || 1) : 1;
         const stock = st ? st.stock : 0;
-        const isMax = stock >= item.maxBuffer;
+        const maxBuf = st ? (st.maxBuffer || item.maxBuffer) : item.maxBuffer;
+        const isMax = stock >= maxBuf;
         const hasIngredients = state.hasStationIngredients ? state.hasStationIngredients(item, st) : true;
         const prog = isMax ? 1 : (st ? st.progress / st.cycleTime : 0);
 
-        // Draw connecting pipeline from Input Hopper -> Machine -> Output Pad
         this.drawStationConnectorPipe(ctx, item.inputPos, item.stationPos, item.pickupPos, item.color);
 
-        // Format Input Hopper stock string
         const inStock = st?.inputStock || {};
         const parts = [];
         if (item.recipe.raw_iron) parts.push(`⛏️${inStock.raw_iron || 0}/${item.recipe.raw_iron}`);
@@ -1221,7 +1354,7 @@
           item.inputPos.x,
           item.inputPos.z,
           162,
-          86,
+          84,
           hasIngredients ? '#38bdf8' : '#ef4444',
           `📥 HOPPER: ${hopperStr}`,
           hasIngredients ? `Recipe: ${item.recipeText}` : `⚠️ FEED RAW ORE HERE!`
@@ -1234,15 +1367,15 @@
         ctx.fillStyle = '#1e293b';
         ctx.strokeStyle = '#090d14';
         ctx.lineWidth = 4;
-        ctx.fillRect(-60, -60, 120, 120);
-        ctx.strokeRect(-60, -60, 120, 120);
+        ctx.fillRect(-58, -58, 116, 116);
+        ctx.strokeRect(-58, -58, 116, 116);
 
         ctx.strokeStyle = hasIngredients ? item.color : '#ef4444';
         ctx.lineWidth = 3;
-        ctx.strokeRect(-52, -52, 104, 104);
+        ctx.strokeRect(-50, -50, 100, 100);
 
         ctx.save();
-        if (!isMax && hasIngredients) ctx.rotate(this.time * 3.4);
+        if (!isMax && hasIngredients) ctx.rotate(this.time * (3.2 + lvl * 0.2));
         ctx.strokeStyle = 'rgba(255,255,255,0.22)';
         ctx.lineWidth = 5;
         ctx.beginPath();
@@ -1261,11 +1394,11 @@
         ctx.fillRect(-46, 36, 92 * Math.min(1, prog), 8);
 
         ctx.fillStyle = '#ffffff';
-        ctx.font = '900 13px Orbitron, sans-serif';
-        ctx.fillText(`${item.icon} ${item.shortName.toUpperCase()}`, 0, -74);
+        ctx.font = '900 12.5px Orbitron, sans-serif';
+        ctx.fillText(`${item.icon} ${item.shortName.toUpperCase()} (Lv.${lvl}/20)`, 0, -72);
         ctx.fillStyle = hasIngredients ? '#fde047' : '#fca5a5';
         ctx.font = '700 11.5px Rajdhani, sans-serif';
-        ctx.fillText(hasIngredients ? `Recipe: ${item.recipeText}` : `⏸️ WAITING FOR RAW INPUT`, 0, -59);
+        ctx.fillText(hasIngredients ? `Recipe: ${item.recipeText}` : `⏸️ WAITING FOR RAW INPUT`, 0, -57);
 
         ctx.restore();
 
@@ -1275,9 +1408,9 @@
           item.pickupPos.x,
           item.pickupPos.z,
           158,
-          86,
+          84,
           isMax ? '#facc15' : item.color,
-          `📤 READY: ${stock}/${item.maxBuffer} ${item.icon}`,
+          `📤 READY: ${stock}/${maxBuf} ${item.icon}`,
           `Sell Price: $${state.getItemSellPrice(item)}`
         );
       }
@@ -1559,7 +1692,13 @@
       ctx.stroke();
 
       if (hasRifle) {
-        if (weaponId === 'w_quasar') {
+        if (weaponId === 'w_autocannon') {
+          ctx.fillStyle = '#991b1b';
+          ctx.fillRect(8, -5, 26, 10);
+          ctx.strokeRect(8, -5, 26, 10);
+          ctx.fillStyle = '#facc15';
+          ctx.fillRect(28, -3, 6, 6);
+        } else if (weaponId === 'w_quasar') {
           ctx.fillStyle = '#ca8a04';
           ctx.fillRect(8, -4, 24, 9);
           ctx.strokeRect(8, -4, 24, 9);

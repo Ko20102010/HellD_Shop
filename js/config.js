@@ -1,20 +1,16 @@
 // ============================================================================
 // HELLDIVERS PLEASE! — Super Earth Arsenal & 2D Factorio War-Zone Tycoon
-// Version: v0.0.04
-// Module: Configuration, 4200x3800 Zero-Overlap Map, Raw Harvest Quarry,
-//         Item Production Recipes, 3-Layer Sequential Defense Gates,
-//         Main Character Equipment Loadout & 12-Unit Character Preview Roster
+// Version: v0.0.05 (20+ Hour Long-Term Campaign & 20-Level Automation Edition)
+// Module: Configuration, 4200x3800 Zero-Overlap Map, 1-Item Start Progression,
+//         20-Level Upgrades for All Belts/Machines/Quarry/Gates, Wave & Rest
+//         System, 8-Planet Galactic Campaign & 12-Unit Character Roster
 // ============================================================================
 
 window.GameConfig = {
-  VERSION: 'v0.0.04',
-  STORAGE_KEY: 'helldivers_please_save_v0004',
-  LEGACY_KEYS: [
-    'helldivers_please_save_v0003',
-    'helldivers_please_save_v0002',
-    'helldivers_please_save_v0001',
-    'helldivers_please_save_v0000'
-  ],
+  VERSION: 'v0.0.05',
+  // Fresh save key so legacy v0.0.03/v0.0.04 saves don't pre-unlock belts or items!
+  STORAGE_KEY: 'helldivers_please_save_v0005',
+  MAX_LEVEL: 20,
 
   // Massively Expanded 4200 x 3800 2D Factorio + Carbot World (Zero Overlap!)
   WORLD: {
@@ -31,14 +27,146 @@ window.GameConfig = {
   PLAYER: {
     baseSpeed: 280,
     sprintMultiplier: 1.55,
-    baseCapacity: 16,
+    baseCapacity: 14,
     pickupRadius: 92,
     transferInterval: 0.06,
     attackRange: 280,
-    attackCooldown: 0.22,
-    attackDamage: 28,
+    attackCooldown: 0.24,
+    attackDamage: 26,
     plowRadius: 105
   },
+
+  // --------------------------------------------------------------------------
+  // WAVE & REST TIME SYSTEM (Designed for 20+ Hours / 200+ Waves Progression)
+  // --------------------------------------------------------------------------
+  WAVE_CONFIG: {
+    initialRestTime: 45,       // 45s peaceful prep before Wave 1 begins
+    betweenWaveRestTime: 35,   // 35s rest & repair time between waves
+    baseEnemyCount: 5,         // Wave 1 has 5 enemies
+    enemiesPerWave: 3,         // +3 enemies per wave
+    spawnIntervalInWave: 1.85, // Time between enemy spawns during an active wave
+    bossWaveEvery: 5           // Every 5th wave is a Boss Siege Wave!
+  },
+
+  // --------------------------------------------------------------------------
+  // 8-PLANET GALACTIC CAMPAIGN (20+ Hours Long-Term Progression)
+  // --------------------------------------------------------------------------
+  CAMPAIGN_PLANETS: [
+    {
+      id: 'planet_1',
+      index: 1,
+      name: 'Sector 1: Angel\'s Venture (安傑爾冒險星)',
+      waveStart: 1,
+      waveEnd: 5,
+      reqMult: 1.0,
+      enemyHpMult: 1.0,
+      rewardMedals: 3,
+      desc: 'Training Operation: Establish your first Cloth & Gun lines and hold Outer Gate 3 through Wave 5.'
+    },
+    {
+      id: 'planet_2',
+      index: 2,
+      name: 'Sector 2: Heeth Cryo-Tundra (希斯冰原星)',
+      waveStart: 6,
+      waveEnd: 15,
+      reqMult: 1.35,
+      enemyHpMult: 1.4,
+      rewardMedals: 6,
+      desc: 'Terminid Swarm Front: Expand Quarry Drills to Lv.5+, unlock Munitions Crates, and survive Wave 15.'
+    },
+    {
+      id: 'planet_3',
+      index: 3,
+      name: 'Sector 3: Tien Kwan Mech Forge (天關機甲工業星)',
+      waveStart: 16,
+      waveEnd: 30,
+      reqMult: 1.8,
+      enemyHpMult: 2.1,
+      rewardMedals: 10,
+      desc: 'Liberate the EXO-45 Patriot Exosuit factories and upgrade Conveyor Belts to Lv.10+.'
+    },
+    {
+      id: 'planet_4',
+      index: 4,
+      name: 'Sector 4: Malevelon Creek (瑪레弗隆溪谷)',
+      waveStart: 31,
+      waveEnd: 50,
+      reqMult: 2.5,
+      enemyHpMult: 3.2,
+      rewardMedals: 16,
+      desc: 'Heavy Automaton Hulk Siege: Fortify all 3 Gate Layers to Lv.12+ and deploy Guard Dog drones.'
+    },
+    {
+      id: 'planet_5',
+      index: 5,
+      name: 'Sector 5: Meridia Supercolony (梅里迪亞超級蟲巢)',
+      waveStart: 51,
+      waveEnd: 75,
+      reqMult: 3.5,
+      enemyHpMult: 4.8,
+      rewardMedals: 25,
+      desc: 'High-Intensity Swarm: Commission SES Super Destroyers and push factory stations toward Lv.15.'
+    },
+    {
+      id: 'planet_6',
+      index: 6,
+      name: 'Sector 6: Cyberstan Outskirts (生化斯坦外圍防線)',
+      waveStart: 76,
+      waveEnd: 100,
+      reqMult: 5.0,
+      enemyHpMult: 7.0,
+      rewardMedals: 40,
+      desc: 'Armored Legion Assault: Max out Lv.20 Turbo Conveyor Belts and Lv.20 Gate Railcannons.'
+    },
+    {
+      id: 'planet_7',
+      index: 7,
+      name: 'Sector 7: Cyberstan Iron Citadel (生化斯坦核心母星)',
+      waveStart: 101,
+      waveEnd: 150,
+      reqMult: 7.5,
+      enemyHpMult: 10.5,
+      rewardMedals: 65,
+      desc: 'Supreme Super Earth Offensive: Full Lv.20 Mega-Factory mastery across all 7 production lines.'
+    },
+    {
+      id: 'planet_8',
+      index: 8,
+      name: 'Sector 8: Endless Galactic Front (無盡銀河遠征 Wave 151+)',
+      waveStart: 151,
+      waveEnd: 9999,
+      reqMult: 12.0,
+      enemyHpMult: 15.0,
+      rewardMedals: 100,
+      desc: 'Infinite 20+ Hour Endgame Mode with compounding Prestige Ascension multipliers!'
+    }
+  ],
+
+  // --------------------------------------------------------------------------
+  // 24 LONG-TERM COMMAND MILESTONES / ACHIEVEMENTS (🏆 成就系統)
+  // --------------------------------------------------------------------------
+  MILESTONES: [
+    { id: 'ms_first_cloth', name: 'First Cape Woven', desc: 'Serve 5 Helldiver customers.', check: (g) => g.totalServed >= 5, rewardMedals: 1 },
+    { id: 'ms_unlock_gun', name: 'Second Amendment of Super Earth', desc: 'Unlock the AR-23 Liberator Gun factory.', check: (g) => !!g.unlocked.gun, rewardMedals: 1 },
+    { id: 'ms_unlock_iron_drill', name: 'Automated Metallurgy', desc: 'Unlock the Auto Iron Quarry Drill (Lv.1+).', check: (g) => (g.rawExtractors.raw_iron?.level || 0) >= 1, rewardMedals: 1 },
+    { id: 'ms_unlock_e710_pump', name: 'Element-710 Pipeline', desc: 'Unlock the Auto E-710 Fuel Pump (Lv.1+).', check: (g) => (g.rawExtractors.raw_e710?.level || 0) >= 1, rewardMedals: 1 },
+    { id: 'ms_first_belt', name: 'Factorio Initiate', desc: 'Unlock your first Conveyor Belt (Lv.1+).', check: (g) => Object.values(g.conveyorLevels || {}).some((v) => v >= 1), rewardMedals: 2 },
+    { id: 'ms_wave_5', name: 'Angel\'s Venture Veteran', desc: 'Clear Enemy Wave 5.', check: (g) => g.waveNumber > 5, rewardMedals: 3 },
+    { id: 'ms_wave_15', name: 'Heeth Survivor', desc: 'Clear Enemy Wave 15.', check: (g) => g.waveNumber > 15, rewardMedals: 5 },
+    { id: 'ms_wave_30', name: 'Hero of Tien Kwan', desc: 'Clear Enemy Wave 30.', check: (g) => g.waveNumber > 30, rewardMedals: 8 },
+    { id: 'ms_wave_50', name: 'Legend of Malevelon Creek', desc: 'Clear Enemy Wave 50.', check: (g) => g.waveNumber > 50, rewardMedals: 15 },
+    { id: 'ms_served_100', name: 'Quartermaster General', desc: 'Serve 100 Helldiver customers across your career.', check: (g) => g.lifetimeServed >= 100, rewardMedals: 4 },
+    { id: 'ms_served_500', name: ' Arsenal of Democracy', desc: 'Serve 500 Helldiver customers across your career.', check: (g) => g.lifetimeServed >= 500, rewardMedals: 10 },
+    { id: 'ms_kills_200', name: 'Scrap Metal Collector', desc: 'Eliminate 200 enemies across your career.', check: (g) => g.lifetimeKills >= 200, rewardMedals: 5 },
+    { id: 'ms_kills_1000', name: 'Bane of Cyberstan', desc: 'Eliminate 1,000 enemies across your career.', check: (g) => g.lifetimeKills >= 1000, rewardMedals: 15 },
+    { id: 'ms_unlock_mech', name: 'Heavy Walker Assembly', desc: 'Unlock the EXO-45 Patriot Mech factory.', check: (g) => !!g.unlocked.mech, rewardMedals: 5 },
+    { id: 'ms_unlock_warship', name: 'Orbital Fleet Admiral', desc: 'Unlock the SES Super Destroyer Drydock.', check: (g) => !!g.unlocked.warship, rewardMedals: 10 },
+    { id: 'ms_belt_lv20', name: 'Lv.20 Turbo Belt Master', desc: 'Upgrade any Conveyor Belt to Max Level 20.', check: (g) => Object.values(g.conveyorLevels || {}).some((v) => v >= 20), rewardMedals: 12 },
+    { id: 'ms_station_lv20', name: 'Lv.20 Overclocked Foundry', desc: 'Upgrade any Production Machine to Max Level 20.', check: (g) => Object.values(g.stations || {}).some((s) => (s.level || 0) >= 20), rewardMedals: 12 },
+    { id: 'ms_quarry_lv20', name: 'Lv.20 Deep-Core Excavator', desc: 'Upgrade any Raw Quarry Drill to Max Level 20.', check: (g) => Object.values(g.rawExtractors || {}).some((r) => (r.level || 0) >= 20), rewardMedals: 12 },
+    { id: 'ms_gate_lv20', name: 'Lv.20 Impenetrable Citadel', desc: 'Fortify any Defense Gate Layer to Max Level 20.', check: (g) => Object.values(g.gates || {}).some((gt) => (gt.defenseLevel || 0) >= 20), rewardMedals: 12 },
+    { id: 'ms_ascend_1', name: 'First Galactic Ascension', desc: 'Perform a Galactic Prestige Ascension (Wave 10+) for permanent x2 income.', check: (g) => (g.prestigeCount || 0) >= 1, rewardMedals: 10 }
+  ],
 
   // --------------------------------------------------------------------------
   // MAIN CHARACTER (主角色) 4-SLOT EQUIPMENT & LOADOUT SYSTEM (🛡️ 裝備 Loadout)
@@ -57,7 +185,7 @@ window.GameConfig = {
         fireRateMult: 1.0,
         pelletCount: 1,
         tracerColor: '#38bdf8',
-        desc: 'Standard-issue Helldiver assault rifle. Reliable single-target rapid fire (28 DMG).'
+        desc: 'Standard-issue Helldiver assault rifle. Reliable single-target rapid fire (26 DMG).'
       },
       {
         id: 'w_breaker',
@@ -65,13 +193,13 @@ window.GameConfig = {
         name: 'SG-225 Breaker Auto-Shotgun',
         zhName: 'SG-225 破擊者全自動霰彈槍',
         icon: '💥',
-        cost: 240,
+        cost: 350,
         unlockedAtStart: false,
-        damageMult: 0.85,
+        damageMult: 0.9,
         fireRateMult: 1.15,
         pelletCount: 3,
         tracerColor: '#f97316',
-        desc: 'Fires a 3-pellet heavy flechette spread (2.55x total burst damage) that shreds bug swarms!'
+        desc: 'Fires a 3-pellet heavy flechette spread (2.7x total burst damage) that shreds bug swarms!'
       },
       {
         id: 'w_quasar',
@@ -79,14 +207,29 @@ window.GameConfig = {
         name: 'LAS-99 Quasar Heavy Cannon',
         zhName: 'LAS-99 類星體重型雷射砲',
         icon: '⚡',
-        cost: 620,
+        cost: 950,
         unlockedAtStart: false,
-        damageMult: 3.4,
-        fireRateMult: 0.85,
+        damageMult: 3.6,
+        fireRateMult: 0.9,
         pelletCount: 1,
         explosive: true,
         tracerColor: '#facc15',
-        desc: 'High-energy golden plasma beam (3.4x DMG + AoE splash explosion) built to melt Automaton Hulks!'
+        desc: 'High-energy golden plasma beam (3.6x DMG + AoE splash explosion) built to melt Automaton Hulks!'
+      },
+      {
+        id: 'w_autocannon',
+        slot: 'weapon',
+        name: 'AC-8 Heavy Flak Autocannon',
+        zhName: 'AC-8 重型高爆機砲',
+        icon: '🚀',
+        cost: 2400,
+        unlockedAtStart: false,
+        damageMult: 5.5,
+        fireRateMult: 1.25,
+        pelletCount: 2,
+        explosive: true,
+        tracerColor: '#ef4444',
+        desc: 'Endgame twin-shell explosive autocannon (11x total burst DMG + heavy splash)!'
       }
     ],
     armor: [
@@ -113,16 +256,16 @@ window.GameConfig = {
         name: 'SC-30 Trailblazer Scout Armor',
         zhName: 'SC-30 開拓者高速偵察裝甲',
         icon: '🏃',
-        cost: 220,
+        cost: 320,
         unlockedAtStart: false,
         speedMult: 1.32,
         bonusCap: 4,
-        harvestMult: 1.6,
+        harvestMult: 1.65,
         sellBonus: 0,
         bodyColor: '#14532d',
         capeColor: '#22c55e',
         trimColor: '#86efac',
-        desc: '+32% Move Speed, +4 Carry Stack, and +60% faster manual Ore Harvesting & Gate Repair!'
+        desc: '+32% Move Speed, +4 Carry Stack, and +65% faster manual Ore Harvesting & Gate Repair!'
       },
       {
         id: 'a_juggernaut',
@@ -130,16 +273,33 @@ window.GameConfig = {
         name: 'FS-05 Devastator Heavy Plate',
         zhName: 'FS-05 毀滅者重裝泰坦甲',
         icon: '🛡️',
-        cost: 480,
+        cost: 780,
         unlockedAtStart: false,
-        speedMult: 1.12,
+        speedMult: 1.15,
         bonusCap: 12,
-        harvestMult: 1.25,
+        harvestMult: 1.35,
         sellBonus: 0.25,
         bodyColor: '#7f1d1d',
         capeColor: '#f59e0b',
         trimColor: '#fde047',
-        desc: '+12 Max Carry Stack Capacity, +12% Move Speed, and +25% Requisition Sale Price on all items!'
+        desc: '+12 Max Carry Stack Capacity, +15% Move Speed, and +25% Requisition Sale Price on all items!'
+      },
+      {
+        id: 'a_admiral',
+        slot: 'armor',
+        name: 'SA-99 Super Citizen Gold Plate',
+        zhName: 'SA-99 超級公民黃金統帥甲',
+        icon: '👑',
+        cost: 2200,
+        unlockedAtStart: false,
+        speedMult: 1.38,
+        bonusCap: 22,
+        harvestMult: 2.2,
+        sellBonus: 0.60,
+        bodyColor: '#3b0764',
+        capeColor: '#facc15',
+        trimColor: '#fef08a',
+        desc: '+22 Carry Stack, +38% Speed, 2.2x Manual Repair/Harvest speed, and +60% Sale Price!'
       }
     ],
     backpack: [
@@ -162,7 +322,7 @@ window.GameConfig = {
         name: 'B-1 Heavy Supply Pack',
         zhName: 'B-1 重型彈藥補給背包',
         icon: '📦',
-        cost: 280,
+        cost: 380,
         unlockedAtStart: false,
         bonusCap: 10,
         hasDrone: false,
@@ -176,9 +336,9 @@ window.GameConfig = {
         name: 'AX/LAS-5 "Guard Dog" Laser Drone',
         zhName: 'AX/LAS-5 護衛犬自動雷射無人機',
         icon: '🛸',
-        cost: 540,
+        cost: 850,
         unlockedAtStart: false,
-        bonusCap: 6,
+        bonusCap: 8,
         hasDrone: true,
         autoHarvest: true,
         desc: 'Deploys an orbiting Guard Dog drone that auto-fires lasers at enemies AND auto-mines Raw Ore from afar!'
@@ -204,12 +364,12 @@ window.GameConfig = {
         name: 'Ride M-102 Fast Recon Vehicle (車)',
         zhName: '騎乘 M-102 戰術偵察車',
         icon: '🚙',
-        cost: 750,
+        cost: 1200,
         unlockedAtStart: false,
         speedMult: 1.55,
-        bonusCap: 10,
-        damageMult: 1.4,
-        desc: 'Drive the armored Carbot Recon Buggy! Grants +55% Move Speed, +10 Carry Stack & HMG fire!'
+        bonusCap: 12,
+        damageMult: 1.5,
+        desc: 'Drive the armored Carbot Recon Buggy! Grants +55% Move Speed, +12 Carry Stack & HMG fire!'
       },
       {
         id: 'm_mech',
@@ -217,12 +377,12 @@ window.GameConfig = {
         name: 'Pilot EXO-45 Patriot Exosuit (機甲)',
         zhName: '駕駛 EXO-45 愛國者雙足機甲',
         icon: '🤖',
-        cost: 1500,
+        cost: 2800,
         unlockedAtStart: false,
-        speedMult: 1.28,
-        bonusCap: 18,
-        damageMult: 2.5,
-        desc: 'Pilot the towering Patriot Mech! Grants +18 Carry Stack, 2.5x Weapon Damage & rapid Gate repair!'
+        speedMult: 1.30,
+        bonusCap: 24,
+        damageMult: 2.8,
+        desc: 'Pilot the towering Patriot Mech! Grants +24 Carry Stack, 2.8x Weapon Damage & 2x Gate repair speed!'
       }
     ]
   },
@@ -248,8 +408,8 @@ window.GameConfig = {
         hasRifle: true,
         hasDrone: true,
         stack: [
-          { icon: '⛏️', color: '#38bdf8' },
-          { icon: '🔫', color: '#38bdf8' }
+          { icon: '🛢️', color: '#a855f7' },
+          { icon: '🦺', color: '#facc15' }
         ]
       },
       stats: '4 Equipment Slots: Weapon 🔫 | Armor 🦺 | Guard Dog 🛸 | Mount 🤖',
@@ -270,10 +430,10 @@ window.GameConfig = {
         visorColor: '#fb923c',
         isCommander: false,
         hasRifle: true,
-        orderBubble: '🔫 0/2'
+        orderBubble: '🦺 0/1'
       },
-      stats: 'Orders: 🔫 Gun, 🦺 Cloth, 📦 Munitions, 🎒 Jump Pack',
-      desc: 'Chubby Carbot bean Helldiver queuing in Sector C. Can be served from the Quartermaster Counter tray OR directly from your hands!'
+      stats: 'Orders: 🦺 Cloth (At Start), then 🔫 Gun, 📦 Munitions, 🎒 Jump Pack',
+      desc: 'Chubby Carbot bean Helldiver queuing in Sector C. Only orders items you have unlocked! Can be served from the Counter or directly from your hands.'
     },
     {
       id: 'char_vip_admiral',
@@ -293,12 +453,12 @@ window.GameConfig = {
         orderBubble: '🤖 0/1'
       },
       stats: 'Orders: 🚙 Recon Vehicle, 🤖 Patriot Mech, 🚀 Super Destroyer',
-      desc: 'Veteran Carbot Admiral in royal purple-and-gold ceremonial armor with winged crest. Pays $310–$1,650+ for vehicles, mechs, and warships.'
+      desc: 'Veteran Carbot Admiral in royal purple-and-gold ceremonial armor with winged crest. Pays massive Requisition slips for vehicles, mechs, and warships.'
     },
     {
       id: 'char_seaf_miner',
       name: 'SEAF Raw Quarry Miner (採礦兵)',
-      zhName: 'SEAF 礦區採集兵 (原料補給員)',
+      zhName: 'SEAF 礦區採集兵 (Lv.1–20 原料補給員)',
       faction: 'SEAF Mining Corps',
       badge: '⛏️ RAW MINER',
       badgeColor: '#38bdf8',
@@ -314,13 +474,13 @@ window.GameConfig = {
           { icon: '🛢️', color: '#a855f7' }
         ]
       },
-      stats: 'Carry: 4 Raw Ore/Fuel | Route: Raw Quarry -> Factory Input Hoppers',
-      desc: 'Dedicated mining trooper who harvests ⛏️ Super Iron and 🛢️ E-710 from Sector A and feeds them into your factory Input Hoppers so production never stops!'
+      stats: 'Upgradable Lv.1–20 | Route: Raw Quarry -> Factory Input Hoppers',
+      desc: 'Dedicated mining trooper who harvests ⛏️ Super Iron and 🛢️ E-710 from Sector A and feeds them into your factory Input Hoppers.'
     },
     {
       id: 'char_seaf_logistics',
       name: 'SEAF Logistics Trooper',
-      zhName: 'SEAF 藍甲後勤搬運兵',
+      zhName: 'SEAF 藍甲後勤搬運兵 (Lv.1–20)',
       faction: 'SEAF Support',
       badge: '🪖 AUTO-STAFF',
       badgeColor: '#38bdf8',
@@ -332,17 +492,17 @@ window.GameConfig = {
         visorColor: '#bae6fd',
         isCommander: false,
         stack: [
-          { icon: '🔫', color: '#38bdf8' },
-          { icon: '🦺', color: '#facc15' }
+          { icon: '🦺', color: '#facc15' },
+          { icon: '🔫', color: '#38bdf8' }
         ]
       },
-      stats: 'Carry: 4 Items | Route: Factory Output -> Sales Counter',
-      desc: 'Loyal Super Earth Armed Forces trooper in sky-blue armor. Automatically collects finished Guns, Cloth, and Gear from assembly lines and stocks the Sales Counter.'
+      stats: 'Upgradable Lv.1–20 | Route: Factory Output -> Sales Counter',
+      desc: 'Loyal Super Earth Armed Forces trooper in sky-blue armor. Automatically collects finished Cloth, Guns, and Gear from assembly lines and stocks the Sales Counter.'
     },
     {
       id: 'char_seaf_ammo',
-      name: 'SEAF Munitions Hauler (搬彈兵)',
-      zhName: 'SEAF 重裝搬彈與修門工兵',
+      name: 'SEAF Munitions & Gate Engineer (搬彈修門工兵)',
+      zhName: 'SEAF 重裝搬彈與修門工兵 (Lv.1–20)',
       faction: 'SEAF Ordnance',
       badge: '🧱 AMMO & REPAIR',
       badgeColor: '#f97316',
@@ -358,8 +518,8 @@ window.GameConfig = {
           { icon: '🧱', color: '#f97316' }
         ]
       },
-      stats: 'Carry: 4 Crates (12 🧱 Ammo) | Supplies & Repairs Gate Layers 3, 2, 1',
-      desc: 'Ordnance specialist who hauls (搬) 🧱 Ammo from the Munitions Press to the 3 Sequential Gate Layers (Gate 3 -> Gate 2 -> Gate 1) and repairs damaged gates!'
+      stats: 'Upgradable Lv.1–20 | Supplies & Manually Repairs Gate Layers 3, 2, 1',
+      desc: 'Ordnance specialist who hauls (搬) 🧱 Ammo from the Munitions Press to the 3 Sequential Gate Layers and manually repairs damaged or broken gates!'
     },
     {
       id: 'char_automaton_trooper',
@@ -370,7 +530,7 @@ window.GameConfig = {
       badgeColor: '#ef4444',
       renderType: 'enemy',
       renderOpts: { type: 'trooper' },
-      stats: 'HP: 95 | Attacks: Gate 3 -> Gate 2 -> Gate 1 | Drops: $35 + 🛢️',
+      stats: 'Wave Enemy | Attacks: Gate 3 -> Gate 2 -> Gate 1 | Drops: $35 + 🛢️',
       desc: 'Carbot-style gunmetal bot chassis with a white cartoon skull faceplate and glowing red eyes. Attacks Outer Gate 3 first, then Middle Gate 2, then Inner Gate 1.'
     },
     {
@@ -382,7 +542,7 @@ window.GameConfig = {
       badgeColor: '#dc2626',
       renderType: 'enemy',
       renderOpts: { type: 'hulk' },
-      stats: 'HP: 310 | Siege DMG: 24 | Drops: $95 + +1 ⭐ Forever Medal!',
+      stats: 'Boss Wave Unit | Siege DMG: 24 | Drops: $110 + +1 ⭐ Forever Medal!',
       desc: 'Towering crimson-and-gunmetal Carbot Hulk armed with a spinning orange buzzsaw arm, heavy flamethrower, and glowing red skull eyes.'
     },
     {
@@ -394,99 +554,101 @@ window.GameConfig = {
       badgeColor: '#84cc16',
       renderType: 'enemy',
       renderOpts: { type: 'bug' },
-      stats: 'HP: 80 | Speed: 110 (Fast) | Drops: $35 + 🛢️ E-710',
+      stats: 'Fast Wave Unit | Speed: 112 | Drops: $35 + 🛢️ E-710',
       desc: 'Chubby Carbot olive-green chitinous bug with yellow snapping mandibles and skittering legs that rushes the active Defense Gate layer in packs.'
     },
     {
       id: 'char_patriot_mech',
       name: 'EXO-45 Patriot Exosuit (機甲)',
-      zhName: 'EXO-45 愛國者雙足機甲 (可販售 & 主角可駕駛)',
+      zhName: 'EXO-45 愛國者雙足機甲 (可升至 Lv.20 & 主角可駕駛)',
       faction: 'Super Earth Heavy Armor',
       badge: '🤖 TIER-6 MECH',
       badgeColor: '#f97316',
       renderType: 'mech',
       renderOpts: {},
-      stats: 'Recipe: 3⛏️ Iron + 2🛢️ E-710 | Sell: $680+ | Wearable Mount!',
+      stats: 'Recipe: 3⛏️ Iron + 2🛢️ E-710 | Upgradable Lv.1–20 | Wearable Mount!',
       desc: 'Heavily armored bipedal walker armed with shoulder rocket pods and rotary gatling cannon. Produce it for VIPs OR equip it in 🛡️ Loadout to pilot it yourself!'
     },
     {
       id: 'char_recon_vehicle',
       name: 'M-102 Fast Recon Vehicle (車)',
-      zhName: 'M-102 戰術偵察車 (可販售 & 主角可騎乘)',
+      zhName: 'M-102 戰術偵察車 (可升至 Lv.20 & 主角可騎乘)',
       faction: 'Super Earth Motor Pool',
       badge: '🚙 TIER-5 VEHICLE',
       badgeColor: '#eab308',
       renderType: 'vehicle',
       renderOpts: {},
-      stats: 'Recipe: 2⛏️ Iron + 1🛢️ E-710 | Sell: $310+ | Wearable Mount!',
+      stats: 'Recipe: 2⛏️ Iron + 1🛢️ E-710 | Upgradable Lv.1–20 | Wearable Mount!',
       desc: 'All-terrain armored tactical buggy with yellow roll-cage and roof HMG turret. Produce it for Helldivers OR equip it in 🛡️ Loadout for +55% move speed!'
     },
     {
       id: 'char_gate_turret',
       name: '3-Layer Defense Gate & Dual Sentries',
-      zhName: '三層縱深防禦城門 & 雙聯裝機砲塔',
+      zhName: '三層縱深防禦城門 (Lv.1–20 強化 & 破門需手動修復)',
       faction: 'Super Earth Defense Grid',
       badge: '🗼 3-LAYER DEFENSE',
       badgeColor: '#22c55e',
       renderType: 'turret',
       renderOpts: {},
-      stats: 'Layers: Outer Gate 3 -> Middle Gate 2 -> Inner Gate 1 (Repairable!)',
-      desc: 'Three concentric blast walls across the Northern Corridor, each guarded by Dual Automated Sentries and a Repair/Ammo Pad.'
+      stats: 'Layers: Outer Gate 3 -> Middle Gate 2 -> Inner Gate 1 (Lv.1–20)',
+      desc: 'Three concentric blast walls across the Northern Corridor. When broken (0 HP), a gate CANNOT auto-heal until manually repaired on its pad!'
     }
   ],
 
   // --------------------------------------------------------------------------
-  // SECTOR A: MANUAL HARVEST QUARRY + EXPANDABLE AUTO-MINING RIGS (Scale 1..5)
+  // SECTOR A: MANUAL HARVEST QUARRY (AT START) + AUTO-DRILL RIGS (Lv.0 Locked -> Lv.20)
   // --------------------------------------------------------------------------
   RAW_EXTRACTORS: [
     {
-      id: 'raw_iron',
-      name: 'Super Iron Quarry & Drill Array',
-      shortName: 'Iron Quarry',
-      itemIcon: '⛏️',
-      icon: '⛏️',
-      color: '#38bdf8',
-      // Manual Harvest Vein Area (Walk here at start to harvest Iron by hand!)
+      id: 'raw_e710',
+      name: 'E-710 Fuel Field & Auto-Pump Array',
+      shortName: 'E-710 Pump',
+      itemIcon: '🛢️',
+      icon: '🛢️',
+      color: '#a855f7',
+      unlockedAtStart: false, // Starts at Lv.0 (Manual Harvest Only at Start!)
+      unlockCost: 110,
+      maxLevel: 20,
       harvestPos: { x: -1740, z: 180, radius: 135 },
-      // Expandable Auto-Drill Rig Array (Scale Lv.1 -> Lv.5 adds more rigs!)
       x: -1400,
       z: 180,
       pickupX: -1150,
       pickupZ: 180,
       padX: -1400,
-      padZ: 350,
-      baseCycleTime: 1.45,
-      baseUpgradeCost: 75,
-      costScale: 1.55,
-      baseBuffer: 24,
-      desc: 'Walk over the ⛏️ Iron Vein to harvest by hand at start, or upgrade Scale (Lv.1–5+) to deploy multi-rig Auto-Drills!'
+      padZ: 345,
+      baseCycleTime: 1.9,
+      baseUpgradeCost: 110,
+      costScale: 1.38,
+      baseBuffer: 16,
+      desc: 'Walk inside the 🛢️ E-710 Field to harvest by hand at start! Unlock Auto-Pump (Lv.1) and upgrade up to Lv.20 for 5-Rig Hyper Extraction.'
     },
     {
-      id: 'raw_e710',
-      name: 'E-710 Fuel Field & Pump Array',
-      shortName: 'E-710 Field',
-      itemIcon: '🛢️',
-      icon: '🛢️',
-      color: '#a855f7',
-      // Manual Harvest Geyser Area (Walk here at start to harvest E-710 by hand!)
+      id: 'raw_iron',
+      name: 'Super Iron Quarry & Auto-Drill Array',
+      shortName: 'Iron Drill',
+      itemIcon: '⛏️',
+      icon: '⛏️',
+      color: '#38bdf8',
+      unlockedAtStart: false, // Starts at Lv.0 (Manual Harvest Only at Start!)
+      unlockCost: 140,
+      maxLevel: 20,
       harvestPos: { x: -1740, z: 680, radius: 135 },
-      // Expandable Auto-Pump Rig Array
       x: -1400,
       z: 680,
       pickupX: -1150,
       pickupZ: 680,
       padX: -1400,
-      padZ: 850,
-      baseCycleTime: 1.55,
-      baseUpgradeCost: 85,
-      costScale: 1.55,
-      baseBuffer: 24,
-      desc: 'Walk over the 🛢️ E-710 Geysers to harvest by hand at start, or upgrade Scale (Lv.1–5+) to expand Auto-Pumps!'
+      padZ: 845,
+      baseCycleTime: 1.85,
+      baseUpgradeCost: 140,
+      costScale: 1.38,
+      baseBuffer: 16,
+      desc: 'Walk inside the ⛏️ Iron Vein to harvest by hand! Unlock Auto-Drill (Lv.1) and upgrade up to Lv.20 for 5-Rig Deep-Core Mining.'
     }
   ],
 
   // --------------------------------------------------------------------------
-  // MUNITIONS AMMO PRESS (Requires 1x ⛏️ Iron -> Produces 3x 🧱 Turret Ammo!)
+  // MUNITIONS AMMO PRESS (Lv.0 Locked -> Lv.1..20! Requires 1x ⛏️ Iron -> 3x 🧱 Ammo)
   // --------------------------------------------------------------------------
   AMMO_PRESS: {
     id: 'ammo',
@@ -494,28 +656,36 @@ window.GameConfig = {
     shortName: 'Ammo Press',
     icon: '🧱',
     color: '#f97316',
+    unlockedAtStart: false, // Must be unlocked ($130) then upgraded Lv.1 -> Lv.20!
+    unlockCost: 130,
+    baseUpgradeCost: 120,
+    costScale: 1.36,
+    maxLevel: 20,
     recipe: { raw_iron: 1 },
     outputBatch: 3,
-    initialInput: { raw_iron: 8 },
+    initialInput: { raw_iron: 6 },
     inputPos: { x: -1700, z: 1280 },
     x: -1440,
     z: 1280,
     padX: -1180,
     padZ: 1280,
-    baseCycleTime: 1.25,
-    maxBuffer: 36,
-    initialStock: 12,
-    desc: 'Consumes 1x ⛏️ Iron Ore in its Input Hopper to press 3x 🧱 Heavy Turret Ammo for Gate Layers 3, 2, and 1!'
+    // Place unlock/upgrade pad BELOW the press so the machine never crushes the player!
+    unlockPos: { x: -1440, z: 1445 },
+    baseCycleTime: 1.6,
+    maxBuffer: 30,
+    initialStock: 9,
+    desc: 'Consumes 1x ⛏️ Iron Ore in its Input Hopper to press 3x 🧱 Heavy Turret Ammo. Upgradable from Lv.1 to Lv.20!'
   },
 
   // --------------------------------------------------------------------------
-  // THREE SEQUENTIAL NORTHERN WAR-ZONE DEFENSE GATE LAYERS
+  // THREE SEQUENTIAL NORTHERN WAR-ZONE DEFENSE GATE LAYERS (Lv.1 -> Lv.20)
   // (Enemies MUST break Outer Gate 3 -> then Middle Gate 2 -> finally Inner Gate 1!)
+  // (When a Gate reaches 0 HP, NO auto HP recovery until manually repaired!)
   // --------------------------------------------------------------------------
   GATES: [
     {
       id: 'gate_3',
-      layerOrder: 3, // Outer Layer (First attacked!)
+      layerOrder: 3,
       name: 'Outer Gate 3 — Forward Bastion (第3層外門)',
       shortName: 'Outer Gate 3',
       x: 0,
@@ -529,22 +699,23 @@ window.GameConfig = {
       upgradePadX: -480,
       upgradePadZ: -1200,
       unlockedAtStart: true,
-      baseUpgradeCost: 140,
-      baseMaxHp: 900,
+      maxLevel: 20,
+      baseUpgradeCost: 150,
+      costScale: 1.35,
+      baseMaxHp: 750,
       turretName: 'Dual A/MG-43 Forward Sentries',
       turretRange: 460,
-      turretFireRate: 0.34,
-      turretDamage: 34,
-      maxAmmo: 50,
-      initialAmmo: 30,
+      turretFireRate: 0.38,
+      turretDamage: 30,
+      maxAmmo: 45,
+      initialAmmo: 18,
       conveyorId: 'conv_gate_3',
-      conveyorCost: 240,
       color: '#f97316',
-      desc: 'FIRST DEFENSE LAYER (z = -1320): Enemies must break Outer Gate 3 before they can advance to Gate 2! Can be repaired & rebuilt anytime.'
+      desc: 'FIRST DEFENSE LAYER (z = -1320): Enemies attack Gate 3 first! Upgradable Lv.1–20. If broken (0 HP), NO auto-heal until manually repaired on pad!'
     },
     {
       id: 'gate_2',
-      layerOrder: 2, // Middle Layer (Attacked only after Gate 3 is broken!)
+      layerOrder: 2,
       name: 'Middle Gate 2 — Citadel Wall (第2層中門)',
       shortName: 'Middle Gate 2',
       x: 0,
@@ -558,22 +729,23 @@ window.GameConfig = {
       upgradePadX: -480,
       upgradePadZ: -720,
       unlockedAtStart: true,
-      baseUpgradeCost: 180,
+      maxLevel: 20,
+      baseUpgradeCost: 190,
+      costScale: 1.35,
       baseMaxHp: 850,
       turretName: 'Dual A/AC-8 Heavy Autocannons',
       turretRange: 470,
-      turretFireRate: 0.32,
-      turretDamage: 42,
+      turretFireRate: 0.35,
+      turretDamage: 38,
       maxAmmo: 50,
-      initialAmmo: 30,
+      initialAmmo: 18,
       conveyorId: 'conv_gate_2',
-      conveyorCost: 200,
       color: '#38bdf8',
-      desc: 'SECOND DEFENSE LAYER (z = -840): Holds the line if Outer Gate 3 falls. Stand on its pad to load 🧱 Ammo or repair/rebuild!'
+      desc: 'SECOND DEFENSE LAYER (z = -840): Attacked only after Outer Gate 3 is broken. Upgradable Lv.1–20. No auto-heal when broken!'
     },
     {
       id: 'gate_1',
-      layerOrder: 1, // Inner Core Layer (Final wall! 0 HP = Lose!)
+      layerOrder: 1,
       name: 'Inner Gate 1 — Core Arsenal Wall (第1層核心內門)',
       shortName: 'Inner Gate 1',
       x: 0,
@@ -587,126 +759,149 @@ window.GameConfig = {
       upgradePadX: -480,
       upgradePadZ: -240,
       unlockedAtStart: true,
-      baseUpgradeCost: 220,
-      baseMaxHp: 800,
+      maxLevel: 20,
+      baseUpgradeCost: 240,
+      costScale: 1.35,
+      baseMaxHp: 950,
       turretName: 'Dual A/MLS-4X Railcannon Sentries',
       turretRange: 490,
-      turretFireRate: 0.30,
-      turretDamage: 52,
+      turretFireRate: 0.32,
+      turretDamage: 48,
       maxAmmo: 60,
-      initialAmmo: 36,
+      initialAmmo: 24,
       conveyorId: 'conv_gate_1',
-      conveyorCost: 160,
       color: '#facc15',
-      desc: 'FINAL INNER LAYER (z = -360): Protects the Factory Floor! Only attacked if Gate 3 and Gate 2 are broken. If Inner Gate 1 hits 0 HP = Defeat!'
+      desc: 'FINAL INNER LAYER (z = -360): Protects the Factory Floor! Upgradable Lv.1–20. If Inner Gate 1 hits 0 HP = Defeat!'
     }
   ],
 
+  // --------------------------------------------------------------------------
+  // 5 FACTORIO CONVEYOR BELTS (ALL START AT Lv.0 LOCKED -> UPGRADABLE TO Lv.20!)
+  // --------------------------------------------------------------------------
   CONVEYORS: [
     {
       id: 'conv_raw_feed',
       name: 'Quarry -> All Factory Input Hoppers Belt',
       icon: '⚙️',
-      cost: 150,
+      baseCost: 180,
+      costScale: 1.35,
+      maxLevel: 20,
       padX: -1150,
       padZ: 430,
       color: '#38bdf8',
-      desc: 'Factorio Raw Ore Conveyor! Automatically pipes ⛏️ Iron & 🛢️ E-710 from the Quarry into all Factory & Ammo Input Hoppers (+40% crafting speed)!'
-    },
-    {
-      id: 'conv_gate_1',
-      name: 'Ammo Belt -> Inner Gate 1 Turrets',
-      icon: '⏩',
-      cost: 160,
-      gateId: 'gate_1',
-      padX: 480,
-      padZ: -240,
-      color: '#facc15',
-      desc: 'Automatically feeds 🧱 Ammo from the Munitions Press to Inner Gate 1 Dual Turrets and slowly auto-repairs Gate 1!'
-    },
-    {
-      id: 'conv_gate_2',
-      name: 'Ammo Belt -> Middle Gate 2 Turrets',
-      icon: '⏩',
-      cost: 200,
-      gateId: 'gate_2',
-      padX: 480,
-      padZ: -720,
-      color: '#38bdf8',
-      desc: 'Automatically feeds 🧱 Ammo to Middle Gate 2 Dual Turrets and slowly auto-repairs Gate 2!'
-    },
-    {
-      id: 'conv_gate_3',
-      name: 'Ammo Belt -> Outer Gate 3 Turrets',
-      icon: '⏩',
-      cost: 240,
-      gateId: 'gate_3',
-      padX: 480,
-      padZ: -1200,
-      color: '#f97316',
-      desc: 'Automatically feeds 🧱 Ammo all the way to Outer Gate 3 Dual Turrets and slowly auto-repairs Gate 3!'
+      desc: 'Starts LOCKED (Lv.0). Unlock Lv.1 to pipe ⛏️ Iron & 🛢️ E-710 into Hoppers, and upgrade up to Lv.20 for hyper-speed raw feeding!'
     },
     {
       id: 'conv_counter_auto',
       name: 'Factory Output -> Sales Counter Belt',
       icon: '🛒',
-      cost: 280,
+      baseCost: 260,
+      costScale: 1.35,
+      maxLevel: 20,
       padX: 180,
       padZ: 340,
       color: '#22c55e',
-      desc: 'Factorio Logistics Belt! Automatically transfers finished Guns, Cloth, Vehicles & Mechs from Output Pads to the Sales Counter!'
+      desc: 'Starts LOCKED (Lv.0). Unlock Lv.1 to auto-transfer finished goods to the Sales Counter, and upgrade up to Lv.20 for turbo logistics!'
+    },
+    {
+      id: 'conv_gate_1',
+      name: 'Ammo Belt -> Inner Gate 1 Turrets',
+      icon: '⏩',
+      baseCost: 200,
+      costScale: 1.35,
+      maxLevel: 20,
+      gateId: 'gate_1',
+      padX: 480,
+      padZ: -240,
+      color: '#facc15',
+      desc: 'Starts LOCKED (Lv.0). Feeds 🧱 Ammo to Inner Gate 1 Turrets & repairs unbroken Gate 1. Upgrade Lv.1–20 for rapid autoloading!'
+    },
+    {
+      id: 'conv_gate_2',
+      name: 'Ammo Belt -> Middle Gate 2 Turrets',
+      icon: '⏩',
+      baseCost: 280,
+      costScale: 1.35,
+      maxLevel: 20,
+      gateId: 'gate_2',
+      padX: 480,
+      padZ: -720,
+      color: '#38bdf8',
+      desc: 'Starts LOCKED (Lv.0). Feeds 🧱 Ammo to Middle Gate 2 Turrets & repairs unbroken Gate 2. Upgrade Lv.1–20!'
+    },
+    {
+      id: 'conv_gate_3',
+      name: 'Ammo Belt -> Outer Gate 3 Turrets',
+      icon: '⏩',
+      baseCost: 360,
+      costScale: 1.35,
+      maxLevel: 20,
+      gateId: 'gate_3',
+      padX: 480,
+      padZ: -1200,
+      color: '#f97316',
+      desc: 'Starts LOCKED (Lv.0). Feeds 🧱 Ammo to Outer Gate 3 Turrets & repairs unbroken Gate 3. Upgrade Lv.1–20!'
     }
   ],
 
   // --------------------------------------------------------------------------
-  // ALL 7 PRODUCTION ITEMS WITH EXPLICIT RAW MATERIAL RECIPES & ZERO-OVERLAP POSITIONS
+  // ALL 7 PRODUCTION ITEMS:
+  // - ONLY Tier 1 (`cloth`) is unlocked at start (Lv.1)!
+  // - All other 6 items start LOCKED (Lv.0) and every machine upgrades to Lv.20!
+  // - `unlockPos` is offset +145px South of `stationPos` so unlocking NEVER crushes the player!
   // --------------------------------------------------------------------------
   ITEMS: [
     {
-      id: 'gun',
-      tier: 1,
-      name: 'AR-23 Liberator Rifle',
-      shortName: 'Liberator Gun',
-      icon: '🔫',
-      color: '#38bdf8',
-      unlockedAtStart: true,
-      unlockCost: 0,
-      sellPrice: 45,
-      cycleTime: 1.55,
-      maxBuffer: 14,
-      initialStock: 4,
-      rawType: 'raw_iron',
-      recipe: { raw_iron: 1 },
-      recipeText: '1x ⛏️ Iron -> 1x 🔫 Gun',
-      initialInput: { raw_iron: 8 },
-      inputPos: { x: -640, z: 160 },
-      stationPos: { x: -380, z: 160 },
-      pickupPos: { x: -120, z: 160 },
-      unlockPos: { x: -380, z: 160 },
-      description: 'Requires 1x ⛏️ Super Iron Ore in its Input Hopper to forge 1x AR-23 Liberator Rifle.'
-    },
-    {
       id: 'cloth',
-      tier: 2,
+      tier: 1,
       name: 'B-01 Tactical Cape & Armor',
       shortName: 'Cape & Armor',
       icon: '🦺',
       color: '#facc15',
-      unlockedAtStart: true,
+      unlockedAtStart: true, // ONLY THIS ONE ITEM IS UNLOCKED AT START!
       unlockCost: 0,
+      baseUpgradeCost: 80,
+      costScale: 1.35,
+      maxLevel: 20,
       sellPrice: 30,
-      cycleTime: 1.45,
-      maxBuffer: 14,
-      initialStock: 4,
+      cycleTime: 1.75,
+      maxBuffer: 12,
+      initialStock: 2,
       rawType: 'raw_e710',
       recipe: { raw_e710: 1 },
       recipeText: '1x 🛢️ E-710 -> 1x 🦺 Cloth',
-      initialInput: { raw_e710: 8 },
+      initialInput: { raw_e710: 4 },
+      inputPos: { x: -640, z: 160 },
+      stationPos: { x: -380, z: 160 },
+      pickupPos: { x: -120, z: 160 },
+      unlockPos: { x: -380, z: 305 }, // Safe offset below machine!
+      description: 'STARTER LINE (Lv.1–20): Harvest 🛢️ E-710 in Sector A and feed Hopper to weave B-01 Capes. Upgrade to Lv.20 for +15%/lvl speed & +12%/lvl value!'
+    },
+    {
+      id: 'gun',
+      tier: 2,
+      name: 'AR-23 Liberator Rifle',
+      shortName: 'Liberator Gun',
+      icon: '🔫',
+      color: '#38bdf8',
+      unlockedAtStart: false, // Locked at start! Unlock for $120 after selling Cloth!
+      unlockCost: 120,
+      baseUpgradeCost: 110,
+      costScale: 1.35,
+      maxLevel: 20,
+      sellPrice: 55,
+      cycleTime: 1.9,
+      maxBuffer: 12,
+      initialStock: 2,
+      rawType: 'raw_iron',
+      recipe: { raw_iron: 1 },
+      recipeText: '1x ⛏️ Iron -> 1x 🔫 Gun',
+      initialInput: { raw_iron: 4 },
       inputPos: { x: -640, z: 520 },
       stationPos: { x: -380, z: 520 },
       pickupPos: { x: -120, z: 520 },
-      unlockPos: { x: -380, z: 520 },
-      description: 'Requires 1x 🛢️ E-710 Polymer in its Input Hopper to weave 1x B-01 Tactical Armor & Cape.'
+      unlockPos: { x: -380, z: 665 }, // Safe offset below machine!
+      description: 'Requires 1x ⛏️ Super Iron Ore in its Input Hopper to forge 1x AR-23 Liberator Rifle. Upgradable Lv.1–20!'
     },
     {
       id: 'resource',
@@ -716,20 +911,23 @@ window.GameConfig = {
       icon: '📦',
       color: '#22c55e',
       unlockedAtStart: false,
-      unlockCost: 150,
-      sellPrice: 85,
-      cycleTime: 2.0,
+      unlockCost: 350,
+      baseUpgradeCost: 180,
+      costScale: 1.36,
+      maxLevel: 20,
+      sellPrice: 110,
+      cycleTime: 2.3,
       maxBuffer: 12,
-      initialStock: 3,
+      initialStock: 2,
       rawType: 'raw_e710',
       recipe: { raw_iron: 1, raw_e710: 1 },
       recipeText: '1⛏️ + 1🛢️ -> 1x 📦 Crate',
-      initialInput: { raw_iron: 5, raw_e710: 5 },
+      initialInput: { raw_iron: 3, raw_e710: 3 },
       inputPos: { x: -640, z: 880 },
       stationPos: { x: -380, z: 880 },
       pickupPos: { x: -120, z: 880 },
-      unlockPos: { x: -380, z: 880 },
-      description: 'Combines 1x ⛏️ Iron + 1x 🛢️ E-710 to pack high-value ordnance crates.'
+      unlockPos: { x: -380, z: 1025 }, // Safe offset below machine!
+      description: 'Combines 1x ⛏️ Iron + 1x 🛢️ E-710 to pack high-value ordnance crates. Upgradable Lv.1–20!'
     },
     {
       id: 'equipment',
@@ -739,20 +937,23 @@ window.GameConfig = {
       icon: '🎒',
       color: '#a855f7',
       unlockedAtStart: false,
-      unlockCost: 400,
-      sellPrice: 155,
-      cycleTime: 2.5,
+      unlockCost: 900,
+      baseUpgradeCost: 320,
+      costScale: 1.36,
+      maxLevel: 20,
+      sellPrice: 220,
+      cycleTime: 2.8,
       maxBuffer: 10,
       initialStock: 2,
       rawType: 'raw_e710',
       recipe: { raw_iron: 1, raw_e710: 2 },
       recipeText: '1⛏️ + 2🛢️ -> 1x 🎒 Pack',
-      initialInput: { raw_iron: 4, raw_e710: 6 },
+      initialInput: { raw_iron: 3, raw_e710: 4 },
       inputPos: { x: -640, z: 1240 },
       stationPos: { x: -380, z: 1240 },
       pickupPos: { x: -120, z: 1240 },
-      unlockPos: { x: -380, z: 1240 },
-      description: 'Combines 1x ⛏️ Iron + 2x 🛢️ E-710 to assemble personal shield & jump packs.'
+      unlockPos: { x: -380, z: 1385 }, // Safe offset below machine!
+      description: 'Combines 1x ⛏️ Iron + 2x 🛢️ E-710 to assemble personal shield & jump packs. Upgradable Lv.1–20!'
     },
     {
       id: 'vehicle',
@@ -762,20 +963,23 @@ window.GameConfig = {
       icon: '🚙',
       color: '#f97316',
       unlockedAtStart: false,
-      unlockCost: 1100,
-      sellPrice: 340,
-      cycleTime: 3.1,
+      unlockCost: 2400,
+      baseUpgradeCost: 650,
+      costScale: 1.38,
+      maxLevel: 20,
+      sellPrice: 480,
+      cycleTime: 3.5,
       maxBuffer: 8,
-      initialStock: 2,
+      initialStock: 1,
       rawType: 'raw_iron',
       recipe: { raw_iron: 2, raw_e710: 1 },
       recipeText: '2⛏️ + 1🛢️ -> 1x 🚙 Vehicle',
-      initialInput: { raw_iron: 6, raw_e710: 4 },
-      inputPos: { x: 740, z: 1000 },
-      stationPos: { x: 1020, z: 1000 },
-      pickupPos: { x: 1300, z: 1000 },
-      unlockPos: { x: 1020, z: 1000 },
-      description: 'Combines 2x ⛏️ Iron + 1x 🛢️ E-710 in Sector D Hangar to build armored Recon Vehicles.'
+      initialInput: { raw_iron: 4, raw_e710: 2 },
+      inputPos: { x: 740, z: 960 },
+      stationPos: { x: 1020, z: 960 },
+      pickupPos: { x: 1300, z: 960 },
+      unlockPos: { x: 1020, z: 1095 }, // Safe offset below machine!
+      description: 'Combines 2x ⛏️ Iron + 1x 🛢️ E-710 in Sector D Hangar to build armored Recon Vehicles. Upgradable Lv.1–20!'
     },
     {
       id: 'mech',
@@ -785,20 +989,23 @@ window.GameConfig = {
       icon: '🤖',
       color: '#ef4444',
       unlockedAtStart: false,
-      unlockCost: 2600,
-      sellPrice: 720,
-      cycleTime: 3.9,
+      unlockCost: 6500,
+      baseUpgradeCost: 1400,
+      costScale: 1.38,
+      maxLevel: 20,
+      sellPrice: 1100,
+      cycleTime: 4.4,
       maxBuffer: 6,
-      initialStock: 2,
+      initialStock: 1,
       rawType: 'raw_iron',
       recipe: { raw_iron: 3, raw_e710: 2 },
       recipeText: '3⛏️ + 2🛢️ -> 1x 🤖 Mech',
       initialInput: { raw_iron: 6, raw_e710: 4 },
-      inputPos: { x: 740, z: 1300 },
-      stationPos: { x: 1020, z: 1300 },
-      pickupPos: { x: 1300, z: 1300 },
-      unlockPos: { x: 1020, z: 1300 },
-      description: 'Combines 3x ⛏️ Iron + 2x 🛢️ E-710 to construct bipedal EXO-45 Patriot Walkers.'
+      inputPos: { x: 740, z: 1260 },
+      stationPos: { x: 1020, z: 1260 },
+      pickupPos: { x: 1300, z: 1260 },
+      unlockPos: { x: 1020, z: 1395 }, // Safe offset below machine!
+      description: 'Combines 3x ⛏️ Iron + 2x 🛢️ E-710 to construct bipedal EXO-45 Patriot Walkers. Upgradable Lv.1–20!'
     },
     {
       id: 'warship',
@@ -808,20 +1015,23 @@ window.GameConfig = {
       icon: '🚀',
       color: '#ec4899',
       unlockedAtStart: false,
-      unlockCost: 6000,
-      sellPrice: 1750,
-      cycleTime: 4.8,
+      unlockCost: 18000,
+      baseUpgradeCost: 3500,
+      costScale: 1.40,
+      maxLevel: 20,
+      sellPrice: 2800,
+      cycleTime: 5.5,
       maxBuffer: 5,
       initialStock: 1,
       rawType: 'raw_e710',
       recipe: { raw_iron: 4, raw_e710: 4 },
       recipeText: '4⛏️ + 4🛢️ -> 1x 🚀 Warship',
       initialInput: { raw_iron: 8, raw_e710: 8 },
-      inputPos: { x: 740, z: 1600 },
-      stationPos: { x: 1020, z: 1600 },
-      pickupPos: { x: 1300, z: 1600 },
-      unlockPos: { x: 1020, z: 1600 },
-      description: 'Combines 4x ⛏️ Iron + 4x 🛢️ E-710 in Orbital Drydock to commission SES Super Destroyers.'
+      inputPos: { x: 740, z: 1560 },
+      stationPos: { x: 1020, z: 1560 },
+      pickupPos: { x: 1300, z: 1560 },
+      unlockPos: { x: 1020, z: 1695 }, // Safe offset below machine!
+      description: 'Combines 4x ⛏️ Iron + 4x 🛢️ E-710 in Orbital Drydock to commission SES Super Destroyers. Upgradable Lv.1–20!'
     }
   ],
 
@@ -842,135 +1052,137 @@ window.GameConfig = {
     brazierEast: { x: 760, z: -1540, radius: 95, cost: 3 }
   },
 
+  // ALL UPGRADES HAVE 20 LEVELS FOR 20+ HOUR PROGRESSION!
   UPGRADES: [
     {
       id: 'seaf_miner',
-      name: 'Hire SEAF Quarry Miner (採礦兵)',
+      name: 'Hire & Train SEAF Quarry Miner (採礦兵)',
       icon: '⛏️',
-      baseCost: 95,
-      costMultiplier: 1.6,
-      maxLevel: 8,
-      description: 'Deploys a SEAF Miner who automatically hauls ⛏️ Iron & 🛢️ E-710 from the Quarry into Factory & Ammo Input Hoppers!'
+      baseCost: 130,
+      costMultiplier: 1.45,
+      maxLevel: 20,
+      description: 'Deploys & upgrades SEAF Miners (up to 8 active miners + +15% haul speed per level up to Lv.20) to feed Factory Hoppers!'
     },
     {
       id: 'raw_speed_boost',
-      name: 'Overclock Quarry & Expand Scale',
+      name: 'Overclock Quarry & Tectonic Drills',
       icon: '⚙️',
-      baseCost: 90,
-      costMultiplier: 1.55,
-      maxLevel: 15,
-      description: 'Increases Super Iron & E-710 Auto-Drill generation speed (+35%/lvl) and expands Quarry capacity.'
+      baseCost: 120,
+      costMultiplier: 1.42,
+      maxLevel: 20,
+      description: 'Increases Super Iron & E-710 Auto-Drill speed (+25%/lvl) and expands Quarry storage buffer up to Lv.20.'
     },
     {
       id: 'seaf_ammo_hauler',
-      name: 'Hire SEAF Ammo & Gate Engineer (搬彈修門兵)',
+      name: 'Hire & Train SEAF Gate Engineer (搬彈修門工兵)',
       icon: '🧱',
-      baseCost: 110,
-      costMultiplier: 1.65,
-      maxLevel: 8,
-      description: 'Deploys a SEAF Engineer who carries (搬) 🧱 Ammo from the Munitions Press to Gate Layers 3, 2, 1 AND repairs damaged Gates!'
+      baseCost: 150,
+      costMultiplier: 1.45,
+      maxLevel: 20,
+      description: 'Deploys & upgrades SEAF Engineers (up to 8 engineers + faster manual gate repair up to Lv.20) to supply & repair Gate Layers 3, 2, 1!'
     },
     {
       id: 'seaf_carrier',
-      name: 'Hire SEAF Logistics Trooper',
+      name: 'Hire & Train SEAF Logistics Trooper',
       icon: '🪖',
-      baseCost: 120,
-      costMultiplier: 1.65,
-      maxLevel: 8,
-      description: 'Deploys a SEAF Trooper who hauls finished Guns, Cloth, Vehicles & Mechs from Output Pads to the Sales Counter.'
+      baseCost: 140,
+      costMultiplier: 1.45,
+      maxLevel: 20,
+      description: 'Deploys & upgrades SEAF Logistics Troopers (up to 8 troopers + +15% speed/lvl up to Lv.20) to haul finished items to the Counter.'
     },
     {
       id: 'seaf_cashier',
-      name: 'Deploy Auto-Cashier Drone',
+      name: 'Upgrade Auto-Cashier Drone Array',
       icon: '🤖',
-      baseCost: 220,
-      costMultiplier: 2.0,
-      maxLevel: 4,
-      description: 'Automatically serves queued Helldivers faster and streams Requisition bills straight to your wallet.'
+      baseCost: 240,
+      costMultiplier: 1.48,
+      maxLevel: 20,
+      description: 'Automatically serves queued Helldivers faster (+20% serve speed/lvl up to Lv.20) and streams Requisition bills straight to your wallet.'
     },
     {
       id: 'player_boots',
       name: 'Jump-Jet Servo Boots',
       icon: '⚡',
-      baseCost: 100,
-      costMultiplier: 1.6,
-      maxLevel: 8,
-      description: 'Increases Commander movement speed (+14%/lvl) and War-Zone snowplow radius.'
+      baseCost: 110,
+      costMultiplier: 1.40,
+      maxLevel: 20,
+      description: 'Increases Commander movement speed (+8%/lvl up to Lv.20) and War-Zone snowplow radius.'
     },
     {
       id: 'player_exo_rig',
-      name: 'Heavy Back-Stack Rig',
+      name: 'Heavy Back-Stack Exo-Rig',
       icon: '🎒',
       baseCost: 130,
-      costMultiplier: 1.65,
-      maxLevel: 8,
-      description: 'Adds +5 max carry capacity to your vertical back-stack per upgrade level.'
+      costMultiplier: 1.42,
+      maxLevel: 20,
+      description: 'Adds +3 max carry capacity to your vertical back-stack per upgrade level (up to Lv.20).'
     },
     {
       id: 'factory_overclock',
       name: 'Super Uranium Factory Turbines',
       icon: '🔋',
-      baseCost: 180,
-      costMultiplier: 1.75,
-      maxLevel: 10,
-      description: 'Speeds up all 7 weapon, vehicle, mech, and warship assembly lines by +22% per level.'
+      baseCost: 200,
+      costMultiplier: 1.48,
+      maxLevel: 20,
+      description: 'Speeds up all 7 weapon, vehicle, mech, and warship assembly lines by +15% per level (up to Lv.20).'
     }
   ],
 
+  // ALL PERMANENT SKILLS HAVE 20 LEVELS!
   PERMANENT_SKILLS: [
     {
       id: 'perm_gun_value',
       name: 'High-Caliber Arsenal Contracts',
       icon: '🔫',
       baseMedalCost: 2,
-      costScale: 1.5,
-      maxLevel: 15,
-      desc: 'PERMANENT: +25% sale price on all Guns, Cloth, Vehicles, Mechs & Warships forever (kept after defeat).'
+      costScale: 1.38,
+      maxLevel: 20,
+      desc: 'PERMANENT (Lv.1–20): +20% sale price on all Cloth, Guns, Vehicles, Mechs & Warships forever.'
     },
     {
       id: 'perm_raw_speed',
       name: 'Deep-Mantle Tectonic Drills',
       icon: '⛏️',
       baseMedalCost: 2,
-      costScale: 1.5,
-      maxLevel: 15,
-      desc: 'PERMANENT: +35% Raw Material Quarry & Munitions Press speed + 30% chance to save Raw Ore when crafting!'
+      costScale: 1.38,
+      maxLevel: 20,
+      desc: 'PERMANENT (Lv.1–20): +25% Raw Quarry & Munitions Press speed + 2.5% chance/lvl to save Raw Ore when crafting!'
     },
     {
       id: 'perm_gate_armor',
       name: '3-Layer Titanium Gate Bulkheads',
       icon: '🛡️',
       baseMedalCost: 2,
-      costScale: 1.5,
-      maxLevel: 15,
-      desc: 'PERMANENT: +40% Max HP on all 3 Gate Layers (Gate 3, Gate 2, Gate 1) and +8 HP/sec automatic Gate self-repair forever.'
+      costScale: 1.38,
+      maxLevel: 20,
+      desc: 'PERMANENT (Lv.1–20): +30% Max HP on all 3 Gate Layers and +5 HP/s maintenance on UNBROKEN gates (broken gates require manual repair!).'
     },
     {
       id: 'perm_turret_power',
       name: 'Orbital Autoloader Munitions',
       icon: '🗼',
       baseMedalCost: 3,
-      costScale: 1.6,
-      maxLevel: 12,
-      desc: 'PERMANENT: +35% Gate Turret damage across all 3 Layers and 25% chance per shot not to consume 🧱 Ammo forever.'
+      costScale: 1.40,
+      maxLevel: 20,
+      desc: 'PERMANENT (Lv.1–20): +25% Gate Turret damage across all 3 Layers and +2.5% chance/lvl not to consume 🧱 Ammo.'
     },
     {
       id: 'perm_start_grant',
       name: 'Ministry Priority Drop Grant',
       icon: '💰',
       baseMedalCost: 3,
-      costScale: 1.6,
-      maxLevel: 10,
-      desc: 'PERMANENT: Start every deployment with +$250 Requisition, +4 Carry Capacity, and +4 Raw Ore in all Hoppers per level.'
+      costScale: 1.40,
+      maxLevel: 20,
+      desc: 'PERMANENT (Lv.1–20): Start every deployment with +$150 Requisition and +2 Carry Capacity per level.'
     },
     {
       id: 'perm_commander_elite',
       name: 'Viper Commando Stim Infusion',
       icon: '🦅',
       baseMedalCost: 3,
-      costScale: 1.6,
-      maxLevel: 10,
-      desc: 'PERMANENT: +15% Commander & SEAF move speed and +35% personal weapon & Guard Dog drone damage forever.'
+      costScale: 1.40,
+      maxLevel: 20,
+      desc: 'PERMANENT (Lv.1–20): +10% Commander & SEAF move speed and +25% personal weapon & Guard Dog drone damage forever.'
     }
   ]
 };
