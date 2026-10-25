@@ -1,8 +1,10 @@
 // ============================================================================
 // HELLDIVERS PLEASE! — Super Earth Arsenal & 2D Factorio War-Zone Tycoon
-// Version: v0.0.03
-// Module: Core 2D Factorio + Carbot Simulation, 3-Gate Siege, Conveyors,
-//         Raw Speed Upgrades, Direct Gun Selling & Permanent Skill Tree
+// Version: v0.0.04
+// Module: Core 2D Factorio + Carbot Simulation, Raw -> Factory Recipe Process,
+//         Manual Harvest Quarry + Expandable Drill Scale, 3-Layer Sequential Gates
+//         (Gate 3 -> Gate 2 -> Gate 1), Main Character 4-Slot Loadout &
+//         Live 12-Character Showcase Gallery (全角色圖鑑)
 // ============================================================================
 
 (function () {
@@ -30,6 +32,20 @@
         this.foreverSkills[sk.id] = 0;
       }
 
+      // Main Character (主角色) Owned & Equipped Loadout (Persists across runs!)
+      this.ownedEquipment = {
+        w_liberator: true,
+        a_standard: true,
+        b_none: true,
+        m_foot: true
+      };
+      this.equipped = {
+        weapon: 'w_liberator',
+        armor: 'a_standard',
+        backpack: 'b_none',
+        mount: 'm_foot'
+      };
+
       // Initialize Run State
       this.initRunState();
 
@@ -40,22 +56,31 @@
       this.sprintToggle = false;
       this.isDefeated = false;
       this.stratSeq = [];
+      this.charPreviewCanvases = [];
+      this.previewPhase = 0;
 
       // Timers
       this.transferCooldown = 0;
+      this.harvestCooldown = 0;
       this.customerSpawnTimer = 0.6;
       this.cashierTimer = 0;
       this.enemySpawnTimer = 2.0;
       this.conveyorTickTimer = 0;
       this.rawPadCooldown = 0;
+      this.gatePadCooldown = 0;
+      this.armoryPadCooldown = 0;
+      this.droneFireTimer = 0;
       this.stratagemCooldown = 0;
       this.stratagemBuffTimer = 0;
 
-      // Load saved state (preserving Forever Skills + current run)
+      // Load saved state
       this.loadGame();
 
-      // Ensure initial setup has plenty of Guns & Cloth ready to sell immediately
+      // Ensure starter setup has raw materials in hoppers & initial Guns/Cloth ready
       this.ensureStarterSetup();
+
+      // Build Character Showcase Modal Cards (全角色動態預覽圖鑑)
+      this.initCharacterShowcaseModal();
 
       // Bind UI & Input
       this.bindEvents();
@@ -65,25 +90,79 @@
       this.spawnCustomer('gun');
       this.spawnCustomer('cloth');
 
-      // Render first frame immediately so canvas is never black even before rAF!
+      // Render first frame immediately so canvas is never black
       this.world.render(this, 0.016);
+      this.renderCharacterShowcaseFrame(0.016);
 
       // Start 60FPS loop
       this.lastTime = performance.now();
       requestAnimationFrame((t) => this.loop(t));
     }
 
+    // ========================================================================
+    // INITIALIZE & ANIMATE 12-CHARACTER SHOWCASE MODAL (全角色預覽圖鑑)
+    // ========================================================================
+    initCharacterShowcaseModal() {
+      const grid = document.getElementById('char-showcase-grid');
+      if (!grid || !CFG.CHARACTER_ROSTER) return;
+      grid.innerHTML = '';
+      this.charPreviewCanvases = [];
+
+      for (const ch of CFG.CHARACTER_ROSTER) {
+        const card = document.createElement('div');
+        card.className = 'char-card';
+        card.innerHTML = `
+          <div class="char-canvas-box">
+            <canvas width="150" height="136"></canvas>
+          </div>
+          <div class="char-meta">
+            <span class="char-badge" style="background:${ch.badgeColor || '#facc15'};">${ch.badge}</span>
+            <div class="char-name-en">${ch.name}</div>
+            <div class="char-name-zh">${ch.zhName}</div>
+            <div class="char-stats-line">${ch.stats}</div>
+            <p class="char-desc-text">${ch.desc}</p>
+          </div>
+        `;
+        const cEl = card.querySelector('canvas');
+        this.charPreviewCanvases.push({ canvas: cEl, def: ch });
+        grid.appendChild(card);
+      }
+    }
+
+    renderCharacterShowcaseFrame(dt) {
+      const modal = document.getElementById('modal-characters');
+      if (!modal || !modal.classList.contains('open')) return;
+      this.previewPhase += dt;
+      for (let i = 0; i < this.charPreviewCanvases.length; i++) {
+        const item = this.charPreviewCanvases[i];
+        this.world.renderCharacterPreviewCard(item.canvas, item.def, this.previewPhase + i * 0.35);
+      }
+    }
+
+    // ========================================================================
+    // MAIN CHARACTER EQUIPMENT HELPERS
+    // ========================================================================
+    getEquippedItems() {
+      const eq = CFG.COMMANDER_EQUIPMENT;
+      return {
+        weapon: eq.weapon.find((w) => w.id === this.equipped.weapon) || eq.weapon[0],
+        armor: eq.armor.find((a) => a.id === this.equipped.armor) || eq.armor[0],
+        backpack: eq.backpack.find((b) => b.id === this.equipped.backpack) || eq.backpack[0],
+        mount: eq.mount.find((m) => m.id === this.equipped.mount) || eq.mount[0]
+      };
+    }
+
     initRunState() {
       const grantLvl = this.foreverSkills?.perm_start_grant || 0;
-      this.cash = 120 + grantLvl * 250;
+      this.cash = 150 + grantLvl * 250;
       this.cashOnGround = 45;
       this.totalServed = 0;
       this.totalKills = 0;
       this.isDefeated = false;
 
       this.player = {
-        x: -60,
-        z: 260,
+        x: -100,
+        z: 220,
         walkPhase: 0,
         inventory: [],
         attackTimer: 0
@@ -93,26 +172,31 @@
       for (const raw of CFG.RAW_EXTRACTORS) {
         this.rawExtractors[raw.id] = {
           level: 1,
-          stock: 4,
+          stock: 6,
+          maxBuffer: raw.baseBuffer,
           progress: 0,
           cycleTime: raw.baseCycleTime
         };
       }
 
       this.ammoPress = {
-        stock: CFG.AMMO_PRESS.initialStock || 10,
+        inputStock: {
+          raw_iron: (CFG.AMMO_PRESS.initialInput?.raw_iron || 8) + grantLvl * 4
+        },
+        stock: CFG.AMMO_PRESS.initialStock || 12,
         progress: 0,
         cycleTime: CFG.AMMO_PRESS.baseCycleTime
       };
 
+      // Three Sequential Defense Gate Layers (Outer Gate 3 -> Middle Gate 2 -> Inner Gate 1)
       this.gates = {};
       const armorLvl = this.foreverSkills?.perm_gate_armor || 0;
       const hpMult = 1 + armorLvl * 0.4;
       for (const g of CFG.GATES) {
         const maxHp = Math.round(g.baseMaxHp * hpMult);
         this.gates[g.id] = {
-          unlocked: g.unlockedAtStart,
-          unlockRemaining: g.unlockCost,
+          unlocked: true,
+          defenseLevel: 1,
           hp: maxHp,
           maxHp: maxHp,
           ammo: g.initialAmmo,
@@ -138,6 +222,10 @@
         this.unlocked[item.id] = !!item.unlockedAtStart;
         this.unlockRemaining[item.id] = item.unlockCost;
         this.stations[item.id] = {
+          inputStock: {
+            raw_iron: (item.initialInput?.raw_iron || 0) + (item.recipe.raw_iron ? grantLvl * 4 : 0),
+            raw_e710: (item.initialInput?.raw_e710 || 0) + (item.recipe.raw_e710 ? grantLvl * 4 : 0)
+          },
           stock: item.unlockedAtStart ? (item.initialStock || 4) : 0,
           progress: 0,
           cycleTime: item.cycleTime
@@ -159,15 +247,15 @@
       this.explosions = [];
 
       this.snowTiles = [];
-      for (let gx = -900; gx <= 900; gx += 180) {
-        for (let gz = -880; gz <= -320; gz += 160) {
+      for (let gx = -1200; gx <= 1200; gx += 240) {
+        for (let gz = -1700; gz <= -440; gz += 220) {
           this.snowTiles.push({ x: gx, z: gz, cleared: false, respawnTimer: 0 });
         }
       }
 
       this.cryoPods = [
-        { id: 'west', x: -420, z: -560, fed: 0, needed: 3, rescued: false, cooldown: 0 },
-        { id: 'east', x: 420, z: -560, fed: 0, needed: 3, rescued: false, cooldown: 0 }
+        { id: 'west', x: CFG.LOCATIONS.brazierWest.x, z: CFG.LOCATIONS.brazierWest.z, fed: 0, needed: 3, rescued: false, cooldown: 0 },
+        { id: 'east', x: CFG.LOCATIONS.brazierEast.x, z: CFG.LOCATIONS.brazierEast.z, fed: 0, needed: 3, rescued: false, cooldown: 0 }
       ];
 
       this.recalcDerivedStats();
@@ -177,26 +265,73 @@
     ensureStarterSetup() {
       this.unlocked.cloth = true;
       this.unlocked.gun = true;
+
+      for (const item of CFG.ITEMS) {
+        if (!this.stations[item.id].inputStock) {
+          this.stations[item.id].inputStock = {
+            raw_iron: item.initialInput?.raw_iron || 6,
+            raw_e710: item.initialInput?.raw_e710 || 6
+          };
+        }
+      }
+      if (!this.ammoPress.inputStock) {
+        this.ammoPress.inputStock = { raw_iron: 8 };
+      }
+
       if ((this.stations.gun?.stock || 0) < 2 && (this.counterBuffer.gun || 0) < 1) {
         this.stations.gun.stock = 4;
+        this.stations.gun.inputStock.raw_iron = Math.max(6, this.stations.gun.inputStock.raw_iron || 0);
         this.counterBuffer.gun = 3;
       }
       if ((this.stations.cloth?.stock || 0) < 2 && (this.counterBuffer.cloth || 0) < 1) {
         this.stations.cloth.stock = 4;
+        this.stations.cloth.inputStock.raw_e710 = Math.max(6, this.stations.cloth.inputStock.raw_e710 || 0);
         this.counterBuffer.cloth = 3;
       }
+
+      // Give player starter Guns, Cloth, and Raw Iron so they can immediately sell & feed hoppers
       if (this.player.inventory.length === 0 && this.totalServed === 0) {
         const gunCfg = this.getItemConfig('gun');
         const clothCfg = this.getItemConfig('cloth');
         this.player.inventory.push(
           { id: 'gun', icon: gunCfg.icon, color: gunCfg.color },
           { id: 'gun', icon: gunCfg.icon, color: gunCfg.color },
-          { id: 'cloth', icon: clothCfg.icon, color: clothCfg.color }
+          { id: 'cloth', icon: clothCfg.icon, color: clothCfg.color },
+          { id: 'raw_iron', icon: '⛏️', color: '#38bdf8' },
+          { id: 'raw_e710', icon: '🛢️', color: '#a855f7' }
         );
       }
+
+      // Ensure all 3 gate layers exist and have valid defenseLevel
+      for (const g of CFG.GATES) {
+        if (!this.gates[g.id]) {
+          this.gates[g.id] = {
+            unlocked: true,
+            defenseLevel: 1,
+            hp: g.baseMaxHp,
+            maxHp: g.baseMaxHp,
+            ammo: g.initialAmmo,
+            turretAngle: -Math.PI / 2,
+            fireCooldown: 0,
+            lastFireTime: -10,
+            lastHitTime: -10
+          };
+        } else {
+          this.gates[g.id].unlocked = true;
+          if (!this.gates[g.id].defenseLevel) this.gates[g.id].defenseLevel = 1;
+        }
+      }
+
       this.syncWorkers();
       this.recalcDerivedStats();
       this.buildSolidObstacles();
+    }
+
+    hasStationIngredients(itemCfg, st) {
+      if (!st || !st.inputStock) return false;
+      const reqIron = itemCfg.recipe?.raw_iron || 0;
+      const reqE710 = itemCfg.recipe?.raw_e710 || 0;
+      return (st.inputStock.raw_iron || 0) >= reqIron && (st.inputStock.raw_e710 || 0) >= reqE710;
     }
 
     getItemConfig(id) {
@@ -204,24 +339,31 @@
     }
 
     getItemSellPrice(item) {
-      const base = typeof item === 'object' ? item.sellPrice : (this.getItemConfig(item)?.sellPrice || 25);
+      const base = typeof item === 'object' ? item.sellPrice : (this.getItemConfig(item)?.sellPrice || 30);
       const permLvl = this.foreverSkills.perm_gun_value || 0;
+      const eq = this.getEquippedItems();
+      const armorBonus = eq.armor?.sellBonus || 0;
       const buff = this.stratagemBuffTimer > 0 ? 1.5 : 1.0;
-      return Math.round(base * (1 + permLvl * 0.25) * buff);
+      return Math.round(base * (1 + permLvl * 0.25 + armorBonus) * buff);
     }
 
     getPlayerMaxCapacity() {
       const rigLvl = this.upgrades.player_exo_rig || 0;
       const grantLvl = this.foreverSkills.perm_start_grant || 0;
-      return CFG.PLAYER.baseCapacity + rigLvl * 5 + grantLvl * 4;
+      const eq = this.getEquippedItems();
+      const eqBonus = (eq.armor?.bonusCap || 0) + (eq.backpack?.bonusCap || 0) + (eq.mount?.bonusCap || 0);
+      return CFG.PLAYER.baseCapacity + rigLvl * 5 + grantLvl * 4 + eqBonus;
     }
 
     getPlayerMoveSpeed() {
       const bootLvl = this.upgrades.player_boots || 0;
       const eliteLvl = this.foreverSkills.perm_commander_elite || 0;
+      const eq = this.getEquippedItems();
+      const armorSpeed = eq.armor?.speedMult || 1.0;
+      const mountSpeed = eq.mount?.speedMult || 1.0;
       const sprint = (this.keys['ShiftLeft'] || this.keys['ShiftRight'] || this.sprintToggle) ? CFG.PLAYER.sprintMultiplier : 1.0;
       const strat = this.stratagemBuffTimer > 0 ? 1.35 : 1.0;
-      return CFG.PLAYER.baseSpeed * (1 + bootLvl * 0.14) * (1 + eliteLvl * 0.15) * sprint * strat;
+      return CFG.PLAYER.baseSpeed * (1 + bootLvl * 0.14) * (1 + eliteLvl * 0.15) * armorSpeed * mountSpeed * sprint * strat;
     }
 
     getRawUpgradeCost(rawId) {
@@ -230,18 +372,25 @@
       return Math.round(rawCfg.baseUpgradeCost * Math.pow(rawCfg.costScale, lvl - 1));
     }
 
+    getGateUpgradeCost(gateId) {
+      const gCfg = CFG.GATES.find((g) => g.id === gateId);
+      const lvl = this.gates[gateId]?.defenseLevel || 1;
+      return Math.round((gCfg?.baseUpgradeCost || 160) * Math.pow(1.55, lvl - 1));
+    }
+
     recalcDerivedStats() {
       const rawUpgLvl = this.upgrades.raw_speed_boost || 0;
       const permRawLvl = this.foreverSkills.perm_raw_speed || 0;
       const factoryLvl = this.upgrades.factory_overclock || 0;
-      const rawBeltBonus = this.conveyors.conv_raw_feed ? 1.5 : 1.0;
+      const rawBeltBonus = this.conveyors.conv_raw_feed ? 1.4 : 1.0;
       const stratBonus = this.stratagemBuffTimer > 0 ? 2.0 : 1.0;
 
       for (const rawCfg of CFG.RAW_EXTRACTORS) {
         const rs = this.rawExtractors[rawCfg.id];
         if (!rs) continue;
-        const speedMult = (1 + (rs.level - 1) * 0.35) * (1 + rawUpgLvl * 0.35) * (1 + permRawLvl * 0.35) * stratBonus;
-        rs.cycleTime = Math.max(0.22, rawCfg.baseCycleTime / speedMult);
+        rs.maxBuffer = rawCfg.baseBuffer + (rs.level - 1) * 8 + rawUpgLvl * 4;
+        const speedMult = (1 + (rs.level - 1) * 0.38) * (1 + rawUpgLvl * 0.35) * (1 + permRawLvl * 0.35) * stratBonus;
+        rs.cycleTime = Math.max(0.20, rawCfg.baseCycleTime / speedMult);
       }
 
       const avgRawLvl = ((this.rawExtractors.raw_iron?.level || 1) + (this.rawExtractors.raw_e710?.level || 1)) * 0.5;
@@ -252,15 +401,16 @@
         const st = this.stations[item.id];
         if (!st) continue;
         const linkedRawLvl = this.rawExtractors[item.rawType]?.level || 1;
-        const prodSpeed = (1 + factoryLvl * 0.22) * (1 + (linkedRawLvl - 1) * 0.2) * rawBeltBonus * stratBonus;
+        const prodSpeed = (1 + factoryLvl * 0.22) * (1 + (linkedRawLvl - 1) * 0.18) * rawBeltBonus * stratBonus;
         st.cycleTime = Math.max(0.25, item.cycleTime / prodSpeed);
       }
 
       const armorLvl = this.foreverSkills.perm_gate_armor || 0;
-      const hpMult = 1 + armorLvl * 0.4;
       for (const g of CFG.GATES) {
         const gs = this.gates[g.id];
         if (!gs) continue;
+        const defLvl = gs.defenseLevel || 1;
+        const hpMult = (1 + armorLvl * 0.4) * (1 + (defLvl - 1) * 0.35);
         const newMax = Math.round(g.baseMaxHp * hpMult);
         if (newMax > gs.maxHp) {
           gs.hp += (newMax - gs.maxHp);
@@ -272,32 +422,37 @@
     buildSolidObstacles() {
       const boxes = [];
       const W = CFG.WORLD;
-      const wallY = W.wallZ;
+      const cMinX = W.corridorMinX;
+      const cMaxX = W.corridorMaxX;
+      const halfOpen = W.gateOpeningWidth * 0.5;
 
-      boxes.push({ minX: -1260, maxX: -685, minZ: wallY - 24, maxZ: wallY + 24 });
-      boxes.push({ minX: -555, maxX: -65, minZ: wallY - 24, maxZ: wallY + 24 });
-      boxes.push({ minX: 65, maxX: 555, minZ: wallY - 24, maxZ: wallY + 24 });
-      boxes.push({ minX: 685, maxX: 1260, minZ: wallY - 24, maxZ: wallY + 24 });
+      // Flanking canyon walls outside the Northern War Corridor
+      boxes.push({ minX: W.minX, maxX: cMinX, minZ: W.minZ, maxZ: W.wallZ });
+      boxes.push({ minX: cMaxX, maxX: W.maxX, minZ: W.minZ, maxZ: W.wallZ });
 
+      // 3 Gate Layer Blast Walls (leaving the central gate doorway open for the player to walk through!)
       for (const g of CFG.GATES) {
-        if (!this.gates[g.id]?.unlocked) {
-          boxes.push({ minX: g.x - 68, maxX: g.x + 68, minZ: wallY - 22, maxZ: wallY + 22 });
-        }
+        boxes.push({ minX: cMinX, maxX: -halfOpen - 10, minZ: g.z - 22, maxZ: g.z + 22 });
+        boxes.push({ minX: halfOpen + 10, maxX: cMaxX, minZ: g.z - 22, maxZ: g.z + 22 });
       }
 
+      // Raw Extractor Auto-Drill Rigs
       for (const raw of CFG.RAW_EXTRACTORS) {
-        boxes.push({ minX: raw.x - 55, maxX: raw.x + 55, minZ: raw.z - 55, maxZ: raw.z + 55 });
+        boxes.push({ minX: raw.x - 95, maxX: raw.x + 95, minZ: raw.z - 65, maxZ: raw.z + 65 });
       }
 
+      // Munitions Press Machine
       const AP = CFG.AMMO_PRESS;
-      boxes.push({ minX: AP.x - 50, maxX: AP.x + 50, minZ: AP.z - 50, maxZ: AP.z + 50 });
+      boxes.push({ minX: AP.x - 54, maxX: AP.x + 54, minZ: AP.z - 54, maxZ: AP.z + 54 });
 
+      // Unlocked Arsenal Fabricator Machines
       for (const item of CFG.ITEMS) {
         if (!this.unlocked[item.id]) continue;
         const p = item.stationPos;
-        boxes.push({ minX: p.x - 48, maxX: p.x + 48, minZ: p.z - 48, maxZ: p.z + 48 });
+        boxes.push({ minX: p.x - 52, maxX: p.x + 52, minZ: p.z - 52, maxZ: p.z + 52 });
       }
 
+      // Quartermaster Counter Table
       const T = CFG.LOCATIONS.counterTable;
       boxes.push({
         minX: T.x - T.width * 0.45,
@@ -311,8 +466,8 @@
 
     moveWithCollision(entity, dx, dz, radius = 20) {
       const W = CFG.WORLD;
-      const nx = Math.max(W.minX + 28, Math.min(W.maxX - 28, entity.x + dx));
-      const nz = Math.max(W.minZ + 28, Math.min(W.maxZ - 28, entity.z + dz));
+      const nx = Math.max(W.minX + 32, Math.min(W.maxX - 32, entity.x + dx));
+      const nz = Math.max(W.minZ + 32, Math.min(W.maxZ - 32, entity.z + dz));
 
       let canX = true;
       for (const b of this.obstacles) {
@@ -341,6 +496,7 @@
         this.update(dt);
       }
       this.world.render(this, dt);
+      this.renderCharacterShowcaseFrame(dt);
 
       requestAnimationFrame((t) => this.loop(t));
     }
@@ -352,6 +508,9 @@
         if (this.stratagemBuffTimer === 0) this.recalcDerivedStats();
       }
       if (this.rawPadCooldown > 0) this.rawPadCooldown = Math.max(0, this.rawPadCooldown - dt);
+      if (this.gatePadCooldown > 0) this.gatePadCooldown = Math.max(0, this.gatePadCooldown - dt);
+      if (this.armoryPadCooldown > 0) this.armoryPadCooldown = Math.max(0, this.armoryPadCooldown - dt);
+      if (this.harvestCooldown > 0) this.harvestCooldown = Math.max(0, this.harvestCooldown - dt);
 
       this.updatePlayerMovement(dt);
       this.updateRawAndAmmoProduction(dt);
@@ -398,36 +557,61 @@
       }
     }
 
+    // ========================================================================
+    // RAW QUARRY AUTO-DRILLS & RECIPE-BASED PRODUCTION
+    // ========================================================================
     updateRawAndAmmoProduction(dt) {
       for (const raw of CFG.RAW_EXTRACTORS) {
         const rs = this.rawExtractors[raw.id];
         if (!rs) continue;
-        if (rs.stock < raw.maxBuffer) {
+        if (rs.stock < rs.maxBuffer) {
           rs.progress += dt;
           if (rs.progress >= rs.cycleTime) {
             rs.progress = 0;
-            rs.stock++;
+            // Higher Scale levels produce extra raw ore per cycle!
+            const batch = 1 + Math.floor((rs.level - 1) / 2);
+            rs.stock = Math.min(rs.maxBuffer, rs.stock + batch);
           }
         }
       }
 
-      if (this.ammoPress.stock < CFG.AMMO_PRESS.maxBuffer) {
+      // Munitions Ammo Press requires 1x ⛏️ Iron in its Input Hopper!
+      const apIn = this.ammoPress.inputStock;
+      const reqIron = CFG.AMMO_PRESS.recipe.raw_iron || 1;
+      if (this.ammoPress.stock < CFG.AMMO_PRESS.maxBuffer && (apIn.raw_iron || 0) >= reqIron) {
         this.ammoPress.progress += dt;
         if (this.ammoPress.progress >= this.ammoPress.cycleTime) {
           this.ammoPress.progress = 0;
-          this.ammoPress.stock++;
+          const saveChance = Math.min(0.45, (this.foreverSkills.perm_raw_speed || 0) * 0.04);
+          if (Math.random() > saveChance) {
+            apIn.raw_iron = Math.max(0, apIn.raw_iron - reqIron);
+          }
+          this.ammoPress.stock = Math.min(
+            CFG.AMMO_PRESS.maxBuffer,
+            this.ammoPress.stock + (CFG.AMMO_PRESS.outputBatch || 3)
+          );
         }
       }
     }
 
     updateArsenalFactories(dt) {
+      const saveChance = Math.min(0.45, (this.foreverSkills.perm_raw_speed || 0) * 0.04);
       for (const item of CFG.ITEMS) {
         if (!this.unlocked[item.id]) continue;
         const st = this.stations[item.id];
-        if (st.stock < item.maxBuffer) {
+        if (!st) continue;
+        if (st.stock < item.maxBuffer && this.hasStationIngredients(item, st)) {
           st.progress += dt;
           if (st.progress >= st.cycleTime) {
             st.progress = 0;
+            if (Math.random() > saveChance) {
+              if (item.recipe.raw_iron) {
+                st.inputStock.raw_iron = Math.max(0, (st.inputStock.raw_iron || 0) - item.recipe.raw_iron);
+              }
+              if (item.recipe.raw_e710) {
+                st.inputStock.raw_e710 = Math.max(0, (st.inputStock.raw_e710 || 0) - item.recipe.raw_e710);
+              }
+            }
             st.stock++;
           }
         }
@@ -436,35 +620,57 @@
 
     updateConveyorAutomation(dt) {
       this.conveyorTickTimer += dt;
-      if (this.conveyorTickTimer < 0.45) return;
+      if (this.conveyorTickTimer < 0.42) return;
       this.conveyorTickTimer = 0;
 
+      // 1. Raw Quarry -> All Factory & Ammo Input Hoppers Belt
       if (this.conveyors.conv_raw_feed) {
-        for (const raw of CFG.RAW_EXTRACTORS) {
-          const rs = this.rawExtractors[raw.id];
-          if (rs && rs.stock > 0) {
-            rs.stock--;
-            if (this.ammoPress.stock < CFG.AMMO_PRESS.maxBuffer) {
-              this.ammoPress.stock++;
-            }
+        const ironStock = this.rawExtractors.raw_iron;
+        const e710Stock = this.rawExtractors.raw_e710;
+
+        // Feed Ammo Press Hopper
+        if (ironStock && ironStock.stock > 0 && (this.ammoPress.inputStock.raw_iron || 0) < 16) {
+          ironStock.stock--;
+          this.ammoPress.inputStock.raw_iron = (this.ammoPress.inputStock.raw_iron || 0) + 1;
+        }
+
+        // Feed Unlocked Item Factory Hoppers
+        for (const item of CFG.ITEMS) {
+          if (!this.unlocked[item.id]) continue;
+          const st = this.stations[item.id];
+          if (!st) continue;
+          if (item.recipe.raw_iron && ironStock && ironStock.stock > 0 && (st.inputStock.raw_iron || 0) < 16) {
+            ironStock.stock--;
+            st.inputStock.raw_iron = (st.inputStock.raw_iron || 0) + 1;
+          }
+          if (item.recipe.raw_e710 && e710Stock && e710Stock.stock > 0 && (st.inputStock.raw_e710 || 0) < 16) {
+            e710Stock.stock--;
+            st.inputStock.raw_e710 = (st.inputStock.raw_e710 || 0) + 1;
           }
         }
       }
 
+      // 2. Ammo Belts -> Gate Layer Turrets + Slow Auto-Repair
       for (const g of CFG.GATES) {
         const gs = this.gates[g.id];
-        if (!gs || !gs.unlocked) continue;
-        if (this.conveyors[g.conveyorId] && gs.ammo < g.maxAmmo && this.ammoPress.stock > 0) {
-          this.ammoPress.stock--;
-          gs.ammo = Math.min(g.maxAmmo, gs.ammo + 2);
+        if (!gs) continue;
+        if (this.conveyors[g.conveyorId]) {
+          if (gs.ammo < g.maxAmmo && this.ammoPress.stock > 0) {
+            this.ammoPress.stock--;
+            gs.ammo = Math.min(g.maxAmmo, gs.ammo + 3);
+          }
+          if (gs.hp < gs.maxHp) {
+            gs.hp = Math.min(gs.maxHp, gs.hp + 6);
+          }
         }
       }
 
+      // 3. Factory Output -> Sales Counter Belt
       if (this.conveyors.conv_counter_auto) {
         for (const item of CFG.ITEMS) {
           if (!this.unlocked[item.id]) continue;
           const st = this.stations[item.id];
-          if (st && st.stock > 0 && (this.counterBuffer[item.id] || 0) < 25) {
+          if (st && st.stock > 0 && (this.counterBuffer[item.id] || 0) < 28) {
             st.stock--;
             this.counterBuffer[item.id] = (this.counterBuffer[item.id] || 0) + 1;
           }
@@ -472,12 +678,17 @@
       }
     }
 
+    // ========================================================================
+    // PLAYER INTERACTIONS: MANUAL HARVEST, HOPPER FEEDING, SELLING & GATES
+    // ========================================================================
     updatePlayerInteractions(dt) {
       const p = this.player;
       const L = CFG.LOCATIONS;
       const maxCap = this.getPlayerMaxCapacity();
+      const eq = this.getEquippedItems();
+      const harvestSpeedMult = eq.armor?.harvestMult || 1.0;
 
-      // Cash Vacuum at Cash Register Pad
+      // 1. Collect Cash Vault
       const distCash = Math.hypot(p.x - L.cashRegisterZone.x, p.z - L.cashRegisterZone.z);
       if (distCash < L.cashRegisterZone.radius && this.cashOnGround > 0) {
         const collect = this.cashOnGround;
@@ -487,7 +698,7 @@
         this.spawnFloatingText(p.x, p.z - 30, `+$${collect} REQ`, '#4ade80');
       }
 
-      // Trash Can Dump Pad
+      // 2. Trash / Clear Stack
       const distTrash = Math.hypot(p.x - L.trashCanZone.x, p.z - L.trashCanZone.z);
       if (distTrash < L.trashCanZone.radius && p.inventory.length > 0) {
         p.inventory = [];
@@ -495,11 +706,36 @@
         this.spawnFloatingText(p.x, p.z - 25, '🗑️ STACK CLEARED', '#f87171');
       }
 
-      // Raw Material Drill Upgrade Pad (Upgrade Raw Generation Speed on-map!)
+      // 3. Walk onto Armory Loadout Pad to open Equipment Modal
+      const distArmory = Math.hypot(p.x - L.armoryLoadoutPad.x, p.z - L.armoryLoadoutPad.z);
+      if (distArmory < L.armoryLoadoutPad.radius && this.armoryPadCooldown <= 0) {
+        this.armoryPadCooldown = 4.5;
+        this.renderLoadoutModal();
+        document.getElementById('modal-loadout')?.classList.add('open');
+      }
+
+      // 4. Manual Harvest Quarry Veins (Walk inside ⛏️ Iron Vein or 🛢️ E-710 Field to harvest by hand!)
+      if (this.harvestCooldown <= 0 && p.inventory.length < maxCap) {
+        const harvestRangeBonus = eq.backpack?.autoHarvest ? 160 : 0;
+        for (const raw of CFG.RAW_EXTRACTORS) {
+          const hp = raw.harvestPos;
+          const dVein = Math.hypot(p.x - hp.x, p.z - hp.z);
+          if (dVein <= hp.radius + harvestRangeBonus) {
+            p.inventory.push({ id: raw.id, icon: raw.itemIcon, color: raw.color });
+            this.harvestCooldown = 0.22 / harvestSpeedMult;
+            this.audio.playPickup();
+            this.spawnArc(hp.x, hp.z, p.x, p.z - 20, raw.itemIcon, raw.color);
+            this.spawnFloatingText(p.x, p.z - 35, `+1 ${raw.itemIcon} HARVESTED`, raw.color);
+            break;
+          }
+        }
+      }
+
+      // 5. Expand Quarry Scale & Speed Pad
       if (this.rawPadCooldown <= 0) {
         for (const raw of CFG.RAW_EXTRACTORS) {
           const distRaw = Math.hypot(p.x - raw.padX, p.z - raw.padZ);
-          if (distRaw < 72) {
+          if (distRaw < 88) {
             const cost = this.getRawUpgradeCost(raw.id);
             if (this.cash >= cost) {
               this.cash -= cost;
@@ -507,7 +743,32 @@
               this.rawPadCooldown = 0.55;
               this.recalcDerivedStats();
               this.audio.playUnlock();
-              this.spawnFloatingText(raw.x, raw.z - 35, `⬆️ ${raw.shortName} Lv.${this.rawExtractors[raw.id].level}!`, raw.color);
+              this.spawnFloatingText(
+                raw.x,
+                raw.z - 45,
+                `⬆️ ${raw.shortName} SCALE Lv.${this.rawExtractors[raw.id].level}!`,
+                raw.color
+              );
+            }
+          }
+        }
+      }
+
+      // 6. Upgrade Gate Defense Level Pads
+      if (this.gatePadCooldown <= 0) {
+        for (const g of CFG.GATES) {
+          const distUpg = Math.hypot(p.x - g.upgradePadX, p.z - g.upgradePadZ);
+          if (distUpg < 88) {
+            const cost = this.getGateUpgradeCost(g.id);
+            if (this.cash >= cost) {
+              this.cash -= cost;
+              const gs = this.gates[g.id];
+              gs.defenseLevel = (gs.defenseLevel || 1) + 1;
+              this.gatePadCooldown = 0.55;
+              this.recalcDerivedStats();
+              gs.hp = gs.maxHp;
+              this.audio.playUnlock();
+              this.spawnFloatingText(g.x, g.z - 50, `🛡️ ${g.shortName} FORTIFIED Lv.${gs.defenseLevel}!`, g.color);
             }
           }
         }
@@ -516,11 +777,11 @@
       this.transferCooldown -= dt;
       if (this.transferCooldown > 0) return;
 
-      // DIRECT HAND-TO-CUSTOMER SELLING (Fixes Gun / Item Selling 100%!)
+      // 7. Direct Selling to Queued Helldivers
       for (const cust of this.customers) {
         if (cust.state === 'leaving') continue;
         const dCust = Math.hypot(p.x - cust.x, p.z - cust.z);
-        if (dCust < 135) {
+        if (dCust < 145) {
           const idx = p.inventory.findIndex((it) => it.id === cust.item.id);
           if (idx !== -1) {
             const soldEntry = p.inventory.splice(idx, 1)[0];
@@ -532,7 +793,7 @@
         }
       }
 
-      // Counter Drop-Off Pad
+      // 8. Drop Finished Products onto Quartermaster Sales Counter
       const distCounter = Math.hypot(p.x - L.counterDropZone.x, p.z - L.counterDropZone.z);
       if (distCounter < L.counterDropZone.radius) {
         const idx = p.inventory.findIndex((it) => CFG.ITEMS.some((cfg) => cfg.id === it.id));
@@ -546,10 +807,38 @@
         }
       }
 
-      // Pickup 🧱 Ammo from Munitions Press
+      // 9. Pickup Raw Ore from Auto-Drill Output Pads
+      for (const raw of CFG.RAW_EXTRACTORS) {
+        const rs = this.rawExtractors[raw.id];
+        const distPickRaw = Math.hypot(p.x - raw.pickupX, p.z - raw.pickupZ);
+        if (distPickRaw < 88 && rs && rs.stock > 0 && p.inventory.length < maxCap) {
+          rs.stock--;
+          p.inventory.push({ id: raw.id, icon: raw.itemIcon, color: raw.color });
+          this.transferCooldown = CFG.PLAYER.transferInterval;
+          this.audio.playPickup();
+          this.spawnArc(raw.x, raw.z, p.x, p.z - 20, raw.itemIcon, raw.color);
+          return;
+        }
+      }
+
+      // 10. Feed Raw Iron into Munitions Ammo Press Input Hopper
       const AP = CFG.AMMO_PRESS;
+      const distAmmoIn = Math.hypot(p.x - AP.inputPos.x, p.z - AP.inputPos.z);
+      if (distAmmoIn < 92) {
+        const ironIdx = p.inventory.findIndex((it) => it.id === 'raw_iron');
+        if (ironIdx !== -1) {
+          const entry = p.inventory.splice(ironIdx, 1)[0];
+          this.ammoPress.inputStock.raw_iron = (this.ammoPress.inputStock.raw_iron || 0) + 1;
+          this.transferCooldown = CFG.PLAYER.transferInterval;
+          this.audio.playPickup();
+          this.spawnArc(p.x, p.z - 20, AP.inputPos.x, AP.inputPos.z, entry.icon, entry.color);
+          return;
+        }
+      }
+
+      // 11. Pickup 🧱 Turret Ammo from Munitions Press Output Pad
       const distAmmoPickup = Math.hypot(p.x - AP.padX, p.z - AP.padZ);
-      if (distAmmoPickup < 82 && this.ammoPress.stock > 0 && p.inventory.length < maxCap) {
+      if (distAmmoPickup < 88 && this.ammoPress.stock > 0 && p.inventory.length < maxCap) {
         this.ammoPress.stock--;
         p.inventory.push({ id: 'ammo', icon: '🧱', color: '#f97316' });
         this.transferCooldown = CFG.PLAYER.transferInterval;
@@ -558,37 +847,32 @@
         return;
       }
 
-      // Manual Ammo Input (搬) + Gate Repair at Gate Turret Ammo Pads
-      for (const g of CFG.GATES) {
-        const gs = this.gates[g.id];
-        if (!gs || !gs.unlocked) continue;
-        const distPad = Math.hypot(p.x - g.ammoPadX, p.z - g.ammoPadZ);
-        if (distPad < 82) {
-          const ammoIdx = p.inventory.findIndex((it) => it.id === 'ammo');
-          if (ammoIdx !== -1 && gs.ammo < g.maxAmmo) {
-            p.inventory.splice(ammoIdx, 1);
-            gs.ammo = Math.min(g.maxAmmo, gs.ammo + 3);
+      // 12. Feed Raw Materials (⛏️ Iron / 🛢️ E-710) into Factory Input Hoppers
+      for (const item of CFG.ITEMS) {
+        if (!this.unlocked[item.id]) continue;
+        const st = this.stations[item.id];
+        const distHopper = Math.hypot(p.x - item.inputPos.x, p.z - item.inputPos.z);
+        if (distHopper < 92) {
+          const rawIdx = p.inventory.findIndex(
+            (it) => (it.id === 'raw_iron' && item.recipe.raw_iron) || (it.id === 'raw_e710' && item.recipe.raw_e710)
+          );
+          if (rawIdx !== -1) {
+            const entry = p.inventory.splice(rawIdx, 1)[0];
+            st.inputStock[entry.id] = (st.inputStock[entry.id] || 0) + 1;
             this.transferCooldown = CFG.PLAYER.transferInterval;
             this.audio.playPickup();
-            this.spawnArc(p.x, p.z - 20, g.turretX, g.turretZ, '🧱', '#f97316');
-            this.spawnFloatingText(g.turretX, g.turretZ - 28, `+3 🧱 TURRET AMMO`, '#f97316');
-            return;
-          }
-          if (gs.hp < gs.maxHp) {
-            gs.hp = Math.min(gs.maxHp, gs.hp + 25);
-            this.transferCooldown = 0.2;
-            this.spawnFloatingText(g.x, g.z - 35, `🔧 +25 GATE HP`, '#4ade80');
+            this.spawnArc(p.x, p.z - 20, item.inputPos.x, item.inputPos.z, entry.icon, entry.color);
             return;
           }
         }
       }
 
-      // Pickup Arsenal Items (🔫 Gun, 🦺 Cloth, etc.)
+      // 13. Pickup Finished Items from Factory Output Pads
       for (const item of CFG.ITEMS) {
         if (!this.unlocked[item.id]) continue;
         const st = this.stations[item.id];
         const distPick = Math.hypot(p.x - item.pickupPos.x, p.z - item.pickupPos.z);
-        if (distPick < 82 && st.stock > 0 && p.inventory.length < maxCap) {
+        if (distPick < 88 && st.stock > 0 && p.inventory.length < maxCap) {
           st.stock--;
           p.inventory.push({ id: item.id, icon: item.icon, color: item.color });
           this.transferCooldown = CFG.PLAYER.transferInterval;
@@ -598,12 +882,45 @@
         }
       }
 
-      // Unlock Locked Arsenal Stations
+      // 14. Load 🧱 Ammo & Repair / Rebuild Gate Layers 3, 2, 1
+      for (const g of CFG.GATES) {
+        const gs = this.gates[g.id];
+        if (!gs) continue;
+        const distPad = Math.hypot(p.x - g.ammoPadX, p.z - g.ammoPadZ);
+        if (distPad < 95) {
+          const ammoIdx = p.inventory.findIndex((it) => it.id === 'ammo');
+          const ammoPerCrate = eq.backpack?.ammoBonus ? 5 : 3;
+          if (ammoIdx !== -1 && gs.ammo < g.maxAmmo) {
+            p.inventory.splice(ammoIdx, 1);
+            gs.ammo = Math.min(g.maxAmmo, gs.ammo + ammoPerCrate);
+            this.transferCooldown = CFG.PLAYER.transferInterval;
+            this.audio.playPickup();
+            this.spawnArc(p.x, p.z - 20, g.leftTurretX, g.turretZ, '🧱', '#f97316');
+            this.spawnFloatingText(g.x, g.z - 32, `+${ammoPerCrate} 🧱 TURRET AMMO`, '#f97316');
+            return;
+          }
+          if (gs.hp < gs.maxHp) {
+            const wasBroken = gs.hp <= 0;
+            const repairAmt = Math.round(40 * harvestSpeedMult * (eq.mount?.id === 'm_mech' ? 1.8 : 1.0));
+            gs.hp = Math.min(gs.maxHp, gs.hp + repairAmt);
+            this.transferCooldown = 0.18;
+            this.spawnFloatingText(
+              g.x,
+              g.z - 38,
+              wasBroken ? `🔧 ${g.shortName.toUpperCase()} REBUILT! (+${repairAmt} HP)` : `🔧 +${repairAmt} GATE HP`,
+              '#4ade80'
+            );
+            return;
+          }
+        }
+      }
+
+      // 15. Unlock New Production Lines
       for (const item of CFG.ITEMS) {
         if (this.unlocked[item.id]) continue;
         const distUnlock = Math.hypot(p.x - item.unlockPos.x, p.z - item.unlockPos.z);
-        if (distUnlock < 85 && this.cash > 0) {
-          const step = Math.min(this.cash, this.unlockRemaining[item.id], Math.max(10, Math.ceil(item.unlockCost * 0.12)));
+        if (distUnlock < 95 && this.cash > 0) {
+          const step = Math.min(this.cash, this.unlockRemaining[item.id], Math.max(15, Math.ceil(item.unlockCost * 0.14)));
           this.cash -= step;
           this.unlockRemaining[item.id] -= step;
           this.transferCooldown = 0.05;
@@ -611,46 +928,25 @@
           if (this.unlockRemaining[item.id] <= 0) {
             this.unlocked[item.id] = true;
             this.stations[item.id].stock = item.initialStock || 2;
+            this.stations[item.id].inputStock = {
+              raw_iron: item.initialInput?.raw_iron || 6,
+              raw_e710: item.initialInput?.raw_e710 || 6
+            };
             this.counterBuffer[item.id] = 1;
             this.buildSolidObstacles();
             this.audio.playUnlock();
-            this.spawnFloatingText(item.stationPos.x, item.stationPos.z - 40, `🎉 UNLOCKED ${item.shortName.toUpperCase()}!`, '#facc15');
+            this.spawnFloatingText(item.stationPos.x, item.stationPos.z - 45, `🎉 UNLOCKED ${item.shortName.toUpperCase()}!`, '#facc15');
           }
           return;
         }
       }
 
-      // Unlock Gate 2 (West) & Gate 3 (East)
-      for (const g of CFG.GATES) {
-        const gs = this.gates[g.id];
-        if (!gs || gs.unlocked) continue;
-        const distGatePad = Math.hypot(p.x - g.unlockPadX, p.z - g.unlockPadZ);
-        if (distGatePad < 88 && this.cash > 0) {
-          const step = Math.min(this.cash, gs.unlockRemaining, Math.max(15, Math.ceil(g.unlockCost * 0.12)));
-          this.cash -= step;
-          gs.unlockRemaining -= step;
-          this.transferCooldown = 0.05;
-          this.audio.playPickup();
-          if (gs.unlockRemaining <= 0) {
-            gs.unlocked = true;
-            gs.hp = gs.maxHp;
-            gs.ammo = g.initialAmmo;
-            this.buildSolidObstacles();
-            this.audio.playUnlock();
-            this.medals += 1;
-            this.spawnFloatingText(g.x, g.z - 45, `🚧 ${g.shortName.toUpperCase()} OPENED! (+1 ⭐ MEDAL)`, '#38bdf8');
-          }
-          return;
-        }
-      }
-
-      // Unlock Factorio Conveyor Belts
+      // 16. Build Factorio Conveyor Belts
       for (const c of CFG.CONVEYORS) {
         if (this.conveyors[c.id]) continue;
-        if (c.gateId && !this.gates[c.gateId]?.unlocked) continue;
         const distConv = Math.hypot(p.x - c.padX, p.z - c.padZ);
-        if (distConv < 78 && this.cash > 0) {
-          const step = Math.min(this.cash, this.conveyorRemaining[c.id], Math.max(10, Math.ceil(c.cost * 0.15)));
+        if (distConv < 90 && this.cash > 0) {
+          const step = Math.min(this.cash, this.conveyorRemaining[c.id], Math.max(15, Math.ceil(c.cost * 0.15)));
           this.cash -= step;
           this.conveyorRemaining[c.id] -= step;
           this.transferCooldown = 0.05;
@@ -665,11 +961,11 @@
         }
       }
 
-      // Feed War-Zone Cryo-Pods
+      // 17. Thaw Cryo-Frozen Helldivers in the War Zone
       for (const pod of this.cryoPods) {
         if (pod.rescued) continue;
         const dPod = Math.hypot(p.x - pod.x, p.z - pod.z);
-        if (dPod < 85 && p.inventory.length > 0) {
+        if (dPod < 95 && p.inventory.length > 0) {
           const dropped = p.inventory.pop();
           pod.fed++;
           this.transferCooldown = 0.12;
@@ -687,17 +983,32 @@
       }
     }
 
+    // ========================================================================
+    // SEAF WORKERS: MINERS (⛏️), AMMO/GATE ENGINEERS (🧱), LOGISTICS (🪖)
+    // ========================================================================
     syncWorkers() {
+      const targetMiners = this.upgrades.seaf_miner || 0;
       const targetLogistics = this.upgrades.seaf_carrier || 0;
       const targetAmmo = this.upgrades.seaf_ammo_hauler || 0;
 
+      const curMiners = this.workers.filter((w) => w.role === 'miner').length;
       const curLogistics = this.workers.filter((w) => w.role === 'logistics').length;
       const curAmmo = this.workers.filter((w) => w.role === 'ammo').length;
+
+      for (let i = curMiners; i < targetMiners; i++) {
+        this.workers.push({
+          role: 'miner',
+          x: -1150 + (i % 3) * 45,
+          z: 420,
+          walkPhase: i,
+          inventory: []
+        });
+      }
 
       for (let i = curLogistics; i < targetLogistics; i++) {
         this.workers.push({
           role: 'logistics',
-          x: -120 + (i % 3) * 45,
+          x: 120 + (i % 3) * 45,
           z: 320,
           walkPhase: i,
           inventory: []
@@ -708,7 +1019,7 @@
         this.workers.push({
           role: 'ammo',
           x: -480 + (i % 3) * 45,
-          z: -20,
+          z: -140,
           walkPhase: i,
           inventory: []
         });
@@ -716,19 +1027,80 @@
     }
 
     updateWorkers(dt) {
-      const speed = 185 * (1 + (this.foreverSkills.perm_commander_elite || 0) * 0.15);
+      const speed = 205 * (1 + (this.foreverSkills.perm_commander_elite || 0) * 0.15);
       const L = CFG.LOCATIONS;
       const AP = CFG.AMMO_PRESS;
 
       for (const w of this.workers) {
         w.walkPhase += dt * 10;
 
-        if (w.role === 'ammo') {
+        if (w.role === 'miner') {
+          // SEAF Quarry Miner: Hauls ⛏️ Iron & 🛢️ E-710 from Quarry to Factory Hoppers
+          if (w.inventory.length === 0) {
+            // Find which raw material is most needed across unlocked stations
+            let needIron = (this.ammoPress.inputStock.raw_iron || 0) < 6;
+            let needE710 = false;
+            for (const item of CFG.ITEMS) {
+              if (!this.unlocked[item.id]) continue;
+              const st = this.stations[item.id];
+              if (item.recipe.raw_iron && (st.inputStock.raw_iron || 0) < 6) needIron = true;
+              if (item.recipe.raw_e710 && (st.inputStock.raw_e710 || 0) < 6) needE710 = true;
+            }
+            const rawCfg = (needE710 && !needIron)
+              ? CFG.RAW_EXTRACTORS[1]
+              : (Math.random() < 0.55 ? CFG.RAW_EXTRACTORS[0] : CFG.RAW_EXTRACTORS[1]);
+
+            const dx = rawCfg.pickupX - w.x;
+            const dz = rawCfg.pickupZ - w.z;
+            const dist = Math.hypot(dx, dz);
+            if (dist > 28) {
+              w.x += (dx / dist) * speed * dt;
+              w.z += (dz / dist) * speed * dt;
+            } else {
+              const rs = this.rawExtractors[rawCfg.id];
+              const take = Math.max(2, Math.min(4, rs.stock));
+              rs.stock = Math.max(0, rs.stock - take);
+              for (let k = 0; k < take; k++) {
+                w.inventory.push({ id: rawCfg.id, icon: rawCfg.itemIcon, color: rawCfg.color });
+              }
+            }
+          } else {
+            const heldId = w.inventory[0].id;
+            // Find station hopper needing heldId
+            let targetPos = AP.inputPos;
+            let targetHopper = this.ammoPress.inputStock;
+            let bestCount = heldId === 'raw_iron' ? (this.ammoPress.inputStock.raw_iron || 0) : 999;
+
+            for (const item of CFG.ITEMS) {
+              if (!this.unlocked[item.id]) continue;
+              if (!item.recipe[heldId]) continue;
+              const st = this.stations[item.id];
+              const cur = st.inputStock[heldId] || 0;
+              if (cur < bestCount) {
+                bestCount = cur;
+                targetPos = item.inputPos;
+                targetHopper = st.inputStock;
+              }
+            }
+
+            const dx = targetPos.x - w.x;
+            const dz = targetPos.z - w.z;
+            const dist = Math.hypot(dx, dz);
+            if (dist > 28) {
+              w.x += (dx / dist) * speed * dt;
+              w.z += (dz / dist) * speed * dt;
+            } else {
+              targetHopper[heldId] = (targetHopper[heldId] || 0) + w.inventory.length;
+              w.inventory = [];
+            }
+          }
+        } else if (w.role === 'ammo') {
+          // SEAF Ammo & Gate Engineer: Hauls 🧱 Ammo to Gate Layers 3, 2, 1 & Repairs Gates!
           if (w.inventory.length === 0) {
             const dx = AP.padX - w.x;
             const dz = AP.padZ - w.z;
             const dist = Math.hypot(dx, dz);
-            if (dist > 24) {
+            if (dist > 26) {
               w.x += (dx / dist) * speed * dt;
               w.z += (dz / dist) * speed * dt;
             } else if (this.ammoPress.stock > 0) {
@@ -739,33 +1111,34 @@
               }
             }
           } else {
-            let bestGate = CFG.GATES[0];
-            let lowestRatio = 999;
+            let bestGate = this.getActiveFrontGate();
+            let lowestScore = 999;
             for (const g of CFG.GATES) {
               const gs = this.gates[g.id];
-              if (gs && gs.unlocked) {
-                const r = gs.ammo / g.maxAmmo;
-                if (r < lowestRatio) {
-                  lowestRatio = r;
-                  bestGate = g;
-                }
+              if (!gs) continue;
+              const score = (gs.ammo / g.maxAmmo) + (gs.hp / gs.maxHp);
+              if (score < lowestScore) {
+                lowestScore = score;
+                bestGate = g;
               }
             }
             const dx = bestGate.ammoPadX - w.x;
             const dz = bestGate.ammoPadZ - w.z;
             const dist = Math.hypot(dx, dz);
-            if (dist > 24) {
+            if (dist > 28) {
               w.x += (dx / dist) * speed * dt;
               w.z += (dz / dist) * speed * dt;
             } else {
               const gs = this.gates[bestGate.id];
               if (gs) {
                 gs.ammo = Math.min(bestGate.maxAmmo, gs.ammo + w.inventory.length * 3);
+                gs.hp = Math.min(gs.maxHp, gs.hp + 45);
               }
               w.inventory = [];
             }
           }
         } else {
+          // SEAF Logistics Trooper: Hauls finished goods to the Quartermaster Counter
           if (w.inventory.length === 0) {
             let chosen = null;
             for (const c of this.customers) {
@@ -785,7 +1158,7 @@
             const dx = chosen.pickupPos.x - w.x;
             const dz = chosen.pickupPos.z - w.z;
             const dist = Math.hypot(dx, dz);
-            if (dist > 26) {
+            if (dist > 28) {
               w.x += (dx / dist) * speed * dt;
               w.z += (dz / dist) * speed * dt;
             } else {
@@ -814,9 +1187,11 @@
       }
     }
 
+    // ========================================================================
+    // CUSTOMERS & SALES QUEUE
+    // ========================================================================
     spawnCustomer(forcedItemId = null) {
-      const unlockedGates = CFG.GATES.filter((g) => this.gates[g.id]?.unlocked).length;
-      const maxQueue = 6 + unlockedGates * 2;
+      const maxQueue = 10;
       const activeCount = this.customers.filter((c) => c.state !== 'leaving').length;
       if (activeCount >= maxQueue) return;
 
@@ -829,7 +1204,7 @@
       }
       if (!chosenItem) {
         const gunItem = this.getItemConfig('gun');
-        if (gunItem && Math.random() < 0.48) {
+        if (gunItem && Math.random() < 0.45) {
           chosenItem = gunItem;
         } else {
           chosenItem = unlockedItems[Math.floor(Math.random() * unlockedItems.length)];
@@ -841,7 +1216,7 @@
 
       this.customers.push({
         x: spawn.x,
-        z: spawn.z + (Math.random() - 0.5) * 80,
+        z: spawn.z + (Math.random() - 0.5) * 90,
         walkPhase: Math.random() * 6,
         item: chosenItem,
         qty: qty,
@@ -876,12 +1251,9 @@
     }
 
     updateCustomersAndSales(dt) {
-      const unlockedGates = CFG.GATES.filter((g) => this.gates[g.id]?.unlocked).length;
-      const spawnInterval = Math.max(1.4, 3.6 - unlockedGates * 0.65);
-
       this.customerSpawnTimer -= dt;
       if (this.customerSpawnTimer <= 0) {
-        this.customerSpawnTimer = spawnInterval;
+        this.customerSpawnTimer = 2.4;
         this.spawnCustomer();
       }
 
@@ -890,14 +1262,14 @@
       activeCustomers.forEach((c, idx) => {
         const row = Math.floor(idx / 2);
         const col = idx % 2;
-        const tx = qStart.x + row * 78;
-        const tz = qStart.z - 55 + col * 110;
+        const tx = qStart.x + row * 88;
+        const tz = qStart.z - 60 + col * 120;
         const dx = tx - c.x;
         const dz = tz - c.z;
         const dist = Math.hypot(dx, dz);
         if (dist > 8) {
-          c.x += (dx / dist) * 190 * dt;
-          c.z += (dz / dist) * 190 * dt;
+          c.x += (dx / dist) * 200 * dt;
+          c.z += (dz / dist) * 200 * dt;
           c.walkPhase += dt * 10;
         }
       });
@@ -912,20 +1284,19 @@
           if (dist < 25) {
             this.customers.splice(i, 1);
           } else {
-            c.x += (dx / dist) * 230 * dt;
-            c.z += (dz / dist) * 230 * dt;
+            c.x += (dx / dist) * 240 * dt;
+            c.z += (dz / dist) * 240 * dt;
             c.walkPhase += dt * 12;
           }
         }
       }
 
-      // MULTI-STALL COUNTER SERVING: Serve ANY customer whose requested item is in counterBuffer!
       this.cashierTimer -= dt;
       if (this.cashierTimer <= 0) {
-        const cashierSpeed = 0.28 / (1 + (this.upgrades.seaf_cashier || 0) * 0.5);
+        const cashierSpeed = 0.26 / (1 + (this.upgrades.seaf_cashier || 0) * 0.5);
         for (const c of activeCustomers) {
           const itemId = c.item.id;
-          if ((this.counterBuffer[itemId] || 0) > 0 && Math.abs(c.x - qStart.x) < 260) {
+          if ((this.counterBuffer[itemId] || 0) > 0 && Math.abs(c.x - qStart.x) < 320) {
             this.counterBuffer[itemId]--;
             this.cashierTimer = cashierSpeed;
             this.spawnArc(CFG.LOCATIONS.counterTable.x, CFG.LOCATIONS.counterTable.z, c.x, c.z - 15, c.item.icon, c.item.color);
@@ -936,58 +1307,71 @@
       }
     }
 
+    // ========================================================================
+    // 3-LAYER SEQUENTIAL GATE SIEGE (OUTER GATE 3 -> MIDDLE GATE 2 -> INNER GATE 1)
+    // ========================================================================
+    getActiveFrontGate() {
+      // Order: Outer Gate 3 (z=-1320) -> Middle Gate 2 (z=-840) -> Inner Gate 1 (z=-360)
+      const g3 = CFG.GATES.find((g) => g.id === 'gate_3');
+      const g2 = CFG.GATES.find((g) => g.id === 'gate_2');
+      const g1 = CFG.GATES.find((g) => g.id === 'gate_1');
+      if (this.gates.gate_3 && this.gates.gate_3.hp > 0) return g3;
+      if (this.gates.gate_2 && this.gates.gate_2.hp > 0) return g2;
+      return g1;
+    }
+
     updateWarZoneAndGates(dt) {
+      // Permanent Skill: Automatic Gate Self-Repair
       const armorLvl = this.foreverSkills.perm_gate_armor || 0;
       if (armorLvl > 0) {
         for (const g of CFG.GATES) {
           const gs = this.gates[g.id];
-          if (gs && gs.unlocked && gs.hp > 0 && gs.hp < gs.maxHp) {
-            gs.hp = Math.min(gs.maxHp, gs.hp + armorLvl * 6 * dt);
+          if (gs && gs.hp > 0 && gs.hp < gs.maxHp) {
+            gs.hp = Math.min(gs.maxHp, gs.hp + armorLvl * 8 * dt);
           }
         }
       }
 
-      const unlockedGateList = CFG.GATES.filter((g) => this.gates[g.id]?.unlocked);
+      // Spawn Enemy Waves at the Northern Drop Zone (z = -1850)
       this.enemySpawnTimer -= dt;
-      if (this.enemySpawnTimer <= 0 && this.enemies.length < 7 + unlockedGateList.length * 4) {
-        this.enemySpawnTimer = Math.max(2.2, 4.8 - unlockedGateList.length * 0.65);
-        const targetGate = unlockedGateList[Math.floor(Math.random() * unlockedGateList.length)] || CFG.GATES[0];
+      if (this.enemySpawnTimer <= 0 && this.enemies.length < 14) {
+        this.enemySpawnTimer = 2.6;
         const roll = Math.random();
         let type = 'trooper';
         let hp = 95;
-        let dmg = 11;
-        let speed = 78;
+        let dmg = 12;
+        let speed = 82;
         if (roll > 0.80) {
           type = 'hulk';
-          hp = 290;
+          hp = 310;
           dmg = 24;
-          speed = 52;
+          speed = 56;
         } else if (roll > 0.45) {
           type = 'bug';
           hp = 80;
           dmg = 9;
-          speed = 105;
+          speed = 112;
         }
         this.enemies.push({
           type,
-          x: targetGate.x + (Math.random() - 0.5) * 360,
-          z: CFG.WORLD.minZ + 60 + Math.random() * 160,
+          x: (Math.random() - 0.5) * 520,
+          z: CFG.WORLD.minZ + 80 + Math.random() * 120,
           hp,
           maxHp: hp,
           dmg,
           speed,
-          targetGateId: targetGate.id,
           attackCooldown: 0
         });
       }
 
+      // Enemies ALWAYS target the current outermost unbroken Gate Layer (Gate 3 -> Gate 2 -> Gate 1)
+      const activeGateCfg = this.getActiveFrontGate();
+      const activeGateState = this.gates[activeGateCfg.id];
+
       for (let i = this.enemies.length - 1; i >= 0; i--) {
         const e = this.enemies[i];
-        const gCfg = CFG.GATES.find((g) => g.id === e.targetGateId) || CFG.GATES[0];
-        const gs = this.gates[gCfg.id];
-
-        const targetX = gCfg.x;
-        const targetZ = gCfg.z - 28;
+        const targetX = Math.max(-140, Math.min(140, e.x * 0.6));
+        const targetZ = activeGateCfg.z - 28;
         const dx = targetX - e.x;
         const dz = targetZ - e.z;
         const dist = Math.hypot(dx, dz);
@@ -995,75 +1379,111 @@
         if (dist > 34) {
           e.x += (dx / dist) * e.speed * dt;
           e.z += (dz / dist) * e.speed * dt;
-        } else if (gs && gs.unlocked) {
+        } else if (activeGateState) {
           e.attackCooldown -= dt;
           if (e.attackCooldown <= 0) {
             e.attackCooldown = 1.05;
-            gs.hp = Math.max(0, gs.hp - e.dmg);
-            gs.lastHitTime = this.world.time;
-            this.spawnFloatingText(gCfg.x, gCfg.z - 35, `-${e.dmg} 🛡️ ${gCfg.shortName}`, '#ef4444');
+            const prevHp = activeGateState.hp;
+            activeGateState.hp = Math.max(0, activeGateState.hp - e.dmg);
+            activeGateState.lastHitTime = this.world.time;
+            this.spawnFloatingText(activeGateCfg.x, activeGateCfg.z - 38, `-${e.dmg} 🛡️ ${activeGateCfg.shortName}`, '#ef4444');
 
-            if (gs.hp <= 0) {
-              this.triggerGateDefeat(gCfg);
-              return;
+            if (prevHp > 0 && activeGateState.hp <= 0) {
+              this.world.triggerCameraShake(14, 0.45);
+              if (activeGateCfg.id === 'gate_1') {
+                // Inner Gate 1 reached 0 HP -> DEFEAT!
+                this.triggerGateDefeat(activeGateCfg);
+                return;
+              } else {
+                // Outer Gate 3 or Middle Gate 2 was breached -> Enemies advance to the next layer!
+                const nextName = activeGateCfg.id === 'gate_3' ? 'MIDDLE GATE 2' : 'INNER GATE 1';
+                this.spawnFloatingText(
+                  activeGateCfg.x,
+                  activeGateCfg.z - 65,
+                  `💥 ${activeGateCfg.shortName.toUpperCase()} BREACHED! ENEMIES ADVANCING TO ${nextName}!`,
+                  '#f97316'
+                );
+              }
             }
           }
         }
       }
 
+      // Dual Sentry Turrets on all 3 Gate Layers
       const turretPwrLvl = this.foreverSkills.perm_turret_power || 0;
-      const turretDmgMult = 1 + turretPwrLvl * 0.35;
       const freeAmmoChance = Math.min(0.6, turretPwrLvl * 0.08);
 
       for (const g of CFG.GATES) {
         const gs = this.gates[g.id];
-        if (!gs || !gs.unlocked) continue;
+        if (!gs) continue;
         gs.fireCooldown = Math.max(0, gs.fireCooldown - dt);
         if (gs.ammo <= 0 || gs.fireCooldown > 0) continue;
 
-        let closest = null;
-        let bestDist = g.turretRange;
-        for (const e of this.enemies) {
-          const d = Math.hypot(e.x - g.turretX, e.z - g.turretZ);
-          if (d < bestDist) {
-            bestDist = d;
-            closest = e;
+        const defLvl = gs.defenseLevel || 1;
+        const turretDmgMult = (1 + turretPwrLvl * 0.35) * (1 + (defLvl - 1) * 0.25);
+
+        // Both Left & Right Sentry Turrets scan for enemies in range
+        const mounts = [
+          { x: g.leftTurretX, z: g.turretZ },
+          { x: g.rightTurretX, z: g.turretZ }
+        ];
+        let firedThisTick = false;
+
+        for (const m of mounts) {
+          let closest = null;
+          let bestDist = g.turretRange;
+          for (const e of this.enemies) {
+            if (e.hp <= 0) continue;
+            const d = Math.hypot(e.x - m.x, e.z - m.z);
+            if (d < bestDist) {
+              bestDist = d;
+              closest = e;
+            }
+          }
+
+          if (closest) {
+            gs.turretAngle = Math.atan2(closest.z - m.z, closest.x - m.x);
+            firedThisTick = true;
+            const dmg = Math.round(g.turretDamage * turretDmgMult);
+            closest.hp -= dmg;
+            this.tracers.push({
+              sx: m.x,
+              sz: m.z,
+              tx: closest.x,
+              tz: closest.z,
+              color: g.color,
+              width: 4,
+              t: 0,
+              duration: 0.09
+            });
+            if (closest.hp <= 0) {
+              this.handleEnemyKilled(closest);
+            }
           }
         }
 
-        if (closest) {
-          gs.turretAngle = Math.atan2(closest.z - g.turretZ, closest.x - g.turretX);
+        if (firedThisTick) {
           gs.fireCooldown = g.turretFireRate;
           gs.lastFireTime = this.world.time;
           if (Math.random() > freeAmmoChance) {
             gs.ammo = Math.max(0, gs.ammo - 1);
           }
-
-          const dmg = Math.round(g.turretDamage * turretDmgMult);
-          closest.hp -= dmg;
-          this.tracers.push({
-            sx: g.turretX,
-            sz: g.turretZ,
-            tx: closest.x,
-            tz: closest.z,
-            color: g.color,
-            width: 4,
-            t: 0,
-            duration: 0.09
-          });
           this.audio.playLaser();
-
-          if (closest.hp <= 0) {
-            this.handleEnemyKilled(closest);
-          }
         }
       }
+
+      // Main Character Personal Weapon & Mount Attack + Guard Dog Rover Drone
+      const eq = this.getEquippedItems();
+      const wep = eq.weapon;
+      const mount = eq.mount;
+      const eliteLvl = this.foreverSkills.perm_commander_elite || 0;
 
       this.player.attackTimer = Math.max(0, this.player.attackTimer - dt);
       if (this.player.attackTimer <= 0 && this.enemies.length > 0) {
         let target = null;
         let minDist = CFG.PLAYER.attackRange;
         for (const e of this.enemies) {
+          if (e.hp <= 0) continue;
           const d = Math.hypot(e.x - this.player.x, e.z - this.player.z);
           if (d < minDist) {
             minDist = d;
@@ -1071,23 +1491,69 @@
           }
         }
         if (target) {
-          this.player.attackTimer = CFG.PLAYER.attackCooldown;
-          const eliteLvl = this.foreverSkills.perm_commander_elite || 0;
-          const pDmg = Math.round(CFG.PLAYER.attackDamage * (1 + eliteLvl * 0.35));
-          target.hp -= pDmg;
-          this.tracers.push({
-            sx: this.player.x,
-            sz: this.player.z - 12,
-            tx: target.x,
-            tz: target.z,
-            color: '#38bdf8',
-            width: 3,
-            t: 0,
-            duration: 0.08
-          });
+          this.player.attackTimer = CFG.PLAYER.attackCooldown / (wep.fireRateMult || 1.0);
+          const pellets = wep.pelletCount || 1;
+          const perPelletDmg = Math.round(
+            CFG.PLAYER.attackDamage * (wep.damageMult || 1.0) * (mount.damageMult || 1.0) * (1 + eliteLvl * 0.35)
+          );
+
+          for (let pIdx = 0; pIdx < pellets; pIdx++) {
+            target.hp -= perPelletDmg;
+            const spreadX = (pIdx - (pellets - 1) * 0.5) * 14;
+            this.tracers.push({
+              sx: this.player.x,
+              sz: this.player.z - 14,
+              tx: target.x + spreadX,
+              tz: target.z,
+              color: wep.tracerColor || '#38bdf8',
+              width: wep.explosive ? 6 : 3.5,
+              t: 0,
+              duration: 0.09
+            });
+          }
+          if (wep.explosive || mount.id === 'm_mech') {
+            this.explosions.push({ x: target.x, z: target.z, maxR: 48, t: 0, duration: 0.22 });
+          }
           this.audio.playLaser();
           if (target.hp <= 0) {
             this.handleEnemyKilled(target);
+          }
+        }
+      }
+
+      // Orbiting Guard Dog Laser Drone Auto-Fire
+      if (eq.backpack?.hasDrone && this.enemies.length > 0) {
+        this.droneFireTimer = Math.max(0, this.droneFireTimer - dt);
+        if (this.droneFireTimer <= 0) {
+          let dTarget = null;
+          let dMin = 340;
+          for (const e of this.enemies) {
+            if (e.hp <= 0) continue;
+            const d = Math.hypot(e.x - this.player.x, e.z - this.player.z);
+            if (d < dMin) {
+              dMin = d;
+              dTarget = e;
+            }
+          }
+          if (dTarget) {
+            this.droneFireTimer = 0.25;
+            const droneDmg = Math.round(22 * (1 + eliteLvl * 0.35));
+            dTarget.hp -= droneDmg;
+            const dx = this.player.x + Math.cos(this.world.time * 3.2) * 52;
+            const dz = this.player.z - 28 + Math.sin(this.world.time * 3.2) * 26;
+            this.tracers.push({
+              sx: dx,
+              sz: dz,
+              tx: dTarget.x,
+              tz: dTarget.z,
+              color: '#facc15',
+              width: 2.5,
+              t: 0,
+              duration: 0.08
+            });
+            if (dTarget.hp <= 0) {
+              this.handleEnemyKilled(dTarget);
+            }
           }
         }
       }
@@ -1101,14 +1567,14 @@
         } else if (Math.hypot(this.player.x - s.x, this.player.z - s.z) < CFG.PLAYER.plowRadius) {
           s.cleared = true;
           s.respawnTimer = 28;
-          this.cash += 8;
-          this.spawnFloatingText(s.x, s.z, `+$8 ⛏️ ORE`, '#38bdf8');
+          this.cash += 10;
+          this.spawnFloatingText(s.x, s.z, `+$10 ⛏️ ORE`, '#38bdf8');
         }
       }
 
       for (let i = this.warDrops.length - 1; i >= 0; i--) {
         const d = this.warDrops[i];
-        if (Math.hypot(this.player.x - d.x, this.player.z - d.z) < 75) {
+        if (Math.hypot(this.player.x - d.x, this.player.z - d.z) < 85) {
           this.warDrops.splice(i, 1);
           this.cash += d.cashValue || 35;
           if (d.medalValue) {
@@ -1148,7 +1614,7 @@
         z: enemy.z,
         icon: isHulk ? '⭐' : '🛢️',
         color: isHulk ? '#facc15' : '#a855f7',
-        cashValue: isHulk ? 90 : 35,
+        cashValue: isHulk ? 95 : 35,
         medalValue: isHulk ? 1 : 0
       });
     }
@@ -1163,10 +1629,10 @@
       const summaryEl = document.getElementById('defeat-summary-text');
       if (summaryEl) {
         summaryEl.innerHTML = `
-          <strong>${breachedGate.name}</strong> reached <strong>0 HP</strong> and was breached by Automaton forces!<br><br>
+          All 3 Defense Layers (Outer Gate 3 ➔ Middle Gate 2 ➔ <strong>${breachedGate.name}</strong>) were breached by Automaton forces!<br><br>
           📊 <strong>Run Summary:</strong> Served <strong>${this.totalServed} Helldivers</strong> &amp; eliminated <strong>${this.totalKills} Enemies</strong>.<br>
           🎖️ <strong>Evacuated Reward:</strong> Earned <strong>+${bonusMedals} ⭐ Forever Warbond Medals</strong> (Total: <strong>${this.medals} ⭐</strong>).<br>
-          🌟 <strong>All Permanent Skill Tree upgrades are 100% preserved forever!</strong>
+          🌟 <strong>All Permanent Skill Tree upgrades &amp; Commander Loadout Gear are 100% preserved forever!</strong>
         `;
       }
       document.getElementById('modal-defeat')?.classList.add('open');
@@ -1181,7 +1647,7 @@
       this.spawnCustomer('cloth');
       this.saveGame();
       this.updateHUD();
-      this.spawnFloatingText(this.player.x, this.player.z - 40, '🦅 NEW HELLPOD DEPLOYED — FOREVER SKILLS ACTIVE!', '#facc15');
+      this.spawnFloatingText(this.player.x, this.player.z - 40, '🦅 NEW HELLPOD DEPLOYED — FOREVER SKILLS & LOADOUT ACTIVE!', '#facc15');
     }
 
     spawnArc(sx, sz, tx, tz, icon, color) {
@@ -1234,7 +1700,7 @@
       this.world.triggerCameraShake(16, 0.5);
 
       for (const e of this.enemies) {
-        e.hp -= 220;
+        e.hp -= 240;
         this.explosions.push({ x: e.x, z: e.z, maxR: 95, t: 0, duration: 0.45 });
         if (e.hp <= 0) this.handleEnemyKilled(e);
       }
@@ -1242,13 +1708,13 @@
 
       for (const g of CFG.GATES) {
         const gs = this.gates[g.id];
-        if (gs && gs.unlocked) {
-          gs.hp = Math.min(gs.maxHp, gs.hp + 200);
+        if (gs) {
+          gs.hp = Math.min(gs.maxHp, gs.hp + 300);
           gs.ammo = g.maxAmmo;
-          this.explosions.push({ x: g.x, z: g.z - 90, maxR: 130, t: 0, duration: 0.5 });
+          this.explosions.push({ x: g.x, z: g.z - 60, maxR: 130, t: 0, duration: 0.5 });
         }
       }
-      this.spawnFloatingText(this.player.x, this.player.z - 45, '🦅 500KG DROPPED! GATES REPAIRED & 2X FACTORY OVERCLOCK!', '#facc15');
+      this.spawnFloatingText(this.player.x, this.player.z - 45, '🦅 500KG DROPPED! ALL 3 GATE LAYERS REPAIRED & 2X FACTORY BOOST!', '#facc15');
     }
 
     updateHUD() {
@@ -1273,6 +1739,18 @@
       const servedEl = document.getElementById('hud-served');
       if (servedEl) servedEl.textContent = `${this.totalServed}`;
 
+      // Update inventory badges (including raw_iron & raw_e710!)
+      const rawIronBadge = document.getElementById('inv-badge-raw_iron');
+      if (rawIronBadge) {
+        const c = this.player.inventory.filter((it) => it.id === 'raw_iron').length;
+        rawIronBadge.textContent = `⛏️ ${c}`;
+      }
+      const rawE710Badge = document.getElementById('inv-badge-raw_e710');
+      if (rawE710Badge) {
+        const c = this.player.inventory.filter((it) => it.id === 'raw_e710').length;
+        rawE710Badge.textContent = `🛢️ ${c}`;
+      }
+
       for (const item of CFG.ITEMS) {
         const badge = document.getElementById(`inv-badge-${item.id}`);
         if (badge) {
@@ -1281,33 +1759,91 @@
         }
       }
 
+      // Show 3-Layer Gate Status in HUD
       const gateEl = document.getElementById('hud-gates-hp');
       if (gateEl) {
-        let lowestPct = 100;
-        let lowGateName = 'Alpha';
-        for (const g of CFG.GATES) {
-          const gs = this.gates[g.id];
-          if (gs && gs.unlocked) {
-            const pct = Math.round((gs.hp / gs.maxHp) * 100);
-            if (pct < lowestPct) {
-              lowestPct = pct;
-              lowGateName = g.shortName;
-            }
-          }
-        }
-        gateEl.textContent = `${lowestPct}%`;
-        gateEl.style.color = lowestPct > 50 ? '#4ade80' : (lowestPct > 25 ? '#facc15' : '#ef4444');
+        const p3 = Math.round(((this.gates.gate_3?.hp || 0) / (this.gates.gate_3?.maxHp || 1)) * 100);
+        const p2 = Math.round(((this.gates.gate_2?.hp || 0) / (this.gates.gate_2?.maxHp || 1)) * 100);
+        const p1 = Math.round(((this.gates.gate_1?.hp || 0) / (this.gates.gate_1?.maxHp || 1)) * 100);
+        gateEl.textContent = `G3:${p3}% G2:${p2}% G1:${p1}%`;
+        gateEl.style.color = p1 > 50 ? '#4ade80' : (p1 > 25 ? '#facc15' : '#ef4444');
 
         const objEl = document.getElementById('objective-text');
         if (objEl) {
-          const g1 = this.gates.gate_1;
-          if (lowestPct < 45) {
-            objEl.textContent = `🚨 WARNING: ${lowGateName} at ${lowestPct}% HP! Stand on its 🧱 Ammo/Repair Pad or call 🦅 500KG BOOST!`;
-          } else if (g1 && g1.ammo === 0) {
-            objEl.textContent = `⚠️ Gate Alpha Turret is OUT OF AMMO! Carry (搬) 🧱 Ammo from the Munitions Press or unlock the Ammo Conveyor Belt!`;
+          if (p3 === 0 && p2 === 0) {
+            objEl.textContent = `🚨 CRITICAL: Outer Gate 3 & Middle Gate 2 breached! Repair INNER GATE 1 (${p1}% HP) now or call 🦅 500KG BOOST!`;
+          } else if (p3 === 0) {
+            objEl.textContent = `⚠️ Outer Gate 3 breached! Enemies attacking MIDDLE GATE 2 (${p2}% HP) — stand on Gate 3 Pad to rebuild!`;
           } else {
-            objEl.textContent = `DIRECTIVE: Sell 🔫 Guns ($${this.getItemSellPrice('gun')}) & 🦺 Cloth ($${this.getItemSellPrice('cloth')}), upgrade ⛏️ Raw Speed, and defend all 3 Gates!`;
+            objEl.textContent = `DIRECTIVE: Harvest ⛏️ Iron & 🛢️ E-710 in Sector A ➔ Feed Factory Input Hoppers ➔ Sell 🔫 Guns ($${this.getItemSellPrice('gun')}) & defend Gate 3 ➔ Gate 2 ➔ Gate 1!`;
           }
+        }
+      }
+    }
+
+    // ========================================================================
+    // MAIN CHARACTER 4-SLOT EQUIPMENT & LOADOUT MODAL (🛡️ 裝備 Loadout)
+    // ========================================================================
+    renderLoadoutModal() {
+      const cashSpan = document.getElementById('loadout-modal-cash');
+      if (cashSpan) cashSpan.textContent = `$${Math.floor(this.cash)}`;
+
+      const grid = document.getElementById('loadout-grid');
+      if (!grid) return;
+      grid.innerHTML = '';
+
+      const categories = [
+        { key: 'weapon', title: '🔫 PRIMARY WEAPON (主武器)' },
+        { key: 'armor', title: '🦺 TACTICAL ARMOR (戰術裝甲)' },
+        { key: 'backpack', title: '🛸 BACKPACK & GUARD DOG DRONE (背包與無人機)' },
+        { key: 'mount', title: '🤖 COMBAT MOUNT / EXOSUIT (騎乘載具與機甲)' }
+      ];
+
+      for (const cat of categories) {
+        const items = CFG.COMMANDER_EQUIPMENT[cat.key] || [];
+        for (const eqItem of items) {
+          const isOwned = !!this.ownedEquipment[eqItem.id];
+          const isEquipped = this.equipped[cat.key] === eqItem.id;
+          const canBuy = !isOwned && this.cash >= eqItem.cost;
+
+          const card = document.createElement('div');
+          card.className = 'upgrade-item';
+          if (isEquipped) {
+            card.style.borderColor = '#facc15';
+            card.style.background = 'rgba(250, 204, 21, 0.14)';
+          }
+          card.innerHTML = `
+            <div class="upgrade-info">
+              <div style="font-size:0.7rem;color:#38bdf8;font-weight:700;">${cat.title}</div>
+              <h4>${eqItem.icon} ${eqItem.name} <span style="color:#fde047;font-size:0.78rem;">(${eqItem.zhName})</span></h4>
+              <p>${eqItem.desc}</p>
+            </div>
+            <button class="buy-btn ${isEquipped ? 'medal-btn' : ''}" ${(!isOwned && !canBuy) ? 'disabled' : ''}>
+              ${isEquipped ? '✅ EQUIPPED' : (isOwned ? '🛡️ EQUIP' : `🔓 $${eqItem.cost}`)}
+            </button>
+          `;
+          card.querySelector('button').addEventListener('click', () => {
+            if (isOwned) {
+              this.equipped[cat.key] = eqItem.id;
+              this.recalcDerivedStats();
+              this.saveGame();
+              this.audio.playPickup();
+              this.renderLoadoutModal();
+              this.updateHUD();
+              this.spawnFloatingText(this.player.x, this.player.z - 40, `🛡️ EQUIPPED ${eqItem.name.toUpperCase()}!`, '#facc15');
+            } else if (this.cash >= eqItem.cost) {
+              this.cash -= eqItem.cost;
+              this.ownedEquipment[eqItem.id] = true;
+              this.equipped[cat.key] = eqItem.id;
+              this.recalcDerivedStats();
+              this.saveGame();
+              this.audio.playUnlock();
+              this.renderLoadoutModal();
+              this.updateHUD();
+              this.spawnFloatingText(this.player.x, this.player.z - 40, `🎉 UNLOCKED & EQUIPPED ${eqItem.name.toUpperCase()}!`, '#4ade80');
+            }
+          });
+          grid.appendChild(card);
         }
       }
     }
@@ -1317,6 +1853,7 @@
       if (!list) return;
       list.innerHTML = '';
 
+      // 1. Quarry Scale & Speed Upgrades
       for (const raw of CFG.RAW_EXTRACTORS) {
         const rs = this.rawExtractors[raw.id];
         const cost = this.getRawUpgradeCost(raw.id);
@@ -1324,11 +1861,11 @@
         card.className = 'upgrade-item';
         card.innerHTML = `
           <div class="upgrade-info">
-            <h4>${raw.icon} ${raw.name} (Lv.${rs.level})</h4>
-            <p>${raw.desc} Current cycle: ${rs.cycleTime.toFixed(2)}s</p>
+            <h4>${raw.icon} ${raw.name} (Scale Lv.${rs.level})</h4>
+            <p>${raw.desc} Current cycle: ${rs.cycleTime.toFixed(2)}s | Buffer: ${rs.maxBuffer}</p>
           </div>
           <button class="buy-btn" ${this.cash < cost ? 'disabled' : ''}>
-            ⬆️ $${cost}
+            ⬆️ Scale $${cost}
           </button>
         `;
         card.querySelector('button').addEventListener('click', () => {
@@ -1344,6 +1881,36 @@
         list.appendChild(card);
       }
 
+      // 2. 3-Layer Gate Defense Fortification Upgrades
+      for (const g of CFG.GATES) {
+        const gs = this.gates[g.id];
+        const cost = this.getGateUpgradeCost(g.id);
+        const card = document.createElement('div');
+        card.className = 'upgrade-item';
+        card.innerHTML = `
+          <div class="upgrade-info">
+            <h4>🛡️ ${g.name} (Defense Lv.${gs.defenseLevel || 1})</h4>
+            <p>${g.desc} Max HP: ${gs.maxHp} | Repairs Gate to 100%!</p>
+          </div>
+          <button class="buy-btn" ${this.cash < cost ? 'disabled' : ''}>
+            ⬆️ Fortify $${cost}
+          </button>
+        `;
+        card.querySelector('button').addEventListener('click', () => {
+          if (this.cash >= cost) {
+            this.cash -= cost;
+            gs.defenseLevel = (gs.defenseLevel || 1) + 1;
+            this.recalcDerivedStats();
+            gs.hp = gs.maxHp;
+            this.audio.playUnlock();
+            this.renderUpgradesModal();
+            this.updateHUD();
+          }
+        });
+        list.appendChild(card);
+      }
+
+      // 3. Factorio Conveyor Belts
       for (const c of CFG.CONVEYORS) {
         const owned = !!this.conveyors[c.id];
         const rem = Math.max(0, this.conveyorRemaining[c.id] ?? c.cost);
@@ -1372,6 +1939,7 @@
         list.appendChild(card);
       }
 
+      // 4. SEAF Staff & Factory Upgrades
       for (const upg of CFG.UPGRADES) {
         const lvl = this.upgrades[upg.id] || 0;
         const isMax = lvl >= upg.maxLevel;
@@ -1453,6 +2021,8 @@
         cash: this.cash,
         medals: this.medals,
         foreverSkills: this.foreverSkills,
+        ownedEquipment: this.ownedEquipment,
+        equipped: this.equipped,
         totalServed: this.totalServed,
         totalKills: this.totalKills,
         rawExtractors: this.rawExtractors,
@@ -1492,7 +2062,9 @@
         const data = JSON.parse(saved);
         if (typeof data.medals === 'number') this.medals = data.medals;
         if (data.foreverSkills) Object.assign(this.foreverSkills, data.foreverSkills);
-        if (typeof data.cash === 'number') this.cash = Math.max(80, data.cash);
+        if (data.ownedEquipment) Object.assign(this.ownedEquipment, data.ownedEquipment);
+        if (data.equipped) Object.assign(this.equipped, data.equipped);
+        if (typeof data.cash === 'number') this.cash = Math.max(100, data.cash);
         if (typeof data.totalServed === 'number') this.totalServed = data.totalServed;
         if (typeof data.totalKills === 'number') this.totalKills = data.totalKills;
         if (data.rawExtractors) {
@@ -1504,6 +2076,7 @@
           for (const k of Object.keys(data.gates)) {
             if (this.gates[k]) {
               Object.assign(this.gates[k], data.gates[k]);
+              this.gates[k].unlocked = true;
               if (this.gates[k].hp <= 0) this.gates[k].hp = this.gates[k].maxHp;
             }
           }
@@ -1586,13 +2159,13 @@
       }
 
       document.getElementById('btn-zoom-in')?.addEventListener('click', () => {
-        this.world.setZoom(this.world.targetZoom + 0.14);
+        this.world.setZoom(this.world.targetZoom + 0.12);
       });
       document.getElementById('btn-zoom-out')?.addEventListener('click', () => {
-        this.world.setZoom(this.world.targetZoom - 0.14);
+        this.world.setZoom(this.world.targetZoom - 0.12);
       });
       document.getElementById('btn-zoom-reset')?.addEventListener('click', () => {
-        this.world.setZoom(0.72);
+        this.world.setZoom(0.56);
       });
 
       document.querySelectorAll('.strat-arrow').forEach((btn) => {
@@ -1621,6 +2194,26 @@
         const enabled = this.audio.toggle();
         const btn = document.getElementById('btn-mute');
         if (btn) btn.textContent = enabled ? '🔊 Audio' : '🔇 Muted';
+      });
+
+      // Main Character Loadout Modal Open/Close
+      document.getElementById('btn-open-loadout')?.addEventListener('click', () => {
+        this.renderLoadoutModal();
+        document.getElementById('modal-loadout')?.classList.add('open');
+      });
+      document.getElementById('btn-close-loadout')?.addEventListener('click', () => {
+        document.getElementById('modal-loadout')?.classList.remove('open');
+      });
+
+      // Character Preview Showcase Modal Open/Close
+      document.getElementById('btn-open-characters')?.addEventListener('click', () => {
+        document.getElementById('modal-characters')?.classList.add('open');
+      });
+      document.getElementById('btn-close-characters')?.addEventListener('click', () => {
+        document.getElementById('modal-characters')?.classList.remove('open');
+      });
+      document.getElementById('btn-play-from-chars')?.addEventListener('click', () => {
+        document.getElementById('modal-characters')?.classList.remove('open');
       });
 
       document.getElementById('btn-open-seaf')?.addEventListener('click', () => {

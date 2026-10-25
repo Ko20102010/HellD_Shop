@@ -1,7 +1,7 @@
 /* ==========================================================================
    HELLDIVERS PLEASE! — Super Earth Arsenal & 2D Factorio War-Zone Tycoon
-   Version: v0.0.02
-   Stylesheet: Responsive Mobile/Desktop HUD, Skill Tree & Defeat Modal
+   Version: v0.0.04
+   Stylesheet: Responsive Mobile/Desktop HUD, Skill Tree, Defeat & 角色圖鑑 Modal
    ========================================================================== */
 
 :root {
@@ -199,6 +199,12 @@ html, body {
   border-color: #e9d5ff;
 }
 
+.hud-btn.btn-char {
+  background: linear-gradient(135deg, #f97316, #ea580c);
+  color: #ffffff;
+  border-color: #fed7aa;
+}
+
 .hud-btn.btn-stratagem {
   background: linear-gradient(135deg, #ef4444, #b91c1c);
   color: #fff;
@@ -334,7 +340,7 @@ html, body {
 }
 
 /* ==========================================================================
-   MODALS
+   MODALS & CHARACTER SHOWCASE GALLERY (角色預覽圖鑑)
    ========================================================================== */
 .modal-backdrop {
   position: fixed;
@@ -365,6 +371,11 @@ html, body {
   overflow: hidden;
 }
 
+.modal-card.modal-wide {
+  max-width: 1060px;
+  max-height: 91vh;
+}
+
 .modal-header {
   padding: 13px 18px;
   background: rgba(30, 41, 59, 0.95);
@@ -372,6 +383,7 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 10px;
 }
 
 .modal-title {
@@ -404,6 +416,92 @@ html, body {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
   gap: 10px;
+}
+
+/* Character Showcase Grid */
+.char-showcase-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(305px, 1fr));
+  gap: 12px;
+}
+
+.char-card {
+  background: rgba(30, 41, 59, 0.88);
+  border: 1.5px solid rgba(148, 163, 184, 0.35);
+  border-radius: 12px;
+  padding: 11px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  transition: border-color 0.15s ease, transform 0.12s ease;
+}
+
+.char-card:hover {
+  border-color: var(--hd-yellow);
+  transform: translateY(-2px);
+}
+
+.char-canvas-box {
+  width: 124px;
+  height: 114px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 2px solid rgba(250, 204, 21, 0.4);
+  background: #090d14;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.char-canvas-box canvas {
+  width: 124px;
+  height: 114px;
+  display: block;
+}
+
+.char-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.char-badge {
+  display: inline-block;
+  align-self: flex-start;
+  font-family: var(--font-display);
+  font-size: 0.64rem;
+  font-weight: 900;
+  padding: 2px 7px;
+  border-radius: 999px;
+  color: #090d14;
+  background: var(--hd-yellow);
+}
+
+.char-name-en {
+  font-family: var(--font-display);
+  font-size: 0.84rem;
+  font-weight: 900;
+  color: #f8fafc;
+}
+
+.char-name-zh {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #fde047;
+}
+
+.char-stats-line {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #38bdf8;
+}
+
+.char-desc-text {
+  font-size: 0.73rem;
+  color: #cbd5e1;
+  line-height: 1.3;
 }
 
 .upgrade-item {

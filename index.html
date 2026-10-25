@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>HELLDIVERS PLEASE! — 2D Factorio &amp; Carbot War-Zone Tycoon (v0.0.03)</title>
+  <title>HELLDIVERS PLEASE! — 2D Factorio &amp; Carbot War-Zone Tycoon (v0.0.04)</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
@@ -24,18 +24,18 @@
           <div class="brand-badge">
             <span>🦅</span>
             <span class="brand-title">HELLDIVERS PLEASE!</span>
-            <span class="version-pill" id="hud-version">v0.0.03</span>
+            <span class="version-pill" id="hud-version">v0.0.04</span>
           </div>
 
           <div class="stat-pill cash-pill" id="cash-pill-el">
             <span>💵</span>
             <div>
               <div class="stat-label">Requisition</div>
-              <div class="stat-val" id="hud-cash">$120</div>
+              <div class="stat-val" id="hud-cash">$150</div>
             </div>
           </div>
 
-          <div class="stat-pill medal-pill" title="Permanent Warbond Medals (Kept Forever Even If Gates Fall!)">
+          <div class="stat-pill medal-pill" title="Permanent Warbond Medals (Kept Forever Even If Inner Gate 1 Falls!)">
             <span>⭐</span>
             <div>
               <div class="stat-label">Forever Medals</div>
@@ -43,11 +43,11 @@
             </div>
           </div>
 
-          <div class="stat-pill gate-pill" title="Active Defense Gates HP (If any Gate hits 0 HP = Defeat!)">
+          <div class="stat-pill gate-pill" title="3 Sequential Gate Layers (Gate 3 Outer -> Gate 2 Middle -> Gate 1 Inner)">
             <span>🛡️</span>
             <div>
-              <div class="stat-label">Gate HP</div>
-              <div class="stat-val" id="hud-gates-hp">100%</div>
+              <div class="stat-label">3-Layer Gates</div>
+              <div class="stat-val" id="hud-gates-hp">G3:100% G2:100% G1:100%</div>
             </div>
           </div>
 
@@ -55,7 +55,7 @@
             <span>🎒</span>
             <div>
               <div class="stat-label">Carry Stack</div>
-              <div class="stat-val"><span id="hud-carry">3</span> / <span id="hud-carry-max">14</span></div>
+              <div class="stat-val"><span id="hud-carry">5</span> / <span id="hud-carry-max">16</span></div>
             </div>
           </div>
 
@@ -78,6 +78,12 @@
             <button class="strat-trigger-btn hud-btn btn-stratagem" id="btn-call-stratagem">🦅 500KG BOOST</button>
           </div>
 
+          <button class="hud-btn btn-char" id="btn-open-characters" title="Preview All 12 Carbot Characters, Mechs &amp; Enemies (全角色圖鑑)">
+            🎭 角色 Preview
+          </button>
+          <button class="hud-btn btn-skill" id="btn-open-loadout" title="Equip Weapons, Armor, Guard Dog Drone &amp; Mechs (主角色裝備)">
+            🛡️ 裝備 Loadout
+          </button>
           <button class="hud-btn primary-cta btn-primary" id="btn-open-seaf">🪖 SEAF &amp; Upgrades</button>
           <button class="hud-btn btn-skill" id="btn-open-skills">🌟 Forever Skills</button>
           <button class="hud-btn btn-zip" id="btn-open-github" style="border-color:#4ade80;color:#4ade80;">📦 GitHub ZIP</button>
@@ -90,11 +96,11 @@
       <div id="objective-ticker">
         <div id="objective-banner">
           <span>📡</span>
-          <span id="objective-text">DIRECTIVE: Sell 🔫 Guns &amp; 🦺 Cloth to Helldivers, haul (搬) 🧱 Ammo to Gate Alpha Turret, or build Factorio Conveyor Belts!</span>
+          <span id="objective-text">DIRECTIVE: Harvest ⛏️ Iron &amp; 🛢️ E-710 in Sector A ➔ Feed Factory Input Hoppers ➔ Sell 🔫 Guns &amp; defend Gate 3 ➔ Gate 2 ➔ Gate 1!</span>
         </div>
       </div>
 
-      <!-- RIGHT-SIDE ZOOM CONTROLS FOR BIG FACTORIO SHOP -->
+      <!-- RIGHT-SIDE ZOOM CONTROLS FOR BIG 4200x3800 FACTORIO SHOP -->
       <div id="zoom-controls">
         <button class="hud-btn" id="btn-zoom-in" title="Zoom In">+</button>
         <button class="hud-btn" id="btn-zoom-out" title="Zoom Out">−</button>
@@ -110,7 +116,9 @@
       <!-- BOTTOM CONTROLS & INVENTORY BADGES -->
       <footer id="hud-bottom">
         <div class="controls-hint">
-          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px;">
+          <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:4px;">
+            <span class="version-pill" id="inv-badge-raw_iron" title="Raw Super Iron Ore">⛏️ 1</span>
+            <span class="version-pill" id="inv-badge-raw_e710" title="Raw E-710 Fuel">🛢️ 1</span>
             <span class="version-pill" id="inv-badge-cloth">🦺 1</span>
             <span class="version-pill" id="inv-badge-gun">🔫 2</span>
             <span class="version-pill" id="inv-badge-resource">📦 0</span>
@@ -119,7 +127,7 @@
             <span class="version-pill" id="inv-badge-mech">🤖 0</span>
             <span class="version-pill" id="inv-badge-warship">🚀 0</span>
           </div>
-          <strong>2D FACTORIO + CARBOT:</strong> Sell <strong>🔫 Guns &amp; 🦺 Cloth</strong> at the Counter (or directly to customers!), haul (搬) <strong>🧱 Ammo</strong> to Gate Turrets or build <strong>Conveyor Belts</strong>, and defend all 3 Gates (HP = 0 means Defeat, keep <strong>🌟 Forever Skills</strong>!).
+          <strong>v0.0.04 PRODUCTION &amp; 3-LAYER SIEGE:</strong> Harvest <strong>⛏️ Iron / 🛢️ E-710</strong> in Sector A ➔ feed <strong>📥 Input Hoppers</strong> to craft 🔫 Guns, 🚙 Vehicles &amp; 🤖 Mechs ➔ defend <strong>Outer Gate 3 ➔ Middle Gate 2 ➔ Inner Gate 1</strong>!
         </div>
 
         <div class="mobile-action-cluster">
@@ -129,16 +137,62 @@
       </footer>
     </div>
 
-    <!-- UPGRADES, CONVEYORS & RAW SPEED MODAL -->
-    <div class="modal-backdrop" id="modal-seaf">
-      <div class="modal-card">
+    <!-- ======================================================================
+         NEW IN v0.0.04: MAIN CHARACTER 4-SLOT EQUIPMENT & LOADOUT MODAL (🛡️ 裝備 Loadout)
+         ====================================================================== -->
+    <div class="modal-backdrop" id="modal-loadout">
+      <div class="modal-card modal-wide">
         <div class="modal-header">
-          <div class="modal-title">🪖 SUPER EARTH LOGISTICS, RAW SPEED &amp; CONVEYORS</div>
+          <div class="modal-title">🛡️ COMMANDER 4-SLOT EQUIPMENT &amp; MECH LOADOUT (主角色武器/裝甲/無人機/機甲裝備)</div>
+          <button class="modal-close-btn modal-close" id="btn-close-loadout">✕</button>
+        </div>
+        <div class="modal-body">
+          <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;background:rgba(56,189,248,0.12);border:1px solid #38bdf8;padding:10px 14px;border-radius:10px;">
+            <div>
+              <div style="font-family:var(--font-display);font-weight:900;color:#fde047;font-size:0.92rem;">
+                💵 AVAILABLE REQUISITION: <span id="loadout-modal-cash">$150</span>
+              </div>
+              <div style="font-size:0.78rem;color:#e2e8f0;">
+                Unlock and equip Primary Weapons (<strong>Breaker Shotgun, Quasar Cannon</strong>), Tactical Armor, the orbiting <strong>🛸 Guard Dog Laser Drone</strong>, or personally pilot the <strong>🚙 Recon Vehicle</strong> and <strong>🤖 EXO-45 Patriot Mech</strong>! All unlocked gear persists across runs!
+              </div>
+            </div>
+          </div>
+          <div class="upgrade-grid" id="loadout-grid"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================================================================
+         ALL 12 CHARACTERS, STAFF, MECHS & ENEMIES PREVIEW MODAL (全角色動態預覽圖鑑)
+         ====================================================================== -->
+    <div class="modal-backdrop" id="modal-characters">
+      <div class="modal-card modal-wide">
+        <div class="modal-header">
+          <div class="modal-title">🎭 ALL 12 CARBOT CHARACTERS, STAFF, MECHS &amp; ENEMIES PREVIEW (全角色動態預覽圖鑑)</div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <button class="hud-btn btn-primary" id="btn-play-from-chars">🎮 Play Game</button>
+            <button class="modal-close-btn modal-close" id="btn-close-characters">✕</button>
+          </div>
+        </div>
+        <div class="modal-body">
+          <p style="font-size:0.84rem; color:#cbd5e1; line-height:1.4;">
+            Live 60FPS animated preview of all <strong>12 CarbotAnimations-style 2D vector characters, SEAF Miners/Engineers, Automaton &amp; Terminid enemies, Vehicles, Mechs, and 3-Layer Defense Sentries</strong> in <code>v0.0.04</code>.
+          </p>
+          <div class="char-showcase-grid" id="char-showcase-grid"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- UPGRADES, QUARRY SCALE, 3-LAYER GATES & CONVEYORS MODAL -->
+    <div class="modal-backdrop" id="modal-seaf">
+      <div class="modal-card modal-wide">
+        <div class="modal-header">
+          <div class="modal-title">🪖 QUARRY SCALE, 3-LAYER GATE FORTIFICATION, SEAF STAFF &amp; CONVEYORS</div>
           <button class="modal-close-btn modal-close" id="btn-close-seaf">✕</button>
         </div>
         <div class="modal-body">
           <p style="font-size:0.84rem; color:#cbd5e1;">
-            Upgrade <strong>⛏️ Raw Material Drill Speed</strong>, hire <strong>🧱 SEAF Ammo Haulers (搬)</strong> &amp; <strong>🪖 Logistics Staff</strong>, or build automated <strong>Factorio Conveyor Belts</strong>:
+            Expand <strong>⛏️ Quarry Auto-Drill Scale (1–5+ Rigs)</strong>, fortify <strong>🛡️ Gate Layers 3, 2, 1</strong>, hire <strong>⛏️ SEAF Miners</strong> &amp; <strong>🧱 Gate Engineers</strong>, or build <strong>Factorio Conveyor Belts</strong>:
           </p>
           <div class="upgrade-grid" id="upgrades-list"></div>
         </div>
@@ -159,7 +213,7 @@
                 ⭐ PERMANENT WARBOND MEDALS: <span id="skill-modal-medals">3</span>
               </div>
               <div style="font-size:0.78rem; color:#e2e8f0;">
-                Earn ⭐ Medals every 5 customers served, by eliminating Hulks, or by exchanging $150 Requisition below. <strong>All Forever Skills persist even if a Gate falls!</strong>
+                Earn ⭐ Medals every 5 customers served, by eliminating Hulks, or by exchanging $150 Requisition below. <strong>All Forever Skills &amp; Commander Loadout Gear persist even if Inner Gate 1 falls!</strong>
               </div>
             </div>
             <button class="buy-btn medal-btn" id="btn-buy-medal">
@@ -171,19 +225,19 @@
       </div>
     </div>
 
-    <!-- DEFEAT / GATE BREACHED MODAL (HP = 0 -> LOSE, KEEP PERMANENT SKILLS) -->
+    <!-- DEFEAT / INNER GATE 1 BREACHED MODAL -->
     <div class="modal-backdrop" id="modal-defeat">
       <div class="modal-card" style="border-color:#ef4444;">
         <div class="modal-header" style="background:rgba(127, 29, 29, 0.95);">
-          <div class="modal-title" style="color:#fca5a5;">💥 DEFENSE GATE BREACHED — SECTOR OVERRUN!</div>
+          <div class="modal-title" style="color:#fca5a5;">💥 ALL 3 GATE LAYERS BREACHED — SECTOR OVERRUN!</div>
         </div>
         <div class="modal-body">
           <p id="defeat-summary-text" style="font-size:0.95rem; color:#f8fafc; line-height:1.45;">
-            Automaton forces breached a Defense Gate (HP reached 0)! Your current factory sector was overrun, but High Command evacuated your <strong>⭐ Warbond Medals</strong> and <strong>🌟 Permanent Skill Tree</strong> upgrades!
+            Automaton forces broke through Outer Gate 3, Middle Gate 2, and Inner Gate 1! Your current factory run was overrun, but High Command evacuated your <strong>⭐ Warbond Medals</strong>, <strong>🛡️ Commander Loadout Gear</strong>, and <strong>🌟 Permanent Skill Tree</strong> upgrades!
           </p>
           <div style="display:flex; gap:10px; flex-wrap:wrap;">
             <button class="hud-btn btn-primary" id="btn-redeploy-now" style="font-size:0.9rem; padding:10px 18px;">
-              🔄 Redeploy New Factory (Keep Forever Skills!)
+              🔄 Redeploy New Factory (Keep Forever Skills &amp; Gear!)
             </button>
             <button class="hud-btn btn-skill" id="btn-defeat-open-skills" style="font-size:0.9rem; padding:10px 18px;">
               🌟 Spend Forever Medals First
@@ -197,12 +251,12 @@
     <div class="modal-backdrop" id="modal-save">
       <div class="modal-card">
         <div class="modal-header">
-          <div class="modal-title">💾 SAVE / EXPORT COMMAND PROGRESS (v0.0.03)</div>
+          <div class="modal-title">💾 SAVE / EXPORT COMMAND PROGRESS (v0.0.04)</div>
           <button class="modal-close-btn modal-close" id="btn-close-save">✕</button>
         </div>
         <div class="modal-body">
           <p style="font-size:0.84rem; color:#cbd5e1;">
-            Your progress and <strong>🌟 Forever Skill Tree</strong> auto-save to browser storage. Copy or paste a Save Code below:
+            Your progress, <strong>🛡️ Loadout Gear</strong>, and <strong>🌟 Forever Skill Tree</strong> auto-save to browser storage. Copy or paste a Save Code below:
           </p>
           <textarea class="code-textarea" id="save-code-box" placeholder="Save code will appear here..."></textarea>
           <div style="display:flex; gap:8px; flex-wrap:wrap;">
@@ -218,12 +272,12 @@
     <div class="modal-backdrop" id="modal-github">
       <div class="modal-card">
         <div class="modal-header">
-          <div class="modal-title">📦 GITHUB &amp; GITHUB PAGES REPOSITORY PACKAGER (v0.0.03)</div>
+          <div class="modal-title">📦 GITHUB &amp; GITHUB PAGES REPOSITORY PACKAGER (v0.0.04)</div>
           <button class="modal-close-btn modal-close" id="btn-close-github">✕</button>
         </div>
         <div class="modal-body">
           <p style="font-size:0.85rem; color:#cbd5e1; line-height:1.45;">
-            Download a clean, modular GitHub repository archive ready for <strong>GitHub Pages</strong> deployment. Includes <code>index.html</code>, <code>css/style.css</code>, <code>js/config.js</code>, <code>js/audio.js</code>, <code>js/world.js</code>, <code>js/game.js</code>, and <code>README.md</code> (with full <code>v0.0.00</code>–<code>v0.0.03</code> changelog history).
+            Download a clean, modular GitHub repository archive ready for <strong>GitHub Pages</strong> deployment. Includes <code>index.html</code>, <code>css/style.css</code>, <code>js/config.js</code>, <code>js/audio.js</code>, <code>js/world.js</code>, <code>js/game.js</code>, and <code>README.md</code> (with full <code>v0.0.00</code>–<code>v0.0.04</code> changelog history).
           </p>
           <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:4px;">
             <button class="upg-buy-btn hud-btn btn-primary" id="btn-ingame-dl-full">

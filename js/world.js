@@ -1,11 +1,12 @@
 // ============================================================================
 // HELLDIVERS PLEASE! — Super Earth Arsenal & 2D Factorio War-Zone Tycoon
-// Version: v0.0.03
-// Module: High-DPI 2D Factorio + CarbotAnimations Vector World Renderer
+// Version: v0.0.04
+// Module: High-DPI 2D Factorio + CarbotAnimations Vector World,
+//         4200x3800 Zero-Overlap Layout, 3-Layer Sequential Defense Gates,
+//         Recipe Hoppers, Expandable Quarry Rigs, Wearable Mechs & Character Preview
 // ============================================================================
 
 (function () {
-  // Ensure ctx.roundRect polyfill exists on all browsers/WebViews
   if (typeof CanvasRenderingContext2D !== 'undefined' && !CanvasRenderingContext2D.prototype.roundRect) {
     CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
       const radius = Math.min(typeof r === 'number' ? r : 8, w / 2, h / 2);
@@ -31,41 +32,37 @@
       this.height = window.innerHeight || 720;
       this.dpr = Math.min(window.devicePixelRatio || 1, 2);
 
-      // Camera state (world coordinates)
-      this.camX = 0;
+      this.camX = -120;
       this.camZ = 220;
-      this.zoom = 0.72;
-      this.targetZoom = 0.72;
+      this.zoom = 0.56;
+      this.targetZoom = 0.56;
       this.shakeTimer = 0;
       this.shakeIntensity = 0;
 
-      // Animated conveyor phase
       this.beltPhase = 0;
       this.time = 0;
 
-      // Pre-generated war zone craters & rocks for deterministic 2D rendering
       this.craters = [];
-      for (let i = 0; i < 42; i++) {
+      for (let i = 0; i < 64; i++) {
         const seed = (i * 9301 + 49297) % 233280;
-        const rx = ((seed / 233280) - 0.5) * 2280;
-        const rz = -280 - ((i * 4177) % 700);
-        const rad = 24 + (i % 5) * 12;
-        this.craters.push({ x: rx, z: rz, r: rad, rot: (i * 1.1) });
+        const rx = ((seed / 233280) - 0.5) * 3100;
+        const rz = -260 - ((i * 4177) % 1580);
+        const rad = 26 + (i % 6) * 12;
+        this.craters.push({ x: rx, z: rz, r: rad });
       }
 
       this.handleResize();
       window.addEventListener('resize', () => this.handleResize());
 
-      // Mouse wheel zoom support
       this.canvas.addEventListener('wheel', (e) => {
         e.preventDefault();
-        const delta = e.deltaY > 0 ? -0.08 : 0.08;
+        const delta = e.deltaY > 0 ? -0.07 : 0.07;
         this.setZoom(this.targetZoom + delta);
       }, { passive: false });
     }
 
     setZoom(z) {
-      this.targetZoom = Math.max(0.42, Math.min(1.35, z));
+      this.targetZoom = Math.max(0.28, Math.min(1.35, z));
     }
 
     handleResize() {
@@ -98,7 +95,7 @@
 
     render(state, dt) {
       this.time += dt;
-      this.beltPhase = (this.beltPhase + dt * 48) % 24;
+      this.beltPhase = (this.beltPhase + dt * 52) % 24;
       this.zoom += (this.targetZoom - this.zoom) * Math.min(1, dt * 10);
 
       const targetX = state.player.x;
@@ -118,11 +115,9 @@
       ctx.save();
       ctx.scale(this.dpr, this.dpr);
 
-      // Background clear
       ctx.fillStyle = '#090d14';
       ctx.fillRect(0, 0, this.width, this.height);
 
-      // Camera transform
       ctx.translate(this.width * 0.5 + shakeX, this.height * 0.5 + shakeY);
       ctx.scale(this.zoom, this.zoom);
       ctx.translate(-this.camX, -this.camZ);
@@ -130,8 +125,8 @@
       this.drawTerrainAndGrid(ctx, state);
       this.drawConveyorNetwork(ctx, state);
       this.drawFloorPads(ctx, state);
-      this.drawPerimeterAndGates(ctx, state);
-      this.drawRawDrillsAndAmmoPress(ctx, state);
+      this.drawThreeLayerGates(ctx, state);
+      this.drawRawQuarryAndAmmoPress(ctx, state);
       this.drawArsenalFactories(ctx, state);
       this.drawCounterAndCashTowers(ctx, state);
       this.drawWarZoneObjects(ctx, state);
@@ -141,15 +136,321 @@
       ctx.restore();
     }
 
+    // ========================================================================
+    // LIVE ANIMATED 2D CHARACTER SHOWCASE CARD RENDERER (角色預覽圖鑑)
+    // ========================================================================
+    renderCharacterPreviewCard(canvas, charDef, phase) {
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const cw = 150;
+      const ch = 136;
+      if (canvas.width !== cw * dpr || canvas.height !== ch * dpr) {
+        canvas.width = cw * dpr;
+        canvas.height = ch * dpr;
+      }
+
+      ctx.save();
+      ctx.scale(dpr, dpr);
+
+      const grad = ctx.createRadialGradient(cw / 2, ch / 2, 10, cw / 2, ch / 2, 80);
+      grad.addColorStop(0, '#1e293b');
+      grad.addColorStop(1, '#090d14');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, cw, ch);
+
+      ctx.strokeStyle = 'rgba(148, 163, 184, 0.12)';
+      ctx.lineWidth = 1;
+      for (let gx = 0; gx < cw; gx += 25) {
+        ctx.beginPath();
+        ctx.moveTo(gx, 0);
+        ctx.lineTo(gx, ch);
+        ctx.stroke();
+      }
+      for (let gy = 0; gy < ch; gy += 25) {
+        ctx.beginPath();
+        ctx.moveTo(0, gy);
+        ctx.lineTo(cw, gy);
+        ctx.stroke();
+      }
+
+      const cx = cw * 0.5;
+      const cy = ch * 0.62;
+
+      if (charDef.renderType === 'bean') {
+        const ro = charDef.renderOpts || {};
+        this.drawCarbotBean(ctx, cx, cy, {
+          bodyColor: ro.bodyColor,
+          capeColor: ro.capeColor,
+          trimColor: ro.trimColor,
+          visorColor: ro.visorColor,
+          isCommander: ro.isCommander,
+          hasRifle: ro.hasRifle,
+          weaponId: 'w_liberator',
+          walkPhase: phase * 6,
+          scale: 1.42,
+          label: '',
+          stack: ro.stack || []
+        });
+
+        if (ro.hasDrone) {
+          this.drawGuardDogDrone(ctx, cx + Math.cos(phase * 3) * 38, cy - 28 + Math.sin(phase * 3) * 12, phase);
+        }
+
+        if (ro.orderBubble) {
+          ctx.save();
+          ctx.translate(cx, cy - 52);
+          ctx.fillStyle = '#0f172a';
+          ctx.strokeStyle = '#facc15';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.roundRect(-36, -13, 72, 24, 8);
+          ctx.fill();
+          ctx.stroke();
+          ctx.fillStyle = '#ffffff';
+          ctx.font = '900 12px Orbitron, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(ro.orderBubble, 0, -1);
+          ctx.restore();
+        }
+      } else if (charDef.renderType === 'enemy') {
+        const type = charDef.renderOpts?.type || 'trooper';
+        this.drawEnemy(ctx, {
+          type,
+          x: cx,
+          z: cy + 4,
+          hp: 100,
+          maxHp: 100,
+          previewScale: type === 'hulk' ? 1.55 : 1.5,
+          phase
+        });
+      } else if (charDef.renderType === 'mech') {
+        this.drawPatriotMechSprite(ctx, cx, cy + 4, phase, 1.32, true);
+      } else if (charDef.renderType === 'vehicle') {
+        this.drawReconVehicleSprite(ctx, cx, cy + 6, phase, 1.32, true);
+      } else if (charDef.renderType === 'turret') {
+        this.drawSingleTurretMount(
+          ctx,
+          cx,
+          cy + 4,
+          '#facc15',
+          36,
+          50,
+          Math.sin(phase * 2.2) * 0.7 - Math.PI / 2,
+          (Math.floor(phase * 6) % 2 === 0) ? this.time : -10,
+          'GATE 3/2/1 SENTRY'
+        );
+      }
+
+      ctx.restore();
+    }
+
+    drawGuardDogDrone(ctx, x, z, phase = 0) {
+      ctx.save();
+      ctx.translate(x, z);
+      const bob = Math.sin(phase * 6) * 3;
+      ctx.translate(0, bob);
+
+      // Rotor blades
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.75)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(-12, -6, 7, 0, Math.PI * 2);
+      ctx.arc(12, -6, 7, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Drone body
+      ctx.fillStyle = '#eab308';
+      ctx.strokeStyle = '#090d14';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.roundRect(-11, -7, 22, 14, 5);
+      ctx.fill();
+      ctx.stroke();
+
+      // Glowing laser eye
+      ctx.fillStyle = '#38bdf8';
+      ctx.beginPath();
+      ctx.arc(0, 0, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    drawPatriotMechSprite(ctx, x, z, phase = 0, scale = 1, showPilot = false, stack = []) {
+      ctx.save();
+      ctx.translate(x, z);
+      ctx.scale(scale, scale);
+      const step = Math.sin(phase * 5) * 4.5;
+
+      // Shadow
+      ctx.fillStyle = 'rgba(0,0,0,0.48)';
+      ctx.beginPath();
+      ctx.ellipse(0, 26, 28, 12, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Mech Legs
+      ctx.fillStyle = '#334155';
+      ctx.strokeStyle = '#090d14';
+      ctx.lineWidth = 3.5;
+      ctx.fillRect(-17, 6 + step * 0.5, 11, 18);
+      ctx.strokeRect(-17, 6 + step * 0.5, 11, 18);
+      ctx.fillRect(6, 6 - step * 0.5, 11, 18);
+      ctx.strokeRect(6, 6 - step * 0.5, 11, 18);
+
+      // Heavy Boxy Carbot Mech Hull
+      ctx.fillStyle = '#d97706';
+      ctx.beginPath();
+      ctx.roundRect(-24, -28, 48, 38, 9);
+      ctx.fill();
+      ctx.stroke();
+
+      // Yellow Mech Visor Slit
+      ctx.fillStyle = '#fef08a';
+      ctx.fillRect(-15, -15, 30, 8);
+      ctx.strokeRect(-15, -15, 30, 8);
+
+      // Optional Commander Winged Crest on Mech Roof when piloted!
+      if (showPilot) {
+        ctx.fillStyle = '#facc15';
+        ctx.beginPath();
+        ctx.moveTo(-14, -28);
+        ctx.lineTo(-24, -38);
+        ctx.lineTo(-8, -28);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(14, -28);
+        ctx.lineTo(24, -38);
+        ctx.lineTo(8, -28);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+      }
+
+      // Left Rocket Pod
+      ctx.fillStyle = '#1e293b';
+      ctx.fillRect(-36, -24, 12, 26);
+      ctx.strokeRect(-36, -24, 12, 26);
+      ctx.fillStyle = '#ef4444';
+      ctx.beginPath();
+      ctx.arc(-30, -16, 2.8, 0, Math.PI * 2);
+      ctx.arc(-30, -6, 2.8, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Right Rotary Gatling Cannon
+      ctx.fillStyle = '#475569';
+      ctx.fillRect(24, -18, 15, 20);
+      ctx.strokeRect(24, -18, 15, 20);
+
+      // Back stack if piloted by player
+      if (stack && stack.length > 0) {
+        const maxDraw = Math.min(stack.length, 14);
+        for (let i = 0; i < maxDraw; i++) {
+          const entry = stack[i];
+          const sy = -36 - i * 9;
+          ctx.fillStyle = entry.color || '#facc15';
+          ctx.strokeStyle = '#090d14';
+          ctx.lineWidth = 2;
+          ctx.fillRect(-12, sy - 5, 24, 8);
+          ctx.strokeRect(-12, sy - 5, 24, 8);
+        }
+      }
+
+      ctx.restore();
+    }
+
+    drawReconVehicleSprite(ctx, x, z, phase = 0, scale = 1, showPilot = false, stack = []) {
+      ctx.save();
+      ctx.translate(x, z);
+      ctx.scale(scale, scale);
+      const bounce = Math.abs(Math.sin(phase * 8)) * 2;
+
+      ctx.fillStyle = 'rgba(0,0,0,0.45)';
+      ctx.beginPath();
+      ctx.ellipse(0, 20, 32, 11, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.translate(0, -bounce);
+
+      // Off-road tires
+      ctx.fillStyle = '#0f172a';
+      ctx.strokeStyle = '#090d14';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(-18, 13, 9, 0, Math.PI * 2);
+      ctx.arc(18, 13, 9, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      // Armored Buggy Hull
+      ctx.fillStyle = '#4d7c0f';
+      ctx.beginPath();
+      ctx.roundRect(-28, -12, 56, 24, 8);
+      ctx.fill();
+      ctx.stroke();
+
+      // Roll Cage & Windshield
+      ctx.fillStyle = '#facc15';
+      ctx.fillRect(-14, -23, 28, 12);
+      ctx.strokeRect(-14, -23, 28, 12);
+
+      // Roof HMG Turret
+      ctx.fillStyle = '#334155';
+      ctx.fillRect(4, -30, 24, 6);
+      ctx.strokeRect(4, -30, 24, 6);
+
+      if (stack && stack.length > 0) {
+        const maxDraw = Math.min(stack.length, 12);
+        for (let i = 0; i < maxDraw; i++) {
+          const entry = stack[i];
+          const sy = -34 - i * 8;
+          ctx.fillStyle = entry.color || '#facc15';
+          ctx.strokeStyle = '#090d14';
+          ctx.lineWidth = 2;
+          ctx.fillRect(-24, sy, 20, 7);
+          ctx.strokeRect(-24, sy, 20, 7);
+        }
+      }
+
+      ctx.restore();
+    }
+
+    // ========================================================================
+    // 1. TERRAIN, SECTORS & 3-LAYER WAR CORRIDOR (4200 x 3800 ZERO OVERLAP)
+    // ========================================================================
     drawTerrainAndGrid(ctx, state) {
       const W = window.GameConfig.WORLD;
 
+      // Northern War-Zone Scorched Battlefield (z: -1950 to -200)
       const warGrad = ctx.createLinearGradient(0, W.minZ, 0, W.wallZ);
-      warGrad.addColorStop(0, '#1e1b2e');
-      warGrad.addColorStop(0.6, '#27293d');
-      warGrad.addColorStop(1, '#31374d');
+      warGrad.addColorStop(0, '#1a1025');
+      warGrad.addColorStop(0.5, '#231f33');
+      warGrad.addColorStop(1, '#2b3248');
       ctx.fillStyle = warGrad;
-      ctx.fillRect(W.minX - 100, W.minZ - 100, (W.maxX - W.minX) + 200, (W.wallZ - W.minZ) + 100);
+      ctx.fillRect(W.minX - 150, W.minZ - 150, (W.maxX - W.minX) + 300, (W.wallZ - W.minZ) + 150);
+
+      // Flanking canyon walls outside the 3-Layer War Corridor
+      ctx.fillStyle = '#0f172a';
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 4;
+      ctx.fillRect(W.minX, W.minZ, W.corridorMinX - W.minX, W.wallZ - W.minZ);
+      ctx.strokeRect(W.minX, W.minZ, W.corridorMinX - W.minX, W.wallZ - W.minZ);
+      ctx.fillRect(W.corridorMaxX, W.minZ, W.maxX - W.corridorMaxX, W.wallZ - W.minZ);
+      ctx.strokeRect(W.corridorMaxX, W.minZ, W.maxX - W.corridorMaxX, W.wallZ - W.minZ);
+
+      // War Corridor Zone Labels
+      ctx.save();
+      ctx.fillStyle = 'rgba(248, 113, 113, 0.25)';
+      ctx.font = '900 22px Orbitron, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('⚠️ AUTOMATON & TERMINID DROP ZONE — ATTACKS GATE 3 FIRST!', 0, -1760);
+      ctx.fillStyle = 'rgba(251, 146, 60, 0.25)';
+      ctx.fillText('🛡️ OUTER DEFENSE ZONE (BETWEEN GATE 3 & GATE 2)', 0, -1040);
+      ctx.fillStyle = 'rgba(56, 189, 248, 0.25)';
+      ctx.fillText('🛡️ INNER CITADEL ZONE (BETWEEN GATE 2 & CORE GATE 1)', 0, -560);
+      ctx.restore();
 
       for (const c of this.craters) {
         ctx.save();
@@ -164,29 +465,69 @@
         ctx.restore();
       }
 
-      ctx.fillStyle = '#161f2e';
+      // Southern Super Earth Mega-Factory Floor (z: -200 to +1850)
+      ctx.fillStyle = '#141c2b';
       ctx.fillRect(W.minX, W.wallZ, W.maxX - W.minX, W.maxZ - W.wallZ);
 
-      this.drawFloorSector(ctx, -1180, -180, 560, 1080, '#132338', '#38bdf8', 'SECTOR A: RAW EXTRACTION & MUNITIONS');
-      this.drawFloorSector(ctx, -560, 80, 620, 820, '#1b2434', '#facc15', 'SECTOR B: ARSENAL ASSEMBLY LINES');
-      this.drawFloorSector(ctx, 100, 40, 460, 540, '#172b26', '#22c55e', 'SECTOR C: HELLDIVER SALES COUNTER');
-      this.drawFloorSector(ctx, 240, 460, 940, 440, '#261e2e', '#f97316', 'SECTOR D: HEAVY VEHICLE, MECH & DESTROYER BAY');
+      // 4 Non-Overlapping Industrial Sectors with Generous Walkways
+      this.drawFloorSector(
+        ctx,
+        -2000,
+        -120,
+        960,
+        1820,
+        '#112236',
+        '#38bdf8',
+        'SECTOR A: RAW HARVEST QUARRY, AUTO-DRILLS & MUNITIONS PRESS'
+      );
+      this.drawFloorSector(
+        ctx,
+        -940,
+        -120,
+        1300,
+        1820,
+        '#1b2434',
+        '#facc15',
+        'SECTOR B: ARSENAL PRODUCTION LINES (RAW HOPPER ➔ MACHINE ➔ OUTPUT)'
+      );
+      this.drawFloorSector(
+        ctx,
+        460,
+        -120,
+        1540,
+        840,
+        '#142924',
+        '#22c55e',
+        'SECTOR C: QUARTERMASTER SALES COUNTER, QUEUE PLAZA & CASH VAULT'
+      );
+      this.drawFloorSector(
+        ctx,
+        460,
+        820,
+        1540,
+        880,
+        '#241a2c',
+        '#f97316',
+        'SECTOR D: HEAVY VEHICLE, PATRIOT MECH & SUPER DESTROYER HANGAR'
+      );
 
-      ctx.strokeStyle = 'rgba(148, 163, 184, 0.09)';
+      // Factorio Blueprint Grid
+      ctx.strokeStyle = 'rgba(148, 163, 184, 0.08)';
       ctx.lineWidth = 1.5;
       ctx.beginPath();
-      for (let x = W.minX; x <= W.maxX; x += 60) {
+      for (let x = W.minX; x <= W.maxX; x += 80) {
         ctx.moveTo(x, W.wallZ);
         ctx.lineTo(x, W.maxZ);
       }
-      for (let z = W.wallZ; z <= W.maxZ; z += 60) {
+      for (let z = W.wallZ; z <= W.maxZ; z += 80) {
         ctx.moveTo(W.minX, z);
         ctx.lineTo(W.maxX, z);
       }
       ctx.stroke();
 
+      // World Outer Boundary Frame
       ctx.strokeStyle = '#475569';
-      ctx.lineWidth = 14;
+      ctx.lineWidth = 16;
       ctx.strokeRect(W.minX, W.minZ, W.maxX - W.minX, W.maxZ - W.minZ);
     }
 
@@ -195,46 +536,52 @@
       ctx.fillStyle = bg;
       ctx.fillRect(x, z, w, h);
       ctx.strokeStyle = accent;
-      ctx.globalAlpha = 0.35;
-      ctx.lineWidth = 3;
-      ctx.setLineDash([12, 8]);
+      ctx.globalAlpha = 0.38;
+      ctx.lineWidth = 3.5;
+      ctx.setLineDash([14, 9]);
       ctx.strokeRect(x, z, w, h);
       ctx.setLineDash([]);
-      ctx.globalAlpha = 0.7;
+      ctx.globalAlpha = 0.85;
       ctx.fillStyle = accent;
-      ctx.font = '900 15px Orbitron, sans-serif';
-      ctx.fillText(title, x + 16, z + 26);
+      ctx.font = '900 16px Orbitron, sans-serif';
+      ctx.fillText(title, x + 20, z + 30);
       ctx.restore();
     }
 
+    // ========================================================================
+    // 2. FACTORIO CONVEYOR BELT NETWORK
+    // ========================================================================
     drawConveyorNetwork(ctx, state) {
       const AP = window.GameConfig.AMMO_PRESS;
       const gates = window.GameConfig.GATES;
 
+      // Raw Quarry -> Factory Input Hoppers Conveyor Belt
       const rawUnlocked = !!state.conveyors.conv_raw_feed;
       this.drawBeltPath(ctx, [
-        { x: -920, z: 660 },
-        { x: -920, z: 360 },
-        { x: -640, z: 360 },
-        { x: -640, z: 60 }
+        { x: -1150, z: 180 },
+        { x: -1150, z: 680 },
+        { x: -640, z: 680 },
+        { x: -640, z: 160 }
       ], rawUnlocked, '#38bdf8', '⛏️');
 
+      // Munitions Press -> 3 Gate Layers Conveyor Spine
       for (const g of gates) {
         const unlocked = !!state.conveyors[g.conveyorId];
         const path = [
-          { x: AP.x, z: AP.z },
-          { x: AP.x, z: -85 },
-          { x: g.turretX, z: -85 },
-          { x: g.turretX, z: g.turretZ }
+          { x: AP.padX, z: AP.padZ },
+          { x: -820, z: AP.padZ },
+          { x: -820, z: g.turretZ },
+          { x: g.leftTurretX, z: g.turretZ }
         ];
         this.drawBeltPath(ctx, path, unlocked, g.color, '🧱');
       }
 
+      // Factory Output -> Sales Counter Conveyor Belt
       const counterBelt = !!state.conveyors.conv_counter_auto;
       this.drawBeltPath(ctx, [
-        { x: -260, z: 420 },
-        { x: -260, z: 220 },
-        { x: 210, z: 220 }
+        { x: -120, z: 520 },
+        { x: -120, z: 220 },
+        { x: 640, z: 220 }
       ], counterBelt, '#22c55e', '🔫');
     }
 
@@ -249,10 +596,10 @@
       }
 
       if (!active) {
-        ctx.strokeStyle = 'rgba(148, 163, 184, 0.22)';
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.18)';
         ctx.lineWidth = 22;
         ctx.stroke();
-        ctx.strokeStyle = 'rgba(250, 204, 21, 0.28)';
+        ctx.strokeStyle = 'rgba(250, 204, 21, 0.25)';
         ctx.lineWidth = 2;
         ctx.setLineDash([8, 8]);
         ctx.stroke();
@@ -294,8 +641,8 @@
           ctx.stroke();
         }
 
-        const itemStep = 72;
-        const itemPhase = (this.time * 55) % itemStep;
+        const itemStep = 76;
+        const itemPhase = (this.time * 58) % itemStep;
         ctx.font = '15px sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
@@ -320,17 +667,49 @@
       ctx.restore();
     }
 
+    // ========================================================================
+    // 3. INTERACTIVE TRIGGER PADS (ZERO OVERLAP)
+    // ========================================================================
     drawFloorPads(ctx, state) {
       const L = window.GameConfig.LOCATIONS;
 
-      this.drawPadBox(ctx, L.counterDropZone.x, L.counterDropZone.z, 130, 140, '#22c55e', '📦 DROP / SELL', 'Stock Counter or Direct Sell');
-      this.drawPadBox(ctx, L.cashRegisterZone.x, L.cashRegisterZone.z, 120, 110, '#facc15', '💵 COLLECT $REQ', 'Walk Here to Vacuum Cash');
+      this.drawPadBox(
+        ctx,
+        L.counterDropZone.x,
+        L.counterDropZone.z,
+        150,
+        140,
+        '#22c55e',
+        '📦 DROP / SELL',
+        'Stock Counter or Direct Sell'
+      );
+
+      this.drawPadBox(
+        ctx,
+        L.cashRegisterZone.x,
+        L.cashRegisterZone.z,
+        150,
+        110,
+        '#facc15',
+        '💵 COLLECT $REQ',
+        'Walk Here to Vacuum Cash'
+      );
+
+      this.drawPadBox(
+        ctx,
+        L.armoryLoadoutPad.x,
+        L.armoryLoadoutPad.z,
+        165,
+        110,
+        '#a855f7',
+        '🛡️ EQUIP LOADOUT',
+        'Weapons, Guard Dog & Mechs'
+      );
 
       for (const c of window.GameConfig.CONVEYORS) {
         if (state.conveyors[c.id]) continue;
-        if (c.gateId && !state.gates[c.gateId]?.unlocked) continue;
         const rem = Math.max(0, state.conveyorRemaining[c.id] ?? c.cost);
-        this.drawPadBox(ctx, c.padX, c.padZ, 115, 76, c.color, `${c.icon} BELT $${rem}`, c.name);
+        this.drawPadBox(ctx, c.padX, c.padZ, 155, 86, c.color, `${c.icon} BELT $${rem}`, c.name);
       }
 
       for (const item of window.GameConfig.ITEMS) {
@@ -340,27 +719,11 @@
           ctx,
           item.unlockPos.x,
           item.unlockPos.z,
-          140,
-          96,
+          175,
+          104,
           item.color,
           `🔓 UNLOCK ${item.icon} $${rem}`,
-          item.shortName
-        );
-      }
-
-      for (const g of window.GameConfig.GATES) {
-        const gs = state.gates[g.id];
-        if (!gs || gs.unlocked) continue;
-        const rem = Math.max(0, gs.unlockRemaining ?? g.unlockCost);
-        this.drawPadBox(
-          ctx,
-          g.unlockPadX,
-          g.unlockPadZ,
-          165,
-          92,
-          g.color,
-          `🚧 OPEN ${g.shortName.toUpperCase()} $${rem}`,
-          'Unlocks Gate, Turret & Customer Surge'
+          `${item.shortName} (${item.recipeText})`
         );
       }
     }
@@ -368,7 +731,7 @@
     drawPadBox(ctx, x, z, w, h, color, title, subtitle) {
       ctx.save();
       ctx.translate(x, z);
-      ctx.fillStyle = 'rgba(15, 23, 42, 0.78)';
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.84)';
       ctx.fillRect(-w / 2, -h / 2, w, h);
 
       ctx.strokeStyle = color;
@@ -380,113 +743,167 @@
       ctx.fillStyle = color;
       ctx.font = '900 13px Orbitron, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(title, 0, -4);
+      ctx.fillText(title, 0, -5);
 
       if (subtitle) {
-        ctx.fillStyle = '#cbd5e1';
-        ctx.font = '700 11px Rajdhani, sans-serif';
-        ctx.fillText(subtitle, 0, 15);
+        ctx.fillStyle = '#e2e8f0';
+        ctx.font = '700 11.5px Rajdhani, sans-serif';
+        ctx.fillText(subtitle, 0, 14);
       }
       ctx.restore();
     }
 
-    drawPerimeterAndGates(ctx, state) {
+    // ========================================================================
+    // 4. THREE SEQUENTIAL DEFENSE GATE LAYERS (GATE 3 -> GATE 2 -> GATE 1)
+    // ========================================================================
+    drawThreeLayerGates(ctx, state) {
       const W = window.GameConfig.WORLD;
       const gates = window.GameConfig.GATES;
-
-      const wallY = W.wallZ;
-      ctx.save();
-      ctx.fillStyle = '#334155';
-      ctx.strokeStyle = '#0f172a';
-      ctx.lineWidth = 4;
-
-      const segments = [
-        [-1240, -695],
-        [-545, -75],
-        [75, 545],
-        [695, 1240]
-      ];
-      for (const [x1, x2] of segments) {
-        ctx.fillRect(x1, wallY - 22, x2 - x1, 44);
-        ctx.strokeRect(x1, wallY - 22, x2 - x1, 44);
-        ctx.fillStyle = '#facc15';
-        ctx.fillRect(x1 + 6, wallY - 6, x2 - x1 - 12, 12);
-        ctx.fillStyle = '#334155';
-      }
-      ctx.restore();
+      const cMinX = W.corridorMinX;
+      const cMaxX = W.corridorMaxX;
+      const halfOpen = W.gateOpeningWidth * 0.5;
 
       for (const g of gates) {
         const gs = state.gates[g.id];
-        const unlocked = gs && gs.unlocked;
+        if (!gs) continue;
+        const wallY = g.z;
+        const isBroken = gs.hp <= 0;
+        const defLvl = gs.defenseLevel || 1;
+        const upgCost = state.getGateUpgradeCost ? state.getGateUpgradeCost(g.id) : 160;
+
         ctx.save();
+        // Left & Right Armored Blast Walls across the War Corridor
+        ctx.fillStyle = isBroken ? '#334155' : '#1e293b';
+        ctx.strokeStyle = '#090d14';
+        ctx.lineWidth = 4;
+
+        // Left wall segment (cMinX to -halfOpen)
+        ctx.fillRect(cMinX, wallY - 22, (-halfOpen) - cMinX, 44);
+        ctx.strokeRect(cMinX, wallY - 22, (-halfOpen) - cMinX, 44);
+
+        // Right wall segment (+halfOpen to cMaxX)
+        ctx.fillRect(halfOpen, wallY - 22, cMaxX - halfOpen, 44);
+        ctx.strokeRect(halfOpen, wallY - 22, cMaxX - halfOpen, 44);
+
+        // Hazard stripes along wall segments
+        ctx.fillStyle = g.color;
+        ctx.fillRect(cMinX + 16, wallY - 5, (-halfOpen) - cMinX - 32, 10);
+        ctx.fillRect(halfOpen + 16, wallY - 5, cMaxX - halfOpen - 32, 10);
+
+        // Central Blast Gate Doorway (-halfOpen to +halfOpen)
         ctx.translate(g.x, g.z);
 
-        ctx.fillStyle = '#1e293b';
+        // Gate Pillars
+        ctx.fillStyle = '#0f172a';
         ctx.strokeStyle = g.color;
-        ctx.lineWidth = 3;
-        ctx.fillRect(-82, -28, 22, 56);
-        ctx.strokeRect(-82, -28, 22, 56);
-        ctx.fillRect(60, -28, 22, 56);
-        ctx.strokeRect(60, -28, 22, 56);
-
-        if (!unlocked) {
-          ctx.fillStyle = '#475569';
-          ctx.fillRect(-60, -18, 120, 36);
-          ctx.strokeStyle = '#ef4444';
-          ctx.lineWidth = 3;
-          ctx.strokeRect(-60, -18, 120, 36);
-          ctx.fillStyle = '#f8fafc';
-          ctx.font = '900 13px Orbitron, sans-serif';
-          ctx.textAlign = 'center';
-          ctx.fillText(`🔒 ${g.shortName.toUpperCase()} (LOCKED)`, 0, 5);
-          ctx.restore();
-          continue;
-        }
+        ctx.lineWidth = 3.5;
+        ctx.fillRect(-halfOpen - 16, -30, 28, 60);
+        ctx.strokeRect(-halfOpen - 16, -30, 28, 60);
+        ctx.fillRect(halfOpen - 12, -30, 28, 60);
+        ctx.strokeRect(halfOpen - 12, -30, 28, 60);
 
         const hpRatio = Math.max(0, Math.min(1, gs.hp / gs.maxHp));
         const underAttack = (this.time - (gs.lastHitTime || -10)) < 0.6;
-        ctx.fillStyle = underAttack ? 'rgba(239, 68, 68, 0.45)' : 'rgba(56, 189, 248, 0.22)';
-        ctx.fillRect(-60, -12, 120, 24);
-        ctx.strokeStyle = underAttack ? '#ef4444' : g.color;
-        ctx.lineWidth = 3;
-        ctx.setLineDash([10, 6]);
-        ctx.strokeRect(-60, -12, 120, 24);
-        ctx.setLineDash([]);
 
-        const barW = 148;
-        const barH = 16;
+        if (isBroken) {
+          // Broken / Breached Gate Barrier
+          ctx.fillStyle = 'rgba(239, 68, 68, 0.28)';
+          ctx.fillRect(-halfOpen + 12, -14, W.gateOpeningWidth - 24, 28);
+          ctx.strokeStyle = '#ef4444';
+          ctx.lineWidth = 3;
+          ctx.setLineDash([8, 8]);
+          ctx.strokeRect(-halfOpen + 12, -14, W.gateOpeningWidth - 24, 28);
+          ctx.setLineDash([]);
+
+          ctx.fillStyle = '#fca5a5';
+          ctx.font = '900 14px Orbitron, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText(`💥 ${g.shortName.toUpperCase()} BREACHED! (STAND ON PAD TO REBUILD)`, 0, 5);
+        } else {
+          // Active Laser/Blast Shield Gate
+          ctx.fillStyle = underAttack ? 'rgba(239, 68, 68, 0.48)' : 'rgba(56, 189, 248, 0.24)';
+          ctx.fillRect(-halfOpen + 12, -14, W.gateOpeningWidth - 24, 28);
+          ctx.strokeStyle = underAttack ? '#ef4444' : g.color;
+          ctx.lineWidth = 3.5;
+          ctx.setLineDash([12, 6]);
+          ctx.strokeRect(-halfOpen + 12, -14, W.gateOpeningWidth - 24, 28);
+          ctx.setLineDash([]);
+        }
+
+        // Gate Layer HP Bar Overhead
+        const barW = 280;
+        const barH = 20;
         ctx.fillStyle = '#090d14';
-        ctx.fillRect(-barW / 2, -52, barW, barH);
+        ctx.fillRect(-barW / 2, -58, barW, barH);
         ctx.fillStyle = hpRatio > 0.5 ? '#22c55e' : (hpRatio > 0.25 ? '#facc15' : '#ef4444');
-        ctx.fillRect(-barW / 2 + 2, -50, (barW - 4) * hpRatio, barH - 4);
+        ctx.fillRect(-barW / 2 + 2, -56, (barW - 4) * hpRatio, barH - 4);
         ctx.strokeStyle = '#f8fafc';
-        ctx.lineWidth = 1.5;
-        ctx.strokeRect(-barW / 2, -52, barW, barH);
+        ctx.lineWidth = 1.8;
+        ctx.strokeRect(-barW / 2, -58, barW, barH);
 
         ctx.fillStyle = '#ffffff';
-        ctx.font = '900 11px Orbitron, sans-serif';
+        ctx.font = '900 12px Orbitron, sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText(`🛡️ ${g.shortName}: ${Math.ceil(gs.hp)}/${gs.maxHp} HP`, 0, -40);
+        ctx.fillText(
+          `🛡️ LAYER ${g.layerOrder} — ${g.shortName.toUpperCase()} (Lv.${defLvl}): ${Math.ceil(gs.hp)}/${gs.maxHp} HP`,
+          0,
+          -44
+        );
         ctx.restore();
 
+        // Central Load Ammo + Repair/Rebuild Pad
         this.drawPadBox(
           ctx,
           g.ammoPadX,
           g.ammoPadZ,
-          96,
-          64,
-          '#f97316',
-          `🧱 LOAD AMMO`,
-          `搬 Ammo + Repair`
+          170,
+          76,
+          isBroken ? '#ef4444' : '#f97316',
+          isBroken ? `🔧 REBUILD ${g.shortName.toUpperCase()}` : `🧱 LOAD AMMO & REPAIR`,
+          `Ammo: ${gs.ammo}/${g.maxAmmo} | +HP Repair`
         );
 
-        this.drawGateTurret(ctx, g, gs);
+        // Left Upgrade Gate Defense Level Pad
+        this.drawPadBox(
+          ctx,
+          g.upgradePadX,
+          g.upgradePadZ,
+          170,
+          76,
+          g.color,
+          `⬆️ FORTIFY Lv.${defLvl + 1} ($${upgCost})`,
+          `+Max HP & Dual Turret DMG`
+        );
+
+        // Dual Sentry Turrets (Left & Right of the Gate Opening!)
+        this.drawSingleTurretMount(
+          ctx,
+          g.leftTurretX,
+          g.turretZ,
+          g.color,
+          gs.ammo,
+          g.maxAmmo,
+          gs.turretAngle ?? -Math.PI / 2,
+          gs.lastFireTime,
+          `${g.shortName} L-Sentry`
+        );
+        this.drawSingleTurretMount(
+          ctx,
+          g.rightTurretX,
+          g.turretZ,
+          g.color,
+          gs.ammo,
+          g.maxAmmo,
+          gs.turretAngle ?? -Math.PI / 2,
+          gs.lastFireTime,
+          `${g.shortName} R-Sentry`
+        );
       }
     }
 
-    drawGateTurret(ctx, g, gs) {
+    drawSingleTurretMount(ctx, tx, tz, color, ammo, maxAmmo, angle, lastFireTime, labelText) {
       ctx.save();
-      ctx.translate(g.turretX, g.turretZ);
+      ctx.translate(tx, tz);
 
       ctx.fillStyle = '#1e293b';
       ctx.strokeStyle = '#0f172a';
@@ -496,17 +913,17 @@
       ctx.fill();
       ctx.stroke();
 
-      const ammoRatio = Math.max(0, Math.min(1, gs.ammo / g.maxAmmo));
-      ctx.strokeStyle = gs.ammo > 0 ? '#f97316' : '#ef4444';
+      const ammoRatio = Math.max(0, Math.min(1, ammo / Math.max(1, maxAmmo)));
+      ctx.strokeStyle = ammo > 0 ? '#f97316' : '#ef4444';
       ctx.lineWidth = 4;
       ctx.beginPath();
       ctx.arc(0, 0, 22, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * ammoRatio);
       ctx.stroke();
 
       ctx.save();
-      ctx.rotate(gs.turretAngle ?? -Math.PI / 2);
+      ctx.rotate(angle ?? -Math.PI / 2);
 
-      const kick = (this.time - (gs.lastFireTime || 0)) < 0.12 ? -5 : 0;
+      const kick = (this.time - (lastFireTime || 0)) < 0.12 ? -5 : 0;
       ctx.translate(kick, 0);
 
       ctx.fillStyle = '#475569';
@@ -517,7 +934,7 @@
       ctx.fillRect(6, 4, 28, 7);
       ctx.strokeRect(6, 4, 28, 7);
 
-      if ((this.time - (gs.lastFireTime || 0)) < 0.08) {
+      if ((this.time - (lastFireTime || 0)) < 0.08) {
         ctx.fillStyle = '#facc15';
         ctx.beginPath();
         ctx.arc(38, -7, 7, 0, Math.PI * 2);
@@ -525,24 +942,24 @@
         ctx.fill();
       }
 
-      ctx.fillStyle = g.color;
+      ctx.fillStyle = color;
       ctx.beginPath();
       ctx.arc(0, 0, 15, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
       ctx.restore();
 
-      ctx.fillStyle = gs.ammo > 0 ? 'rgba(15, 23, 42, 0.9)' : 'rgba(185, 28, 28, 0.95)';
-      ctx.fillRect(-52, 30, 104, 20);
-      ctx.strokeStyle = gs.ammo > 0 ? '#f97316' : '#fca5a5';
+      ctx.fillStyle = ammo > 0 ? 'rgba(15, 23, 42, 0.9)' : 'rgba(185, 28, 28, 0.95)';
+      ctx.fillRect(-56, 30, 112, 20);
+      ctx.strokeStyle = ammo > 0 ? '#f97316' : '#fca5a5';
       ctx.lineWidth = 1.5;
-      ctx.strokeRect(-52, 30, 104, 20);
+      ctx.strokeRect(-56, 30, 112, 20);
 
       ctx.fillStyle = '#ffffff';
-      ctx.font = '900 11px Orbitron, sans-serif';
+      ctx.font = '900 10.5px Orbitron, sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText(
-        gs.ammo > 0 ? `🧱 AMMO: ${gs.ammo}/${g.maxAmmo}` : `⚠️ NO AMMO (搬🧱!)`,
+        ammo > 0 ? `🧱 ${ammo}/${maxAmmo} (${labelText})` : `⚠️ NO AMMO (搬🧱!)`,
         0,
         44
       );
@@ -550,79 +967,177 @@
       ctx.restore();
     }
 
-    drawRawDrillsAndAmmoPress(ctx, state) {
+    // ========================================================================
+    // 5. SECTOR A: MANUAL HARVEST QUARRY + EXPANDABLE AUTO-MINING RIGS
+    // ========================================================================
+    drawRawQuarryAndAmmoPress(ctx, state) {
       for (const raw of window.GameConfig.RAW_EXTRACTORS) {
         const rs = state.rawExtractors[raw.id];
         const lvl = rs ? rs.level : 1;
         const stock = rs ? rs.stock : 0;
+        const maxBuf = rs ? rs.maxBuffer : raw.baseBuffer;
         const upgradeCost = state.getRawUpgradeCost ? state.getRawUpgradeCost(raw.id) : 100;
 
+        // A. Manual Harvest Field (Rich Ore Veins / E-710 Geysers at raw.harvestPos)
+        const hp = raw.harvestPos;
+        ctx.save();
+        ctx.translate(hp.x, hp.z);
+
+        ctx.fillStyle = raw.id === 'raw_iron' ? 'rgba(56, 189, 248, 0.14)' : 'rgba(168, 85, 247, 0.14)';
+        ctx.beginPath();
+        ctx.arc(0, 0, hp.radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = raw.color;
+        ctx.lineWidth = 3;
+        ctx.setLineDash([10, 6]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Draw 6 animated ore crystal / geyser nodes inside the harvest circle
+        for (let i = 0; i < 6; i++) {
+          const ang = (i / 6) * Math.PI * 2 + this.time * 0.25;
+          const nx = Math.cos(ang) * 68;
+          const nz = Math.sin(ang) * 58;
+          const pulse = 1 + Math.sin(this.time * 4 + i) * 0.12;
+          ctx.save();
+          ctx.translate(nx, nz);
+          ctx.scale(pulse, pulse);
+          ctx.fillStyle = raw.color;
+          ctx.strokeStyle = '#090d14';
+          ctx.lineWidth = 2.5;
+          ctx.beginPath();
+          ctx.arc(0, 0, 18, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+          ctx.font = '18px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(raw.itemIcon, 0, 1);
+          ctx.restore();
+        }
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '900 13px Orbitron, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(`${raw.itemIcon} MANUAL ${raw.shortName.toUpperCase()}`, 0, -hp.radius - 18);
+        ctx.fillStyle = '#fde047';
+        ctx.font = '700 12px Rajdhani, sans-serif';
+        ctx.fillText(`✋ Walk Inside to Harvest ${raw.itemIcon} by Hand!`, 0, -hp.radius - 2);
+        ctx.restore();
+
+        // B. Expandable Multi-Rig Auto-Extractor Array (Scale Lv.1 -> up to 5 visible rigs!)
+        const visibleRigs = Math.min(5, lvl);
         ctx.save();
         ctx.translate(raw.x, raw.z);
 
         ctx.fillStyle = '#1e293b';
         ctx.strokeStyle = '#090d14';
         ctx.lineWidth = 4;
-        ctx.fillRect(-62, -62, 124, 124);
-        ctx.strokeRect(-62, -62, 124, 124);
+        ctx.fillRect(-105, -75, 210, 150);
+        ctx.strokeRect(-105, -75, 210, 150);
 
-        ctx.save();
-        ctx.rotate(this.time * (1.8 + lvl * 0.45));
-        ctx.fillStyle = raw.color;
-        ctx.strokeStyle = '#090d14';
-        ctx.lineWidth = 3;
-        for (let i = 0; i < 8; i++) {
-          ctx.rotate(Math.PI / 4);
-          ctx.fillRect(-8, -42, 16, 84);
-          ctx.strokeRect(-8, -42, 16, 84);
+        // Render 1..5 animated drill rigs based on Scale Level!
+        const rigOffsets = [
+          { x: 0, z: 0 },
+          { x: -55, z: -28 },
+          { x: 55, z: -28 },
+          { x: -55, z: 28 },
+          { x: 55, z: 28 }
+        ];
+        for (let rIdx = 0; rIdx < visibleRigs; rIdx++) {
+          const ro = rigOffsets[rIdx];
+          ctx.save();
+          ctx.translate(ro.x, ro.z);
+          const rigScale = visibleRigs === 1 ? 0.95 : 0.62;
+          ctx.scale(rigScale, rigScale);
+          ctx.rotate(this.time * (2.0 + lvl * 0.35) + rIdx);
+          ctx.fillStyle = raw.color;
+          ctx.strokeStyle = '#090d14';
+          ctx.lineWidth = 3;
+          for (let i = 0; i < 6; i++) {
+            ctx.rotate(Math.PI / 3);
+            ctx.fillRect(-7, -38, 14, 76);
+            ctx.strokeRect(-7, -38, 14, 76);
+          }
+          ctx.beginPath();
+          ctx.arc(0, 0, 18, 0, Math.PI * 2);
+          ctx.fillStyle = '#0f172a';
+          ctx.fill();
+          ctx.stroke();
+          ctx.restore();
         }
-        ctx.beginPath();
-        ctx.arc(0, 0, 22, 0, Math.PI * 2);
-        ctx.fillStyle = '#0f172a';
-        ctx.fill();
-        ctx.stroke();
-        ctx.restore();
 
         const prog = rs ? (rs.progress / rs.cycleTime) : 0;
         ctx.fillStyle = '#090d14';
-        ctx.fillRect(-54, 44, 108, 10);
+        ctx.fillRect(-90, 56, 180, 12);
         ctx.fillStyle = raw.color;
-        ctx.fillRect(-52, 46, 104 * Math.min(1, prog), 6);
+        ctx.fillRect(-88, 58, 176 * Math.min(1, prog), 8);
 
         ctx.fillStyle = '#ffffff';
         ctx.font = '900 13px Orbitron, sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText(`${raw.icon} ${raw.shortName} Lv.${lvl}`, 0, -72);
+        ctx.fillText(`${raw.icon} AUTO ${raw.shortName.toUpperCase()} (SCALE Lv.${lvl} — ${visibleRigs} RIGS)`, 0, -88);
         ctx.fillStyle = '#facc15';
         ctx.font = '700 12px Rajdhani, sans-serif';
-        ctx.fillText(`Speed: ${(1 / (rs?.cycleTime || 1.8)).toFixed(1)}/s | Buffer: ${stock}/${raw.maxBuffer}`, 0, -56);
+        ctx.fillText(`Auto Rate: ${(1 / (rs?.cycleTime || 1.5)).toFixed(1)}/s | Stored: ${stock}/${maxBuf}`, 0, -72);
         ctx.restore();
 
+        // C. Raw Output Pickup Pad (Take raw ore from Auto-Drill buffer)
+        this.drawPadBox(
+          ctx,
+          raw.pickupX,
+          raw.pickupZ,
+          148,
+          86,
+          raw.color,
+          `📤 PICKUP ${raw.itemIcon} (${stock}/${maxBuf})`,
+          `Take Raw ${raw.shortName} to Hoppers`
+        );
+
+        // D. Expand Quarry Scale & Speed Pad
         this.drawPadBox(
           ctx,
           raw.padX,
           raw.padZ,
-          122,
-          88,
+          178,
+          82,
           raw.color,
-          `⬆️ SPEED Lv.${lvl + 1} ($${upgradeCost})`,
-          `Stand to Upgrade / Boost`
+          `⬆️ EXPAND SCALE Lv.${lvl + 1} ($${upgradeCost})`,
+          `Add Drill Rig & +35% Speed`
         );
       }
 
+      // E. Munitions Ammo Press with Input Hopper (Requires 1x ⛏️ Iron -> 3x 🧱 Ammo)
       const AP = window.GameConfig.AMMO_PRESS;
       const ammoStock = state.ammoPress.stock;
+      const ammoInIron = state.ammoPress.inputStock?.raw_iron || 0;
       const ammoProg = state.ammoPress.progress / state.ammoPress.cycleTime;
+
+      // Connector pipe from Input Hopper -> Ammo Press -> Output Pad
+      this.drawStationConnectorPipe(ctx, AP.inputPos, { x: AP.x, z: AP.z }, { x: AP.padX, z: AP.padZ }, '#f97316');
+
+      // Ammo Press Input Hopper Pad
+      this.drawPadBox(
+        ctx,
+        AP.inputPos.x,
+        AP.inputPos.z,
+        155,
+        88,
+        ammoInIron > 0 ? '#38bdf8' : '#ef4444',
+        `📥 AMMO HOPPER: ⛏️${ammoInIron}`,
+        ammoInIron > 0 ? `Recipe: 1⛏️ ➔ 3🧱 Ammo` : `⚠️ DROP ⛏️ IRON HERE!`
+      );
 
       ctx.save();
       ctx.translate(AP.x, AP.z);
       ctx.fillStyle = '#27272a';
       ctx.strokeStyle = '#090d14';
       ctx.lineWidth = 4;
-      ctx.fillRect(-58, -58, 116, 116);
-      ctx.strokeRect(-58, -58, 116, 116);
+      ctx.fillRect(-62, -62, 124, 124);
+      ctx.strokeRect(-62, -62, 124, 124);
 
-      const stampScale = 0.85 + 0.15 * Math.sin(this.time * 8);
+      const stampScale = ammoInIron > 0 ? (0.85 + 0.15 * Math.sin(this.time * 8)) : 0.9;
       ctx.save();
       ctx.scale(stampScale, stampScale);
       ctx.fillStyle = '#f97316';
@@ -633,89 +1148,144 @@
       ctx.font = '26px sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText('🧱', 0, 0);
+      ctx.fillText('🧱', 0, -2);
 
       ctx.fillStyle = '#090d14';
-      ctx.fillRect(-50, 42, 100, 10);
-      ctx.fillStyle = '#f97316';
-      ctx.fillRect(-48, 44, 96 * Math.min(1, ammoProg), 6);
+      ctx.fillRect(-52, 42, 104, 12);
+      ctx.fillStyle = ammoInIron > 0 ? '#f97316' : '#ef4444';
+      ctx.fillRect(-50, 44, 100 * Math.min(1, ammoProg), 8);
 
       ctx.fillStyle = '#ffffff';
       ctx.font = '900 13px Orbitron, sans-serif';
-      ctx.fillText(`🧱 MUNITIONS PRESS`, 0, -68);
+      ctx.fillText(`🧱 MUNITIONS PRESS (1⛏️ ➔ 3🧱)`, 0, -72);
       ctx.restore();
 
       this.drawPadBox(
         ctx,
         AP.padX,
         AP.padZ,
-        118,
+        155,
         88,
         '#f97316',
-        `🧱 PICKUP AMMO (${ammoStock})`,
-        `Carry (搬) to Gate Turrets!`
+        `📤 PICKUP 🧱 AMMO (${ammoStock})`,
+        `Carry (搬) to Gate Layers 3/2/1`
       );
     }
 
+    drawStationConnectorPipe(ctx, inPos, stPos, outPos, color) {
+      ctx.save();
+      ctx.strokeStyle = '#0f172a';
+      ctx.lineWidth = 18;
+      ctx.beginPath();
+      ctx.moveTo(inPos.x, inPos.z);
+      ctx.lineTo(stPos.x, stPos.z);
+      ctx.lineTo(outPos.x, outPos.z);
+      ctx.stroke();
+
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 4;
+      ctx.setLineDash([10, 6]);
+      ctx.beginPath();
+      ctx.moveTo(inPos.x, inPos.z);
+      ctx.lineTo(stPos.x, stPos.z);
+      ctx.lineTo(outPos.x, outPos.z);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // ========================================================================
+    // 6. SECTOR B & D: ARSENAL PRODUCTION LINES (HOPPER -> MACHINE -> OUTPUT)
+    // ========================================================================
     drawArsenalFactories(ctx, state) {
       for (const item of window.GameConfig.ITEMS) {
         if (!state.unlocked[item.id]) continue;
         const st = state.stations[item.id];
         const stock = st ? st.stock : 0;
         const isMax = stock >= item.maxBuffer;
+        const hasIngredients = state.hasStationIngredients ? state.hasStationIngredients(item, st) : true;
         const prog = isMax ? 1 : (st ? st.progress / st.cycleTime : 0);
 
+        // Draw connecting pipeline from Input Hopper -> Machine -> Output Pad
+        this.drawStationConnectorPipe(ctx, item.inputPos, item.stationPos, item.pickupPos, item.color);
+
+        // Format Input Hopper stock string
+        const inStock = st?.inputStock || {};
+        const parts = [];
+        if (item.recipe.raw_iron) parts.push(`⛏️${inStock.raw_iron || 0}/${item.recipe.raw_iron}`);
+        if (item.recipe.raw_e710) parts.push(`🛢️${inStock.raw_e710 || 0}/${item.recipe.raw_e710}`);
+        const hopperStr = parts.join(' ');
+
+        // 1. Input Hopper Pad (Left)
+        this.drawPadBox(
+          ctx,
+          item.inputPos.x,
+          item.inputPos.z,
+          162,
+          86,
+          hasIngredients ? '#38bdf8' : '#ef4444',
+          `📥 HOPPER: ${hopperStr}`,
+          hasIngredients ? `Recipe: ${item.recipeText}` : `⚠️ FEED RAW ORE HERE!`
+        );
+
+        // 2. Fabricator Machine (Center)
         ctx.save();
         ctx.translate(item.stationPos.x, item.stationPos.z);
 
         ctx.fillStyle = '#1e293b';
         ctx.strokeStyle = '#090d14';
         ctx.lineWidth = 4;
-        ctx.fillRect(-56, -56, 112, 112);
-        ctx.strokeRect(-56, -56, 112, 112);
+        ctx.fillRect(-60, -60, 120, 120);
+        ctx.strokeRect(-60, -60, 120, 120);
 
-        ctx.strokeStyle = item.color;
+        ctx.strokeStyle = hasIngredients ? item.color : '#ef4444';
         ctx.lineWidth = 3;
-        ctx.strokeRect(-48, -48, 96, 96);
+        ctx.strokeRect(-52, -52, 104, 104);
 
         ctx.save();
-        if (!isMax) ctx.rotate(this.time * 3.2);
+        if (!isMax && hasIngredients) ctx.rotate(this.time * 3.4);
         ctx.strokeStyle = 'rgba(255,255,255,0.22)';
         ctx.lineWidth = 5;
         ctx.beginPath();
-        ctx.arc(0, -4, 24, 0, Math.PI * 2);
+        ctx.arc(0, -6, 25, 0, Math.PI * 2);
         ctx.stroke();
         ctx.restore();
 
         ctx.font = '30px sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(item.icon, 0, -4);
+        ctx.fillText(item.icon, 0, -6);
 
         ctx.fillStyle = '#090d14';
-        ctx.fillRect(-46, 34, 92, 12);
-        ctx.fillStyle = isMax ? '#ef4444' : item.color;
-        ctx.fillRect(-44, 36, 88 * Math.min(1, prog), 8);
+        ctx.fillRect(-48, 34, 96, 12);
+        ctx.fillStyle = !hasIngredients ? '#ef4444' : (isMax ? '#facc15' : item.color);
+        ctx.fillRect(-46, 36, 92 * Math.min(1, prog), 8);
 
         ctx.fillStyle = '#ffffff';
         ctx.font = '900 13px Orbitron, sans-serif';
-        ctx.fillText(`${item.icon} ${item.shortName}`, 0, -68);
+        ctx.fillText(`${item.icon} ${item.shortName.toUpperCase()}`, 0, -74);
+        ctx.fillStyle = hasIngredients ? '#fde047' : '#fca5a5';
+        ctx.font = '700 11.5px Rajdhani, sans-serif';
+        ctx.fillText(hasIngredients ? `Recipe: ${item.recipeText}` : `⏸️ WAITING FOR RAW INPUT`, 0, -59);
 
         ctx.restore();
 
+        // 3. Output Pickup Pad (Right)
         this.drawPadBox(
           ctx,
           item.pickupPos.x,
           item.pickupPos.z,
-          104,
-          82,
-          isMax ? '#ef4444' : item.color,
-          isMax ? `${item.icon} MAX (${stock}/${item.maxBuffer})` : `${item.icon} READY: ${stock}/${item.maxBuffer}`,
-          `Sell: $${state.getItemSellPrice(item)}`
+          158,
+          86,
+          isMax ? '#facc15' : item.color,
+          `📤 READY: ${stock}/${item.maxBuffer} ${item.icon}`,
+          `Sell Price: $${state.getItemSellPrice(item)}`
         );
       }
     }
 
+    // ========================================================================
+    // 7. SECTOR C: QUARTERMASTER SALES COUNTER & CASH VAULT (ZERO OVERLAP)
+    // ========================================================================
     drawCounterAndCashTowers(ctx, state) {
       const L = window.GameConfig.LOCATIONS;
       const T = L.counterTable;
@@ -732,7 +1302,7 @@
       ctx.fillStyle = '#facc15';
       ctx.font = '900 14px Orbitron, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('🦅 QUARTERMASTER COUNTER', 0, -T.depth / 2 - 12);
+      ctx.fillText('🦅 QUARTERMASTER COUNTER', 0, -T.depth / 2 - 14);
 
       const items = window.GameConfig.ITEMS;
       let rowY = -T.depth / 2 + 28;
@@ -763,11 +1333,11 @@
       const billCount = Math.min(48, Math.ceil(cashVal / 15));
       if (billCount > 0) {
         const cx = L.cashRegisterZone.x;
-        const cz = L.cashRegisterZone.z - 20;
+        const cz = L.cashRegisterZone.z - 22;
         for (let i = 0; i < billCount; i++) {
           const col = i % 2;
           const layer = Math.floor(i / 2);
-          const bx = cx - 22 + col * 44;
+          const bx = cx - 24 + col * 48;
           const by = cz - layer * 4;
           ctx.fillStyle = '#22c55e';
           ctx.strokeStyle = '#14532d';
@@ -782,7 +1352,7 @@
       }
 
       const TC = L.trashCanZone;
-      this.drawPadBox(ctx, TC.x, TC.z, 92, 82, '#ef4444', '🗑️ DUMP / CLEAR', 'Clear Held Stack');
+      this.drawPadBox(ctx, TC.x, TC.z, 130, 84, '#ef4444', '🗑️ DUMP / CLEAR', 'Clear Held Stack');
     }
 
     drawWarZoneObjects(ctx, state) {
@@ -790,9 +1360,9 @@
         if (s.cleared) continue;
         ctx.save();
         ctx.translate(s.x, s.z);
-        ctx.fillStyle = 'rgba(203, 213, 225, 0.25)';
+        ctx.fillStyle = 'rgba(203, 213, 225, 0.22)';
         ctx.beginPath();
-        ctx.arc(0, 0, 34, 0, Math.PI * 2);
+        ctx.arc(0, 0, 36, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
       }
@@ -803,8 +1373,8 @@
         ctx.fillStyle = pod.rescued ? '#1e293b' : '#0284c7';
         ctx.strokeStyle = pod.rescued ? '#475569' : '#38bdf8';
         ctx.lineWidth = 3;
-        ctx.fillRect(-38, -38, 76, 76);
-        ctx.strokeRect(-38, -38, 76, 76);
+        ctx.fillRect(-40, -40, 80, 80);
+        ctx.strokeRect(-40, -40, 80, 80);
 
         ctx.fillStyle = '#ffffff';
         ctx.font = '900 12px Orbitron, sans-serif';
@@ -812,15 +1382,15 @@
         if (pod.rescued) {
           ctx.fillText(`❄️ THAWING (${Math.ceil(pod.cooldown)}s)`, 0, 5);
         } else {
-          ctx.fillText(`🥶 CRYO HELLDIVER`, 0, -46);
+          ctx.fillText(`🥶 CRYO HELLDIVER`, 0, -48);
           ctx.fillStyle = '#facc15';
-          ctx.fillText(`Feed ${pod.needed - pod.fed} 📦/🛢️ -> +1 SEAF!`, 0, 52);
+          ctx.fillText(`Feed ${pod.needed - pod.fed} Items -> +1 SEAF!`, 0, 54);
           this.drawCarbotBean(ctx, 0, 6, {
             bodyColor: '#38bdf8',
             capeColor: '#0284c7',
             visorColor: '#bae6fd',
             isCommander: false,
-            scale: 0.75,
+            scale: 0.78,
             walkPhase: 0
           });
         }
@@ -832,7 +1402,7 @@
         ctx.translate(d.x, d.z + Math.sin(this.time * 5 + d.id) * 4);
         ctx.fillStyle = '#0f172a';
         ctx.beginPath();
-        ctx.arc(0, 0, 16, 0, Math.PI * 2);
+        ctx.arc(0, 0, 17, 0, Math.PI * 2);
         ctx.fill();
         ctx.strokeStyle = d.color || '#a855f7';
         ctx.lineWidth = 2.5;
@@ -887,6 +1457,8 @@
         trimColor = '#facc15',
         visorColor = '#f97316',
         isCommander = false,
+        hasRifle = false,
+        weaponId = 'w_liberator',
         walkPhase = 0,
         scale = 1,
         label = '',
@@ -941,6 +1513,9 @@
 
       ctx.fillStyle = trimColor;
       ctx.fillRect(-13, 0, 26, 5);
+      ctx.beginPath();
+      ctx.arc(0, 2.5, 3.2, 0, Math.PI * 2);
+      ctx.fill();
 
       ctx.fillStyle = visorColor;
       ctx.strokeStyle = '#090d14';
@@ -982,6 +1557,30 @@
       ctx.arc(-18, 3, 5.5, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
+
+      if (hasRifle) {
+        if (weaponId === 'w_quasar') {
+          ctx.fillStyle = '#ca8a04';
+          ctx.fillRect(8, -4, 24, 9);
+          ctx.strokeRect(8, -4, 24, 9);
+          ctx.fillStyle = '#38bdf8';
+          ctx.fillRect(26, -2, 6, 5);
+        } else if (weaponId === 'w_breaker') {
+          ctx.fillStyle = '#9a3412';
+          ctx.fillRect(9, -2, 20, 7);
+          ctx.strokeRect(9, -2, 20, 7);
+          ctx.fillStyle = '#f97316';
+          ctx.fillRect(14, 0, 7, 4);
+        } else {
+          ctx.fillStyle = '#334155';
+          ctx.fillRect(10, -1, 18, 6);
+          ctx.strokeRect(10, -1, 18, 6);
+          ctx.fillStyle = '#facc15';
+          ctx.fillRect(14, 0, 5, 4);
+        }
+      }
+
+      ctx.fillStyle = bodyColor;
       ctx.beginPath();
       ctx.arc(18, 3, 5.5, 0, Math.PI * 2);
       ctx.fill();
@@ -990,16 +1589,16 @@
       ctx.restore();
 
       if (stack && stack.length > 0) {
-        const maxDraw = Math.min(stack.length, 14);
+        const maxDraw = Math.min(stack.length, 15);
         for (let i = 0; i < maxDraw; i++) {
           const entry = stack[i];
-          const sy = -30 - i * 11;
-          const sway = Math.sin(this.time * 6 + i * 0.4) * (i * 0.45);
+          const sy = -30 - i * 10;
+          const sway = Math.sin(this.time * 6 + i * 0.4) * (i * 0.4);
           ctx.fillStyle = entry.color || '#facc15';
           ctx.strokeStyle = '#090d14';
           ctx.lineWidth = 2;
-          ctx.fillRect(-12 + sway, sy - 6, 24, 10);
-          ctx.strokeRect(-12 + sway, sy - 6, 24, 10);
+          ctx.fillRect(-12 + sway, sy - 6, 24, 9);
+          ctx.strokeRect(-12 + sway, sy - 6, 24, 9);
           if (i === maxDraw - 1) {
             ctx.font = '14px sans-serif';
             ctx.textAlign = 'center';
@@ -1020,6 +1619,12 @@
 
     drawPlayerCommander(ctx, state) {
       const p = state.player;
+      const eq = state.getEquippedItems ? state.getEquippedItems() : {};
+      const armor = eq.armor || { bodyColor: '#1e293b', capeColor: '#eab308', trimColor: '#facc15' };
+      const weapon = eq.weapon || { id: 'w_liberator' };
+      const backpack = eq.backpack || { hasDrone: false };
+      const mount = eq.mount || { id: 'm_foot' };
+
       if (p.z < window.GameConfig.WORLD.wallZ + 30) {
         ctx.save();
         ctx.translate(p.x, p.z);
@@ -1032,43 +1637,74 @@
         ctx.restore();
       }
 
-      this.drawCarbotBean(ctx, p.x, p.z, {
-        bodyColor: '#1e293b',
-        capeColor: '#eab308',
-        trimColor: '#facc15',
-        visorColor: '#f97316',
-        isCommander: true,
-        walkPhase: p.walkPhase || 0,
-        scale: 1.12,
-        label: `🦅 YOU (${p.inventory.length}/${state.getPlayerMaxCapacity()})`,
-        stack: p.inventory
-      });
+      const labelText = `🦅 YOU (${p.inventory.length}/${state.getPlayerMaxCapacity()})`;
+
+      if (mount.id === 'm_mech') {
+        this.drawPatriotMechSprite(ctx, p.x, p.z, p.walkPhase * 0.25, 1.28, true, p.inventory);
+        ctx.save();
+        ctx.fillStyle = '#fde047';
+        ctx.font = '900 12px Orbitron, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(`🤖 MECH PILOT — ${labelText}`, p.x, p.z + 44);
+        ctx.restore();
+      } else if (mount.id === 'm_vehicle') {
+        this.drawReconVehicleSprite(ctx, p.x, p.z, p.walkPhase * 0.25, 1.28, true, p.inventory);
+        ctx.save();
+        ctx.fillStyle = '#fde047';
+        ctx.font = '900 12px Orbitron, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(`🚙 RECON DRIVER — ${labelText}`, p.x, p.z + 38);
+        ctx.restore();
+      } else {
+        this.drawCarbotBean(ctx, p.x, p.z, {
+          bodyColor: armor.bodyColor || '#1e293b',
+          capeColor: armor.capeColor || '#eab308',
+          trimColor: armor.trimColor || '#facc15',
+          visorColor: '#f97316',
+          isCommander: true,
+          hasRifle: true,
+          weaponId: weapon.id,
+          walkPhase: p.walkPhase || 0,
+          scale: 1.15,
+          label: labelText,
+          stack: p.inventory
+        });
+      }
+
+      if (backpack.hasDrone) {
+        const dx = p.x + Math.cos(this.time * 3.2) * 52;
+        const dz = p.z - 28 + Math.sin(this.time * 3.2) * 26;
+        this.drawGuardDogDrone(ctx, dx, dz, this.time);
+      }
     }
 
     drawSeafWorker(ctx, w) {
       const isAmmo = w.role === 'ammo';
+      const isMiner = w.role === 'miner';
       this.drawCarbotBean(ctx, w.x, w.z, {
-        bodyColor: isAmmo ? '#7c2d12' : '#1d4ed8',
-        capeColor: isAmmo ? '#f97316' : '#38bdf8',
+        bodyColor: isMiner ? '#0f766e' : (isAmmo ? '#7c2d12' : '#1d4ed8'),
+        capeColor: isMiner ? '#2dd4bf' : (isAmmo ? '#f97316' : '#38bdf8'),
         trimColor: '#f8fafc',
-        visorColor: '#38bdf8',
+        visorColor: isMiner ? '#99f6e4' : (isAmmo ? '#fb923c' : '#38bdf8'),
         isCommander: false,
         walkPhase: w.walkPhase || 0,
-        scale: 0.92,
-        label: isAmmo ? '🧱 SEAF AMMO' : '🪖 SEAF STAFF',
+        scale: 0.94,
+        label: isMiner ? '⛏️ SEAF MINER' : (isAmmo ? '🧱 SEAF ENGINEER' : '🪖 SEAF STAFF'),
         stack: w.inventory
       });
     }
 
     drawHelldiverCustomer(ctx, c) {
+      const isVip = c.item && c.item.tier >= 5;
       this.drawCarbotBean(ctx, c.x, c.z, {
-        bodyColor: c.color || '#1e293b',
-        capeColor: '#dc2626',
-        trimColor: '#facc15',
-        visorColor: '#fb923c',
-        isCommander: false,
+        bodyColor: isVip ? '#3b0764' : (c.color || '#1e293b'),
+        capeColor: isVip ? '#f59e0b' : '#dc2626',
+        trimColor: isVip ? '#fde047' : '#facc15',
+        visorColor: isVip ? '#fef08a' : '#fb923c',
+        isCommander: isVip,
+        hasRifle: true,
         walkPhase: c.walkPhase || 0,
-        scale: 1.0,
+        scale: isVip ? 1.1 : 1.0,
         label: '',
         stack: []
       });
@@ -1100,7 +1736,8 @@
       ctx.translate(e.x, e.z);
       const isHulk = e.type === 'hulk';
       const isBug = e.type === 'bug';
-      const scale = isHulk ? 1.45 : (isBug ? 1.0 : 1.05);
+      const scale = e.previewScale || (isHulk ? 1.45 : (isBug ? 1.0 : 1.05));
+      const t = e.phase ?? this.time;
       ctx.scale(scale, scale);
 
       ctx.fillStyle = 'rgba(0,0,0,0.45)';
@@ -1108,7 +1745,20 @@
       ctx.ellipse(0, 18, 18, 8, 0, 0, Math.PI * 2);
       ctx.fill();
 
+      const wobble = Math.sin(t * 7) * 2;
+      ctx.translate(0, wobble * 0.4);
+
       if (isBug) {
+        ctx.strokeStyle = '#090d14';
+        ctx.lineWidth = 3;
+        for (const side of [-1, 1]) {
+          for (let l = -1; l <= 1; l++) {
+            ctx.beginPath();
+            ctx.moveTo(side * 12, l * 5);
+            ctx.lineTo(side * 22, l * 8 + Math.sin(t * 12 + l) * 3);
+            ctx.stroke();
+          }
+        }
         ctx.fillStyle = '#65a30d';
         ctx.strokeStyle = '#090d14';
         ctx.lineWidth = 3.5;
@@ -1148,14 +1798,19 @@
           ctx.arc(-22, 2, 9, 0, Math.PI * 2);
           ctx.fill();
           ctx.stroke();
+          ctx.fillStyle = '#dc2626';
+          ctx.fillRect(18, -4, 9, 14);
+          ctx.strokeRect(18, -4, 9, 14);
         }
       }
 
-      const hpRatio = Math.max(0, Math.min(1, e.hp / e.maxHp));
-      ctx.fillStyle = '#090d14';
-      ctx.fillRect(-20, -32, 40, 7);
-      ctx.fillStyle = '#ef4444';
-      ctx.fillRect(-19, -31, 38 * hpRatio, 5);
+      if (!e.previewScale) {
+        const hpRatio = Math.max(0, Math.min(1, e.hp / e.maxHp));
+        ctx.fillStyle = '#090d14';
+        ctx.fillRect(-20, -32, 40, 7);
+        ctx.fillStyle = '#ef4444';
+        ctx.fillRect(-19, -31, 38 * hpRatio, 5);
+      }
       ctx.restore();
     }
 
