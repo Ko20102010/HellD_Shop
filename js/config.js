@@ -5,14 +5,14 @@
 // ============================================================================
 
 window.GameConfig = {
-  VERSION: 'v0.0.08',
-  STORAGE_KEY: 'helldivers_please_save_v0008',
-  MAX_LEVEL: 20,
+  VERSION: 'v0.0.09',
+  STORAGE_KEY: 'helldivers_please_save_v0009',
+  MAX_LEVEL: 10,
 
   // Expanded 4600 x 4000 2D Factorio + Carbot World for 7 Full Horizontal Lanes
   WORLD: {
     minX: -2200,
-    maxX: 2400,
+    maxX: 2700,
     minZ: -1950,
     maxZ: 2050,
     wallZ: -200,
@@ -34,12 +34,12 @@ window.GameConfig = {
   },
 
   WAVE_CONFIG: {
-    initialRestTime: 45,
-    betweenWaveRestTime: 35,
-    baseEnemyCount: 5,
-    enemiesPerWave: 3,
-    spawnIntervalInWave: 1.85,
-    bossWaveEvery: 5
+    initialRestTime: 22,
+    betweenWaveRestTime: 18,
+    baseEnemyCount: 8,
+    enemiesPerWave: 5,
+    spawnIntervalInWave: 1.15,
+    bossWaveEvery: 3
   },
 
   // --------------------------------------------------------------------------
@@ -661,7 +661,7 @@ window.GameConfig = {
       color: '#a855f7',
       unlockedAtStart: false,
       unlockCost: 110,
-      maxLevel: 20,
+      maxLevel: 10,
       harvestPos: { x: -1820, z: 240, radius: 135 },
       x: -1460,
       z: 240,
@@ -684,7 +684,7 @@ window.GameConfig = {
       color: '#38bdf8',
       unlockedAtStart: false,
       unlockCost: 140,
-      maxLevel: 20,
+      maxLevel: 10,
       harvestPos: { x: -1820, z: 780, radius: 135 },
       x: -1460,
       z: 780,
@@ -713,7 +713,7 @@ window.GameConfig = {
     unlockCost: 130,
     baseUpgradeCost: 120,
     costScale: 1.36,
-    maxLevel: 20,
+    maxLevel: 10,
     recipe: { raw_iron: 1 },
     outputBatch: 3,
     initialInput: { raw_iron: 6 },
@@ -749,7 +749,7 @@ window.GameConfig = {
       upgradePadX: -480,
       upgradePadZ: -1200,
       unlockedAtStart: true,
-      maxLevel: 20,
+      maxLevel: 10,
       baseUpgradeCost: 150,
       costScale: 1.35,
       baseMaxHp: 750,
@@ -779,7 +779,7 @@ window.GameConfig = {
       upgradePadX: -480,
       upgradePadZ: -720,
       unlockedAtStart: true,
-      maxLevel: 20,
+      maxLevel: 10,
       baseUpgradeCost: 190,
       costScale: 1.35,
       baseMaxHp: 850,
@@ -809,7 +809,7 @@ window.GameConfig = {
       upgradePadX: -480,
       upgradePadZ: -240,
       unlockedAtStart: true,
-      maxLevel: 20,
+      maxLevel: 10,
       baseUpgradeCost: 240,
       costScale: 1.35,
       baseMaxHp: 950,
@@ -843,7 +843,7 @@ window.GameConfig = {
       rawType: 'raw_e710',
       baseCost: 150,
       costScale: 1.35,
-      maxLevel: 20,
+      maxLevel: 10,
       padX: -1180,
       padZ: 70,
       color: '#a855f7',
@@ -856,7 +856,7 @@ window.GameConfig = {
       rawType: 'raw_iron',
       baseCost: 170,
       costScale: 1.35,
-      maxLevel: 20,
+      maxLevel: 10,
       padX: -1180,
       padZ: 560,
       color: '#38bdf8',
@@ -868,7 +868,7 @@ window.GameConfig = {
       icon: '🛒',
       baseCost: 220,
       costScale: 1.35,
-      maxLevel: 20,
+      maxLevel: 10,
       padX: 160,
       padZ: -40,
       color: '#22c55e',
@@ -880,7 +880,7 @@ window.GameConfig = {
       icon: '⏩',
       baseCost: 190,
       costScale: 1.35,
-      maxLevel: 20,
+      maxLevel: 10,
       gateId: 'gate_1',
       padX: 480,
       padZ: -240,
@@ -893,7 +893,7 @@ window.GameConfig = {
       icon: '⏩',
       baseCost: 260,
       costScale: 1.35,
-      maxLevel: 20,
+      maxLevel: 10,
       gateId: 'gate_2',
       padX: 480,
       padZ: -720,
@@ -906,7 +906,7 @@ window.GameConfig = {
       icon: '⏩',
       baseCost: 340,
       costScale: 1.35,
-      maxLevel: 20,
+      maxLevel: 10,
       gateId: 'gate_3',
       padX: 480,
       padZ: -1200,
@@ -942,7 +942,7 @@ window.GameConfig = {
       unlockCost: 0,
       baseUpgradeCost: 80,
       costScale: 1.35,
-      maxLevel: 20,
+      maxLevel: 10,
       sellPrice: 30,
       cycleTime: 1.75,
       maxBuffer: 12,
@@ -955,10 +955,12 @@ window.GameConfig = {
       stationPos: { x: -460, z: 120 },
       unlockPos: { x: -460, z: 238 },
       pickupPos: { x: -160, z: 120 },
-      counterDropPos: { x: 310, z: 120 },
-      counterPos: { x: 520, z: 120 },
-      cashPos: { x: 720, z: 120 },
-      queueStart: { x: 920, z: 120 },
+      counterDropPos: { x: 280, z: 120 },
+      counterPos: { x: 500, z: 120 },
+      counter2Pos: { x: 820, z: 120 },
+      counter3Pos: { x: 1140, z: 120 },
+      cashPos: { x: 1420, z: 120 },
+      queueStart: { x: 1600, z: 120 },
       description: 'LANE 1 (Lv.1–20): Uses 1x 🛢️ E-710 (Purple Belt) to weave B-01 Capes and sells them at Dedicated Counter #1.'
     },
     {
@@ -974,7 +976,7 @@ window.GameConfig = {
       unlockCost: 120,
       baseUpgradeCost: 110,
       costScale: 1.35,
-      maxLevel: 20,
+      maxLevel: 10,
       sellPrice: 55,
       cycleTime: 1.9,
       maxBuffer: 12,
@@ -987,10 +989,12 @@ window.GameConfig = {
       stationPos: { x: -460, z: 390 },
       unlockPos: { x: -460, z: 508 },
       pickupPos: { x: -160, z: 390 },
-      counterDropPos: { x: 310, z: 390 },
-      counterPos: { x: 520, z: 390 },
-      cashPos: { x: 720, z: 390 },
-      queueStart: { x: 920, z: 390 },
+      counterDropPos: { x: 280, z: 390 },
+      counterPos: { x: 500, z: 390 },
+      counter2Pos: { x: 820, z: 390 },
+      counter3Pos: { x: 1140, z: 390 },
+      cashPos: { x: 1420, z: 390 },
+      queueStart: { x: 1600, z: 390 },
       description: 'LANE 2 (Lv.1–20): Uses 1x ⛏️ Super Iron (Cyan Belt) to forge Liberator Rifles and sells them at Dedicated Counter #2.'
     },
     {
@@ -1006,7 +1010,7 @@ window.GameConfig = {
       unlockCost: 350,
       baseUpgradeCost: 180,
       costScale: 1.36,
-      maxLevel: 20,
+      maxLevel: 10,
       sellPrice: 110,
       cycleTime: 2.3,
       maxBuffer: 12,
@@ -1019,10 +1023,12 @@ window.GameConfig = {
       stationPos: { x: -460, z: 660 },
       unlockPos: { x: -460, z: 778 },
       pickupPos: { x: -160, z: 660 },
-      counterDropPos: { x: 310, z: 660 },
-      counterPos: { x: 520, z: 660 },
-      cashPos: { x: 720, z: 660 },
-      queueStart: { x: 920, z: 660 },
+      counterDropPos: { x: 280, z: 660 },
+      counterPos: { x: 500, z: 660 },
+      counter2Pos: { x: 820, z: 660 },
+      counter3Pos: { x: 1140, z: 660 },
+      cashPos: { x: 1420, z: 660 },
+      queueStart: { x: 1600, z: 660 },
       description: 'LANE 3 (Lv.1–20): Combines 1x ⛏️ Iron + 1x 🛢️ E-710 and sells Munitions Crates at Dedicated Counter #3.'
     },
     {
@@ -1038,7 +1044,7 @@ window.GameConfig = {
       unlockCost: 900,
       baseUpgradeCost: 320,
       costScale: 1.36,
-      maxLevel: 20,
+      maxLevel: 10,
       sellPrice: 220,
       cycleTime: 2.8,
       maxBuffer: 10,
@@ -1051,10 +1057,12 @@ window.GameConfig = {
       stationPos: { x: -460, z: 930 },
       unlockPos: { x: -460, z: 1048 },
       pickupPos: { x: -160, z: 930 },
-      counterDropPos: { x: 310, z: 930 },
-      counterPos: { x: 520, z: 930 },
-      cashPos: { x: 720, z: 930 },
-      queueStart: { x: 920, z: 930 },
+      counterDropPos: { x: 280, z: 930 },
+      counterPos: { x: 500, z: 930 },
+      counter2Pos: { x: 820, z: 930 },
+      counter3Pos: { x: 1140, z: 930 },
+      cashPos: { x: 1420, z: 930 },
+      queueStart: { x: 1600, z: 930 },
       description: 'LANE 4 (Lv.1–20): Combines 1x ⛏️ Iron + 2x 🛢️ E-710 and sells Jump Packs at Dedicated Counter #4.'
     },
     {
@@ -1070,7 +1078,7 @@ window.GameConfig = {
       unlockCost: 2400,
       baseUpgradeCost: 650,
       costScale: 1.38,
-      maxLevel: 20,
+      maxLevel: 10,
       sellPrice: 480,
       cycleTime: 3.5,
       maxBuffer: 8,
@@ -1083,10 +1091,12 @@ window.GameConfig = {
       stationPos: { x: -460, z: 1200 },
       unlockPos: { x: -460, z: 1318 },
       pickupPos: { x: -160, z: 1200 },
-      counterDropPos: { x: 310, z: 1200 },
-      counterPos: { x: 520, z: 1200 },
-      cashPos: { x: 720, z: 1200 },
-      queueStart: { x: 920, z: 1200 },
+      counterDropPos: { x: 280, z: 1200 },
+      counterPos: { x: 500, z: 1200 },
+      counter2Pos: { x: 820, z: 1200 },
+      counter3Pos: { x: 1140, z: 1200 },
+      cashPos: { x: 1420, z: 1200 },
+      queueStart: { x: 1600, z: 1200 },
       description: 'LANE 5 (Lv.1–20): Combines 2x ⛏️ Iron + 1x 🛢️ E-710 to build Recon Buggy Vehicles for Dedicated Counter #5.'
     },
     {
@@ -1102,7 +1112,7 @@ window.GameConfig = {
       unlockCost: 6500,
       baseUpgradeCost: 1400,
       costScale: 1.38,
-      maxLevel: 20,
+      maxLevel: 10,
       sellPrice: 1100,
       cycleTime: 4.4,
       maxBuffer: 6,
@@ -1115,10 +1125,12 @@ window.GameConfig = {
       stationPos: { x: -460, z: 1470 },
       unlockPos: { x: -460, z: 1588 },
       pickupPos: { x: -160, z: 1470 },
-      counterDropPos: { x: 310, z: 1470 },
-      counterPos: { x: 520, z: 1470 },
-      cashPos: { x: 720, z: 1470 },
-      queueStart: { x: 920, z: 1470 },
+      counterDropPos: { x: 280, z: 1470 },
+      counterPos: { x: 500, z: 1470 },
+      counter2Pos: { x: 820, z: 1470 },
+      counter3Pos: { x: 1140, z: 1470 },
+      cashPos: { x: 1420, z: 1470 },
+      queueStart: { x: 1600, z: 1470 },
       description: 'LANE 6 (Lv.1–20): Combines 3x ⛏️ Iron + 2x 🛢️ E-710 to construct Patriot Mechs for Dedicated Counter #6.'
     },
     {
@@ -1134,7 +1146,7 @@ window.GameConfig = {
       unlockCost: 18000,
       baseUpgradeCost: 3500,
       costScale: 1.40,
-      maxLevel: 20,
+      maxLevel: 10,
       sellPrice: 2800,
       cycleTime: 5.5,
       maxBuffer: 5,
@@ -1147,22 +1159,25 @@ window.GameConfig = {
       stationPos: { x: -460, z: 1740 },
       unlockPos: { x: -460, z: 1858 },
       pickupPos: { x: -160, z: 1740 },
-      counterDropPos: { x: 310, z: 1740 },
-      counterPos: { x: 520, z: 1740 },
-      cashPos: { x: 720, z: 1740 },
-      queueStart: { x: 920, z: 1740 },
+      counterDropPos: { x: 280, z: 1740 },
+      counterPos: { x: 500, z: 1740 },
+      counter2Pos: { x: 820, z: 1740 },
+      counter3Pos: { x: 1140, z: 1740 },
+      cashPos: { x: 1420, z: 1740 },
+      queueStart: { x: 1600, z: 1740 },
       description: 'LANE 7 (Lv.1–20): Combines 4x ⛏️ Iron + 4x 🛢️ E-710 to charter SES Super Destroyers at Dedicated Counter #7.'
     }
   ],
 
   LOCATIONS: {
     armoryLoadoutPad: { x: -160, z: -40, radius: 95 },
+    hellpodBay: { x: 220, z: -100, radius: 130, baseCost: 140, costScale: 1.45, maxLevel: 10, baseDropFee: 45 },
     trashCanZone: { x: -1820, z: 1680, radius: 85 },
-    cashRegisterZone: { x: 720, z: 120, radius: 105 },
-    counterDropZone: { x: 310, z: 120, radius: 105 },
-    customerQueueStart: { x: 920, z: 120 },
-    customerSpawn: { x: 2050, z: 660 },
-    customerExit: { x: 2050, z: -60 },
+    cashRegisterZone: { x: 1420, z: 120, radius: 115 },
+    counterDropZone: { x: 280, z: 120, radius: 105 },
+    customerQueueStart: { x: 1600, z: 120 },
+    customerSpawn: { x: 2420, z: 660 },
+    customerExit: { x: 220, z: -100 },
     brazierWest: { x: -760, z: -1540, radius: 95, cost: 3 },
     brazierEast: { x: 760, z: -1540, radius: 95, cost: 3 }
   },
@@ -1174,7 +1189,7 @@ window.GameConfig = {
       icon: '⛏️',
       baseCost: 130,
       costMultiplier: 1.45,
-      maxLevel: 20,
+      maxLevel: 10,
       description: 'Smart AI (Lv.1–20): Hauls un-belted Raw Ore to unique hoppers, OR hand-mines bonus ore from Quarry Veins once Raw Belts are active!'
     },
     {
@@ -1183,7 +1198,7 @@ window.GameConfig = {
       icon: '⚙️',
       baseCost: 120,
       costMultiplier: 1.42,
-      maxLevel: 20,
+      maxLevel: 10,
       description: 'Increases Super Iron & E-710 Auto-Drill speed (+25%/lvl) and expands Quarry storage buffer up to Lv.20.'
     },
     {
@@ -1192,7 +1207,7 @@ window.GameConfig = {
       icon: '🧱',
       baseCost: 150,
       costMultiplier: 1.45,
-      maxLevel: 20,
+      maxLevel: 10,
       description: 'Smart AI (Lv.1–20): Prioritizes manually rebuilding Broken/Damaged Gates, then supplies un-belted Gate Turrets or boosts Ammo Press!'
     },
     {
@@ -1201,7 +1216,7 @@ window.GameConfig = {
       icon: '🪖',
       baseCost: 140,
       costMultiplier: 1.45,
-      maxLevel: 20,
+      maxLevel: 10,
       description: 'Smart AI (Lv.1–20): Stocks un-belted Item Counters, OR patrols all 7 Counters to serve customers faster & auto-collect $REQ when Belts are on!'
     },
     {
@@ -1210,7 +1225,7 @@ window.GameConfig = {
       icon: '🤖',
       baseCost: 240,
       costMultiplier: 1.48,
-      maxLevel: 20,
+      maxLevel: 10,
       description: 'Automatically serves queued Helldivers across all 7 Item Counters faster (+20%/lvl up to Lv.20) and streams Requisition straight to your wallet.'
     },
     {
@@ -1219,7 +1234,7 @@ window.GameConfig = {
       icon: '⚡',
       baseCost: 110,
       costMultiplier: 1.40,
-      maxLevel: 20,
+      maxLevel: 10,
       description: 'Increases Commander movement speed (+8%/lvl up to Lv.20) and War-Zone snowplow radius.'
     },
     {
@@ -1228,7 +1243,7 @@ window.GameConfig = {
       icon: '🎒',
       baseCost: 130,
       costMultiplier: 1.42,
-      maxLevel: 20,
+      maxLevel: 10,
       description: 'Adds +3 max carry capacity to your vertical back-stack per upgrade level (up to Lv.20).'
     },
     {
@@ -1237,7 +1252,7 @@ window.GameConfig = {
       icon: '🔋',
       baseCost: 200,
       costMultiplier: 1.48,
-      maxLevel: 20,
+      maxLevel: 10,
       description: 'Speeds up all 7 weapon, vehicle, mech, and warship assembly lines by +15% per level (up to Lv.20).'
     }
   ],
@@ -1249,7 +1264,7 @@ window.GameConfig = {
       icon: '🔫',
       baseMedalCost: 2,
       costScale: 1.38,
-      maxLevel: 20,
+      maxLevel: 10,
       desc: 'PERMANENT (Lv.1–20): +20% sale price across all 7 Item Counters forever.'
     },
     {
@@ -1258,7 +1273,7 @@ window.GameConfig = {
       icon: '⛏️',
       baseMedalCost: 2,
       costScale: 1.38,
-      maxLevel: 20,
+      maxLevel: 10,
       desc: 'PERMANENT (Lv.1–20): +25% Raw Quarry & Munitions Press speed + 2.5% chance/lvl to save Raw Ore when crafting!'
     },
     {
@@ -1267,7 +1282,7 @@ window.GameConfig = {
       icon: '🛡️',
       baseMedalCost: 2,
       costScale: 1.38,
-      maxLevel: 20,
+      maxLevel: 10,
       desc: 'PERMANENT (Lv.1–20): +30% Max HP on all 3 Gate Layers and +5 HP/s maintenance on UNBROKEN gates (broken gates require manual repair!).'
     },
     {
@@ -1276,7 +1291,7 @@ window.GameConfig = {
       icon: '🗼',
       baseMedalCost: 3,
       costScale: 1.40,
-      maxLevel: 20,
+      maxLevel: 10,
       desc: 'PERMANENT (Lv.1–20): +25% Gate Turret damage across all 3 Layers and +2.5% chance/lvl not to consume 🧱 Ammo.'
     },
     {
@@ -1285,7 +1300,7 @@ window.GameConfig = {
       icon: '💰',
       baseMedalCost: 3,
       costScale: 1.40,
-      maxLevel: 20,
+      maxLevel: 10,
       desc: 'PERMANENT (Lv.1–20): Start every deployment with +$150 Requisition and +2 Carry Capacity per level.'
     },
     {
@@ -1294,7 +1309,7 @@ window.GameConfig = {
       icon: '🦅',
       baseMedalCost: 3,
       costScale: 1.40,
-      maxLevel: 20,
+      maxLevel: 10,
       desc: 'PERMANENT (Lv.1–20): +10% Commander & SEAF move speed and +25% personal weapon & Guard Dog drone damage forever.'
     }
   ],
@@ -1435,7 +1450,7 @@ window.GameConfig = {
       color: '#facc15',
       nx: 0.50,
       ny: 0.11,
-      maxLevel: 20,
+      maxLevel: 10,
       baseMedalCost: 1,
       reqCost: 100,
       linkedPermId: 'perm_start_grant',
@@ -1452,7 +1467,7 @@ window.GameConfig = {
       color: '#38bdf8',
       nx: 0.14,
       ny: 0.36,
-      maxLevel: 20,
+      maxLevel: 10,
       baseMedalCost: 1,
       reqCost: 120,
       linkedPermId: 'perm_raw_speed',
@@ -1468,7 +1483,7 @@ window.GameConfig = {
       color: '#38bdf8',
       nx: 0.14,
       ny: 0.62,
-      maxLevel: 20,
+      maxLevel: 10,
       baseMedalCost: 2,
       reqCost: 220,
       desc: 'Boosts all Split Raw Belt (🛢️/⛏️) & Counter Belt packet transit speeds by +20% per level.'
@@ -1483,7 +1498,7 @@ window.GameConfig = {
       color: '#38bdf8',
       nx: 0.14,
       ny: 0.88,
-      maxLevel: 20,
+      maxLevel: 10,
       baseMedalCost: 3,
       reqCost: 400,
       desc: 'Mindustry Inter-Base Logistics: +35% passive $REQ, 🛢️ E-710, and ⛏️ Iron exported from all your other conquered Sector Bases!'
@@ -1499,7 +1514,7 @@ window.GameConfig = {
       color: '#22c55e',
       nx: 0.38,
       ny: 0.36,
-      maxLevel: 20,
+      maxLevel: 10,
       baseMedalCost: 1,
       reqCost: 140,
       linkedPermId: 'perm_gun_value',
@@ -1515,7 +1530,7 @@ window.GameConfig = {
       color: '#22c55e',
       nx: 0.38,
       ny: 0.62,
-      maxLevel: 20,
+      maxLevel: 10,
       baseMedalCost: 2,
       reqCost: 260,
       desc: 'Radiates an Overdrive Dome across all 7 Production Lanes (+18% crafting speed per level).'
@@ -1530,7 +1545,7 @@ window.GameConfig = {
       color: '#22c55e',
       nx: 0.38,
       ny: 0.88,
-      maxLevel: 20,
+      maxLevel: 10,
       baseMedalCost: 3,
       reqCost: 450,
       desc: '+30% Vehicle, Patriot Mech & Super Destroyer crafting speed and -20% War Front deployment cost!'
@@ -1546,7 +1561,7 @@ window.GameConfig = {
       color: '#f97316',
       nx: 0.62,
       ny: 0.36,
-      maxLevel: 20,
+      maxLevel: 10,
       baseMedalCost: 1,
       reqCost: 130,
       linkedPermId: 'perm_gate_armor',
@@ -1562,7 +1577,7 @@ window.GameConfig = {
       color: '#f97316',
       nx: 0.62,
       ny: 0.62,
-      maxLevel: 20,
+      maxLevel: 10,
       baseMedalCost: 2,
       reqCost: 240,
       linkedPermId: 'perm_turret_power',
@@ -1578,7 +1593,7 @@ window.GameConfig = {
       color: '#f97316',
       nx: 0.62,
       ny: 0.88,
-      maxLevel: 20,
+      maxLevel: 10,
       baseMedalCost: 3,
       reqCost: 480,
       desc: 'Gate Sentries fire piercing railcannon beams that deal +40% bonus damage to Hulks, Bile Titans & Factory Striders!'
@@ -1594,7 +1609,7 @@ window.GameConfig = {
       color: '#a855f7',
       nx: 0.86,
       ny: 0.36,
-      maxLevel: 20,
+      maxLevel: 10,
       baseMedalCost: 1,
       reqCost: 150,
       linkedPermId: 'perm_commander_elite',
@@ -1610,7 +1625,7 @@ window.GameConfig = {
       color: '#a855f7',
       nx: 0.86,
       ny: 0.62,
-      maxLevel: 20,
+      maxLevel: 10,
       baseMedalCost: 2,
       reqCost: 260,
       desc: 'Equips SEAF Miners, Logistics & Engineers with Mindustry Micro-Processors (+25% carry stack & +30% repair speed/lvl).'
@@ -1625,7 +1640,7 @@ window.GameConfig = {
       color: '#a855f7',
       nx: 0.86,
       ny: 0.88,
-      maxLevel: 20,
+      maxLevel: 10,
       baseMedalCost: 3,
       reqCost: 460,
       desc: 'Allied SEAF Squads, Recon Buggies & Patriot Mechs deployed on the War Front gain +40% HP and +35% firepower per level!'
@@ -1688,6 +1703,77 @@ window.GameConfig = {
       cashFallbackCost: 160,
       color: '#4ade80',
       desc: 'Builds/Upgrades Mindustry Mend Projectors ($160) behind all 3 Gate Layers that auto-heal gates & reload turret ammo!'
+    }
+  ],
+
+  // --------------------------------------------------------------------------
+  // NEW IN v0.0.09: CAPYBARA GO! × HELLDIVERS 2 ROGUELIKE PERK CARDS
+  // Earned every Stage / Wave level-up during Attack & Defense Operations!
+  // --------------------------------------------------------------------------
+  ROGUELIKE_CARDS: [
+    {
+      id: 'rk_arc_chain',
+      name: '⚡ ARC-3 Lightning Thrower',
+      zhName: '閃電鏈折射 (攻擊彈射+2目標)',
+      icon: '⚡',
+      color: '#38bdf8',
+      desc: 'All Commander & Squad attacks chain lightning to +2 nearby enemies for +35% bonus damage per stack!'
+    },
+    {
+      id: 'rk_eagle_napalm',
+      name: '🦅 Eagle-1 Napalm Carpet',
+      zhName: '飛鷹凝固汽油彈轟炸 (每6秒全場火海)',
+      icon: '🦅',
+      color: '#f97316',
+      desc: 'Calls an automatic Eagle-1 Napalm Air-Strike every 6 seconds that burns the enemy frontline!'
+    },
+    {
+      id: 'rk_hellpod_crush',
+      name: '🚀 Hellpod Kinetic Slam',
+      zhName: '絕地空投艙重擊 (新兵空投造成450範圍傷害)',
+      icon: '🚀',
+      color: '#facc15',
+      desc: 'Every Helldiver customer launched from your Shop Hellpods slams into enemies for 450 AoE damage + +30% Squad HP!'
+    },
+    {
+      id: 'rk_viper_stims',
+      name: '💉 Experimental Viper Stims',
+      zhName: '實驗性毒蛇興奮劑 (擊殺回血18% + 攻速+25%)',
+      icon: '💉',
+      color: '#4ade80',
+      desc: 'Heals your War Squad & Active Gate for 18% HP on Boss/Elite kills and boosts all fire rates by +25%!'
+    },
+    {
+      id: 'rk_orbital_gatling',
+      name: '🔥 Orbital Gatling Overclock',
+      zhName: '軌道機砲超頻 (子彈數量+1 & 砲塔傷害+40%)',
+      icon: '🔥',
+      color: '#ef4444',
+      desc: 'Adds +1 extra projectile to every shot and increases all 3 Gate Sentry Turrets damage by +40%!'
+    },
+    {
+      id: 'rk_shield_relay',
+      name: '🛡️ FX-12 Dome Shield Relay',
+      zhName: 'FX-12 穹頂護盾中繼器 (最大HP+45% & 減傷25%)',
+      icon: '🛡️',
+      color: '#a855f7',
+      desc: 'Projects a Super Earth energy dome that grants +45% Max HP and 25% Damage Reduction to Gates & Allied Squads!'
+    },
+    {
+      id: 'rk_patriot_drop',
+      name: '🤖 Emergency Patriot Mech Drop',
+      zhName: '緊急空投愛國者機甲 (+1台免費機甲 & 機甲傷害+40%)',
+      icon: '🤖',
+      color: '#eab308',
+      desc: 'Immediately drops 1 Free EXO-45 Patriot Mech onto the battlefield and boosts all Mech damage by +40%!'
+    },
+    {
+      id: 'rk_war_spoils',
+      name: '💰 Ministry War Spoils Contract',
+      zhName: '軍需部戰利品合約 (戰場賞金與空投費+50%)',
+      icon: '💰',
+      color: '#22c55e',
+      desc: 'Increases all War-Zone kill bounties, Mission Victory Chests, and Shop Hellpod Drop Fees by +50%!'
     }
   ]
 };

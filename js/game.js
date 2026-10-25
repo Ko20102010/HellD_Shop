@@ -1,6 +1,6 @@
 // ============================================================================
 // HELLDIVERS PLEASE! — Super Earth Arsenal & 2D Factorio War-Zone Tycoon
-// Version: v0.0.08 (All-Episode Carbot Art, Real-Item-Only Split Belts,
+// Version: v0.0.09 (All-Episode Carbot Art, Real-Item-Only Split Belts,
 //                   7 Dedicated Item Counters & Smart SEAF AI Edition)
 // Module: Core Simulation, Anti-Crush Obstacle Ejection, 1-Item Start,
 //         Real-Packet Belt System (No Fake Items on Empty Belts),
@@ -218,6 +218,330 @@
       return total;
     }
 
+    getUnlockedCounterCount(itemId) {
+      const lvl = this.stations?.[itemId]?.level || 1;
+      if (lvl >= 8) return 3;
+      if (lvl >= 4) return 2;
+      return 1;
+    }
+
+    getHellpodUpgradeCost() {
+      const lvl = this.hellpodBayLevel || 1;
+      return Math.round(140 * Math.pow(1.45, lvl - 1));
+    }
+
+    getHellpodDropFee(tierBonus = 1) {
+      const lvl = this.hellpodBayLevel || 1;
+      const spoilsMult = 1 + (this.roguelikePerks?.rk_war_spoils || 0) * 0.50;
+      return Math.round((45 + (lvl - 1) * 25 + tierBonus * 18) * this.getPrestigeMultiplier() * spoilsMult);
+    }
+
+    triggerRoguelikePerkDraft() {
+      const pool = CFG.ROGUELIKE_CARDS || [];
+      if (pool.length === 0) return;
+      const shuffled = [...pool].sort(() => Math.random() - 0.5);
+      this.pendingPerkChoices = shuffled.slice(0, 3);
+      this.perkAutoPickTimer = 14.0;
+      this.renderRoguelikeDraftBar();
+    }
+
+    selectRoguelikePerk(cardId) {
+      const card = (CFG.ROGUELIKE_CARDS || []).find((c) => c.id === cardId);
+      if (!card) return;
+      this.roguelikePerks[cardId] = (this.roguelikePerks[cardId] || 0) + 1;
+      this.pendingPerkChoices = [];
+      this.audio.playUnlock();
+
+      if (cardId === 'rk_patriot_drop') {
+        const fg = this.getActiveFrontGate();
+        this.alliedUnits.push({
+          id: Math.random(),
+          unitType: 'deploy_mech',
+          label: '🤖 ROGUELIKE PATRIOT MECH',
+          x: (Math.random() - 0.5) * 180,
+          z: fg.z - 60,
+          hp: 1500,
+          maxHp: 1500,
+          damage: 135,
+          fireRate: 0.25,
+          fireCooldown: 0,
+          range: 480,
+          speed: 120,
+          color: '#facc15',
+          patrolDir: 1
+        });
+      }
+
+      this.recalcDerivedStats();
+      this.renderRoguelikeDraftBar();
+      this.spawnFloatingText(
+        this.player.x,
+        this.player.z - 55,
+        `🎲 PERK EQUIPPED: ${card.name} (Lv.${this.roguelikePerks[cardId]})!`,
+        card.color
+      );
+    }
+
+    renderRoguelikeDraftBar() {
+      const bar = document.getElementById('roguelike-draft-bar');
+      const container = document.getElementById('rk-cards-container');
+      const progEl = document.getElementById('rk-mission-progress');
+      if (!bar || !container) return;
+
+      if (this.viewMode !== 'war' || !this.pendingPerkChoices || this.pendingPerkChoices.length === 0) {
+        bar.classList.remove('visible');
+        return;
+      }
+
+      bar.classList.add('visible');
+      if (progEl) {
+        progEl.textContent = `${this.missionType === 'attack' ? '⚔️ ATTACK' : '🛡️ DEFENSE'} STAGE ${this.missionStage}/5`;
+      }
+      container.innerHTML = '';
+      for (const c of this.pendingPerkChoices) {
+        const curLvl = this.roguelikePerks[c.id] || 0;
+        const btn = document.createElement('button');
+        btn.className = 'rk-card-btn';
+        btn.style.borderColor = c.color || '#facc15';
+        btn.innerHTML = `
+          <div style="font-size:1.25rem;">${c.icon}</div>
+          <div class="rk-card-title">${c.name} ${curLvl > 0 ? `(Lv.${curLvl + 1})` : '(NEW!)'}</div>
+          <div class="rk-card-desc">${c.desc}</div>
+        `;
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.selectRoguelikePerk(c.id);
+        });
+        container.appendChild(btn);
+      }
+    }
+
+    // Direct Click/Tap on 2D Canvas Buildings to Upgrade (Idle Tycoon Style!)
+    handleCanvasBuildingClick(wx, wz) {
+      if (this.viewMode === 'war') {
+        for (const g of CFG.GATES) {
+          if (Math.hypot(wx - g.x, wz - g.z) < 160 || Math.hypot(wx - g.upgradePadX, wz - g.upgradePadZ) < 110) {
+            const gs = this.gates[g.id];
+            if ((gs.defenseLevel || 1) < 10) {
+              const cost = this.getGateUpgradeCost(g.id);
+              if (this.cash >= cost) {
+                this.cash -= cost;
+                gs.defenseLevel = (gs.defenseLevel || 1) + 1;
+                this.recalcDerivedStats();
+                gs.broken = false;
+                gs.hp = gs.maxHp;
+                this.audio.playUnlock();
+                this.spawnFloatingText(g.x, g.z - 45, `🛡️ ${g.shortName} FORTIFIED Lv.${gs.defenseLevel}/10!`, g.color);
+                this.updateHUD();
+              } else {
+                this.spawnFloatingText(wx, wz - 25, `⚠️ NEED $${cost} TO FORTIFY GATE`, '#ef4444');
+              }
+            }
+            return true;
+          }
+        }
+        return false;
+      }
+
+      // 1. Check Hellpod Launch Bay at (220, -100)
+      if (Math.hypot(wx - 220, wz - (-100)) < 190) {
+        this.selectedInspectTarget = { type: 'hellpod', id: 'hellpod' };
+        if (this.hellpodBayLevel < 10) {
+          const cost = this.getHellpodUpgradeCost();
+          if (this.cash >= cost) {
+            this.cash -= cost;
+            this.hellpodBayLevel++;
+            this.audio.playUnlock();
+            this.spawnFloatingText(220, -140, `🚀 HELLPOD BAY UPGRADED Lv.${this.hellpodBayLevel}/10!`, '#facc15');
+            this.updateHUD();
+            return true;
+          }
+        }
+        this.updateHUD();
+        return true;
+      }
+
+      // 2. Check Raw Quarry Auto-Drills
+      for (const raw of CFG.RAW_EXTRACTORS) {
+        if (Math.hypot(wx - raw.x, wz - raw.z) < 135) {
+          this.selectedInspectTarget = { type: 'raw', id: raw.id };
+          const rs = this.rawExtractors[raw.id];
+          if ((rs.level || 0) < 10) {
+            const cost = this.getRawUpgradeCost(raw.id);
+            if (this.cash >= cost) {
+              this.cash -= cost;
+              rs.level = (rs.level || 0) + 1;
+              if (rs.level === 1) rs.stock = 4;
+              this.recalcDerivedStats();
+              this.buildSolidObstacles();
+              this.audio.playUnlock();
+              this.spawnFloatingText(raw.x, raw.z - 45, `⬆️ ${raw.shortName} Lv.${rs.level}/10!`, raw.color);
+              this.updateHUD();
+              return true;
+            }
+          }
+          this.updateHUD();
+          return true;
+        }
+      }
+
+      // 3. Check Munitions Ammo Press
+      const AP = CFG.AMMO_PRESS;
+      if (Math.hypot(wx - AP.x, wz - AP.z) < 120) {
+        this.selectedInspectTarget = { type: 'ammo', id: 'ammo' };
+        if ((this.ammoPress.level || 0) < 10) {
+          const cost = this.getAmmoPressUpgradeCost();
+          if (this.cash >= cost) {
+            this.cash -= cost;
+            this.ammoPress.level = (this.ammoPress.level || 0) + 1;
+            this.recalcDerivedStats();
+            this.buildSolidObstacles();
+            this.audio.playUnlock();
+            this.spawnFloatingText(AP.x, AP.z - 45, `⬆️ AMMO PRESS Lv.${this.ammoPress.level}/10!`, '#f97316');
+            this.updateHUD();
+            return true;
+          }
+        }
+        this.updateHUD();
+        return true;
+      }
+
+      // 4. Check All 7 Production Stations, 3-Counter Bays & Cash Vaults!
+      for (const item of CFG.ITEMS) {
+        // Click Cash Vault to collect immediately!
+        if (this.unlocked[item.id] && Math.hypot(wx - item.cashPos.x, wz - item.cashPos.z) < 95) {
+          const cVal = this.counterCash[item.id] || 0;
+          if (cVal > 0) {
+            this.cash += cVal;
+            this.counterCash[item.id] = 0;
+            this.syncTotalCashOnGround();
+            this.audio.playCash();
+            this.spawnFloatingText(item.cashPos.x, item.cashPos.z - 30, `+$${cVal} REQ (#${item.tier})`, '#4ade80');
+            this.updateHUD();
+            return true;
+          }
+        }
+
+        const nearStation = Math.hypot(wx - item.stationPos.x, wz - item.stationPos.z) < 115;
+        const nearCounter1 = Math.hypot(wx - item.counterPos.x, wz - item.counterPos.z) < 125;
+        const nearCounter2 = item.counter2Pos && Math.hypot(wx - item.counter2Pos.x, wz - item.counter2Pos.z) < 125;
+        const nearCounter3 = item.counter3Pos && Math.hypot(wx - item.counter3Pos.x, wz - item.counter3Pos.z) < 125;
+
+        if (nearStation || nearCounter1 || nearCounter2 || nearCounter3) {
+          this.selectedInspectTarget = { type: 'station', id: item.id };
+          this.triggerSelectedInspectorUpgrade();
+          return true;
+        }
+      }
+
+      return false;
+    }
+
+    triggerSelectedInspectorUpgrade() {
+      const sel = this.selectedInspectTarget || { type: 'station', id: 'cloth' };
+      if (sel.type === 'hellpod') {
+        if (this.hellpodBayLevel < 10) {
+          const cost = this.getHellpodUpgradeCost();
+          if (this.cash >= cost) {
+            this.cash -= cost;
+            this.hellpodBayLevel++;
+            this.audio.playUnlock();
+            this.spawnFloatingText(220, -140, `🚀 HELLPOD BAY Lv.${this.hellpodBayLevel}/10!`, '#facc15');
+          }
+        }
+      } else if (sel.type === 'raw') {
+        const rs = this.rawExtractors[sel.id];
+        const rawCfg = CFG.RAW_EXTRACTORS.find((r) => r.id === sel.id);
+        if (rs && (rs.level || 0) < 10) {
+          const cost = this.getRawUpgradeCost(sel.id);
+          if (this.cash >= cost) {
+            this.cash -= cost;
+            rs.level = (rs.level || 0) + 1;
+            if (rs.level === 1) rs.stock = 4;
+            this.recalcDerivedStats();
+            this.buildSolidObstacles();
+            this.audio.playUnlock();
+            this.spawnFloatingText(rawCfg.x, rawCfg.z - 45, `⬆️ ${rawCfg.shortName} Lv.${rs.level}/10!`, rawCfg.color);
+          }
+        }
+      } else if (sel.type === 'ammo') {
+        const AP = CFG.AMMO_PRESS;
+        if ((this.ammoPress.level || 0) < 10) {
+          const cost = this.getAmmoPressUpgradeCost();
+          if (this.cash >= cost) {
+            this.cash -= cost;
+            this.ammoPress.level = (this.ammoPress.level || 0) + 1;
+            this.recalcDerivedStats();
+            this.buildSolidObstacles();
+            this.audio.playUnlock();
+            this.spawnFloatingText(AP.x, AP.z - 45, `⬆️ AMMO PRESS Lv.${this.ammoPress.level}/10!`, '#f97316');
+          }
+        }
+      } else {
+        const item = this.getItemConfig(sel.id) || CFG.ITEMS[0];
+        const isUnlocked = !!this.unlocked[item.id];
+        const st = this.stations[item.id];
+        if (!isUnlocked) {
+          const rem = this.unlockRemaining[item.id] ?? item.unlockCost;
+          if (this.cash >= rem) {
+            this.cash -= rem;
+            this.unlockRemaining[item.id] = 0;
+            this.unlocked[item.id] = true;
+            st.level = 1;
+            st.stock = item.initialStock || 2;
+            st.inputStock = {
+              raw_iron: item.initialInput?.raw_iron || 4,
+              raw_e710: item.initialInput?.raw_e710 || 4
+            };
+            this.counterBuffer[item.id] = 2;
+            this.recalcDerivedStats();
+            this.buildSolidObstacles();
+            this.audio.playUnlock();
+            this.spawnFloatingText(item.stationPos.x, item.stationPos.z - 45, `🎉 UNLOCKED ${item.shortName.toUpperCase()}!`, item.color);
+          }
+        } else if ((st.level || 1) < 10) {
+          const upgCost = this.getStationUpgradeCost(item.id);
+          if (this.cash >= upgCost) {
+            const prevCounters = this.getUnlockedCounterCount(item.id);
+            this.cash -= upgCost;
+            st.level = (st.level || 1) + 1;
+            const newCounters = this.getUnlockedCounterCount(item.id);
+            this.recalcDerivedStats();
+            this.buildSolidObstacles();
+            this.audio.playUnlock();
+            if (newCounters > prevCounters) {
+              this.spawnFloatingText(
+                item.counterPos.x + (newCounters - 1) * 320,
+                item.counterPos.z - 55,
+                `🎉 EXPANDED TO ${newCounters}/3 PHYSICAL COUNTERS (${item.shortName.toUpperCase()})!`,
+                '#4ade80'
+              );
+            } else {
+              this.spawnFloatingText(
+                item.stationPos.x,
+                item.stationPos.z - 45,
+                `⬆️ ${item.shortName.toUpperCase()} Lv.${st.level}/10!`,
+                item.color
+              );
+            }
+          }
+        }
+      }
+      const idleBar = document.getElementById('idle-inspector-bar');
+      if (this.viewMode === 'war') {
+        idleBar?.classList.add('hidden-bar');
+        if (!this.pendingPerkChoices || this.pendingPerkChoices.length === 0) {
+          this.triggerRoguelikePerkDraft();
+        } else {
+          this.renderRoguelikeDraftBar();
+        }
+      } else {
+        idleBar?.classList.remove('hidden-bar');
+        this.renderRoguelikeDraftBar();
+      }
+      this.updateHUD();
+    }
+
     setViewMode(mode) {
       this.viewMode = mode === 'war' ? 'war' : 'shop';
       const shopBtn = document.getElementById('btn-mode-shop');
@@ -266,7 +590,7 @@
         this.cash -= cost;
         this.mendProjectorLevel = curLvl + 1;
         this.audio.playUnlock();
-        this.spawnFloatingText(this.player.x, this.player.z - 45, `💚 MINDUSTRY MEND PROJECTOR Lv.${this.mendProjectorLevel}/20 ONLINE!`, '#4ade80');
+        this.spawnFloatingText(this.player.x, this.player.z - 45, `💚 MINDUSTRY MEND PROJECTOR Lv.${this.mendProjectorLevel}/10 ONLINE!`, '#4ade80');
         this.updateHUD();
         return;
       }
@@ -449,6 +773,18 @@
       }
 
       this.viewMode = 'shop';
+      this.selectedInspectTarget = { type: 'station', id: 'cloth' };
+      this.hellpodBayLevel = 1;
+      this.totalHellpodDrops = 0;
+      this.missionType = 'attack';
+      this.missionStage = 1;
+      this.attackOutpostMaxHp = 1200;
+      this.attackOutpostHp = 1200;
+      this.roguelikePerks = {};
+      this.pendingPerkChoices = [];
+      this.perkAutoPickTimer = 0;
+      this.napalmStrikeTimer = 6.0;
+      this.superSamples = this.superSamples || 0;
       this.mendProjectorLevel = 0;
       this.mendTickTimer = 0;
       this.alliedUnits = [];
@@ -539,7 +875,9 @@
       const armorBonus = eq.armor?.sellBonus || 0;
       const planetMult = this.getCurrentPlanet().reqMult || 1.0;
       const baseSellMult = this.getActiveBaseConfig().sellMult || 1.0;
-      const prestigeMult = this.getPrestigeMultiplier();
+      const sampleMult = 1 + (this.superSamples || 0) * 0.15;
+      const counterCountMult = 1 + (this.getUnlockedCounterCount(itemCfg?.id) - 1) * 0.25;
+      const prestigeMult = this.getPrestigeMultiplier() * sampleMult * counterCountMult;
       const buff = this.stratagemBuffTimer > 0 ? 1.5 : 1.0;
       return Math.round(base * machineQualityMult * (1 + permLvl * 0.20 + armorBonus) * planetMult * baseSellMult * prestigeMult * buff);
     }
@@ -1359,7 +1697,7 @@
         }
       }
 
-      // 5. Unlock / Upgrade Quarry Auto-Drill Scale (Lv.0 -> Lv.20)
+      // 5. Unlock / Upgrade Quarry Auto-Drill Scale (Lv.0 -> Lv.10)
       if (this.rawPadCooldown <= 0) {
         for (const raw of CFG.RAW_EXTRACTORS) {
           const rs = this.rawExtractors[raw.id];
@@ -1378,7 +1716,7 @@
               this.spawnFloatingText(
                 raw.x,
                 raw.z - 45,
-                rs.level === 1 ? `🎉 AUTO ${raw.shortName.toUpperCase()} UNLOCKED (Lv.1/20)!` : `⬆️ ${raw.shortName} Lv.${rs.level}/20!`,
+                rs.level === 1 ? `🎉 AUTO ${raw.shortName.toUpperCase()} UNLOCKED (Lv.1/10)!` : `⬆️ ${raw.shortName} Lv.${rs.level}/10!`,
                 raw.color
               );
             }
@@ -1386,7 +1724,7 @@
         }
       }
 
-      // 6. Unlock / Upgrade Munitions Ammo Press (Lv.0 -> Lv.20 at safe offset AP.unlockPos)
+      // 6. Unlock / Upgrade Munitions Ammo Press (Lv.0 -> Lv.10 at safe offset AP.unlockPos)
       const AP = CFG.AMMO_PRESS;
       if (this.stationPadCooldown <= 0 && (this.ammoPress.level || 0) < (AP.maxLevel || 20)) {
         const distApUpg = Math.hypot(p.x - AP.unlockPos.x, p.z - AP.unlockPos.z);
@@ -1402,14 +1740,14 @@
             this.spawnFloatingText(
               AP.x,
               AP.z - 45,
-              this.ammoPress.level === 1 ? `🎉 MUNITIONS PRESS UNLOCKED (Lv.1/20)!` : `⬆️ AMMO PRESS Lv.${this.ammoPress.level}/20!`,
+              this.ammoPress.level === 1 ? `🎉 MUNITIONS PRESS UNLOCKED (Lv.1/10)!` : `⬆️ AMMO PRESS Lv.${this.ammoPress.level}/10!`,
               '#f97316'
             );
           }
         }
       }
 
-      // 7. Upgrade Gate Defense Level Pads (Lv.1 -> Lv.20)
+      // 7. Upgrade Gate Defense Level Pads (Lv.1 -> Lv.10)
       if (this.gatePadCooldown <= 0) {
         for (const g of CFG.GATES) {
           const gs = this.gates[g.id];
@@ -1425,7 +1763,7 @@
               gs.broken = false;
               gs.hp = gs.maxHp;
               this.audio.playUnlock();
-              this.spawnFloatingText(g.x, g.z - 50, `🛡️ ${g.shortName} FORTIFIED Lv.${gs.defenseLevel}/20!`, g.color);
+              this.spawnFloatingText(g.x, g.z - 50, `🛡️ ${g.shortName} FORTIFIED Lv.${gs.defenseLevel}/10!`, g.color);
             }
           }
         }
@@ -1584,9 +1922,9 @@
         }
       }
 
-      // 15. Unlock New Production Lines OR Upgrade Unlocked Machines (Lv.1 -> Lv.20) at Safe Offset Pad!
+      // 15. Unlock New Production Lines OR Upgrade Unlocked Machines (Lv.1 -> Lv.10) at Safe Offset Pad!
       for (const item of CFG.ITEMS) {
-        const distPad = Math.hypot(p.x - item.unlockPos.x, p.z - item.unlockPos.z);
+        const distPad = Math.min(Math.hypot(p.x - item.stationPos.x, p.z - item.stationPos.z), Math.hypot(p.x - item.unlockPos.x, p.z - item.unlockPos.z));
         if (distPad < 92) {
           if (!this.unlocked[item.id]) {
             if (this.cash > 0) {
@@ -1630,7 +1968,7 @@
                 this.spawnFloatingText(
                   item.stationPos.x,
                   item.stationPos.z - 45,
-                  `⬆️ ${item.shortName.toUpperCase()} UPGRADED Lv.${st.level}/20!`,
+                  `⬆️ ${item.shortName.toUpperCase()} UPGRADED Lv.${st.level}/10!`,
                   item.color
                 );
                 return;
@@ -1665,7 +2003,7 @@
             this.spawnFloatingText(
               c.padX,
               c.padZ - 35,
-              curLvl === 0 ? `⚙️ ${c.name.toUpperCase()} UNLOCKED (Lv.1/20)!` : `⬆️ ${c.name.toUpperCase()} Lv.${curLvl + 1}/20!`,
+              curLvl === 0 ? `⚙️ ${c.name.toUpperCase()} UNLOCKED (Lv.1/10)!` : `⬆️ ${c.name.toUpperCase()} Lv.${curLvl + 1}/10!`,
               c.color
             );
           }
@@ -2100,77 +2438,227 @@
     }
 
     // ========================================================================
-    // CUSTOMERS & 7 DEDICATED ITEM SALES COUNTERS
-    // (Customers queue directly in front of their ordered item's Counter!)
+    // CUSTOMERS, 1-TO-3 EXPANDABLE COUNTERS, MIXED ORDERS & HELLPOD DEPLOYMENT
+    // - Scales customer count & arrival speed with unlocked items & production levels!
+    // - Customers demand Mixed Multi-Item Loadouts (`cust.orders`) and higher quantities!
+    // - After buying their gear, Helldivers march to the 4 Hellpod Launch Tubes,
+    //   pay an Orbital Drop Fee, and drop into the War Zone as live Allied Units!
     // ========================================================================
     spawnCustomer(forcedItemId = null) {
-      const maxQueue = 16;
-      const activeCount = this.customers.filter((c) => c.state !== 'leaving').length;
-      if (activeCount >= maxQueue) return;
-
       const unlockedItems = CFG.ITEMS.filter((it) => this.unlocked[it.id]);
       if (unlockedItems.length === 0) return;
 
-      let chosenItem = null;
-      if (forcedItemId && this.unlocked[forcedItemId]) {
-        chosenItem = this.getItemConfig(forcedItemId);
-      }
-      if (!chosenItem) {
-        chosenItem = unlockedItems[Math.floor(Math.random() * unlockedItems.length)];
+      let totalLevels = 0;
+      for (const it of unlockedItems) {
+        totalLevels += (this.stations[it.id]?.level || 1);
       }
 
-      const qty = chosenItem.tier <= 2 ? (1 + Math.floor(Math.random() * 2)) : 1;
-      const qStart = chosenItem.queueStart || CFG.LOCATIONS.customerQueueStart;
+      // Dynamic Queue Capacity scales from 18 up to 46 as production grows!
+      const maxQueue = Math.min(46, 16 + unlockedItems.length * 3 + Math.floor(totalLevels * 0.4));
+      const activeCount = this.customers.filter((c) => c.state === 'queueing').length;
+      if (activeCount >= maxQueue) return;
+
+      // Build Mixed Multi-Item Order List (`orders`)
+      const orders = [];
+      let primaryItem = null;
+      if (forcedItemId && this.unlocked[forcedItemId]) {
+        primaryItem = this.getItemConfig(forcedItemId);
+      }
+      if (!primaryItem) {
+        primaryItem = unlockedItems[Math.floor(Math.random() * unlockedItems.length)];
+      }
+
+      // Quantity scales with station level and wave number so production is challenged!
+      const stLvl = this.stations[primaryItem.id]?.level || 1;
+      const baseNeed = 1 + Math.floor((stLvl - 1) / 3) + Math.floor((this.waveNumber - 1) / 4);
+      const primaryQty = Math.min(6, Math.max(1, primaryItem.tier <= 3 ? baseNeed + (Math.random() > 0.4 ? 1 : 0) : Math.ceil(baseNeed * 0.6)));
+      orders.push({ item: primaryItem, qty: primaryQty, received: 0 });
+
+      // If 2+ items are unlocked, 65% of customers have Mixed Loadout Needs (2 to 3 different items)!
+      if (!forcedItemId && unlockedItems.length >= 2 && Math.random() < 0.65) {
+        const otherItems = unlockedItems.filter((it) => it.id !== primaryItem.id);
+        const secondItem = otherItems[Math.floor(Math.random() * otherItems.length)];
+        if (secondItem) {
+          const secQty = Math.min(4, 1 + Math.floor((this.stations[secondItem.id]?.level || 1) / 4));
+          orders.push({ item: secondItem, qty: secQty, received: 0 });
+        }
+        if (unlockedItems.length >= 3 && Math.random() < 0.35) {
+          const thirdPool = otherItems.filter((it) => it.id !== secondItem?.id);
+          const thirdItem = thirdPool[Math.floor(Math.random() * thirdPool.length)];
+          if (thirdItem) {
+            orders.push({ item: thirdItem, qty: 1, received: 0 });
+          }
+        }
+      }
+
+      const qStart = primaryItem.queueStart || CFG.LOCATIONS.customerQueueStart;
 
       this.customers.push({
         x: CFG.LOCATIONS.customerSpawn.x,
         z: qStart.z + (Math.random() - 0.5) * 60,
         walkPhase: Math.random() * 6,
-        item: chosenItem,
-        qty: qty,
+        orders,
+        orderIndex: 0,
+        item: primaryItem,
+        qty: primaryQty,
         received: 0,
+        highestTierBought: primaryItem.tier,
+        podTubeIndex: Math.floor(Math.random() * 4),
         state: 'queueing',
-        color: chosenItem.id === 'gun' ? '#0f172a' : '#1e293b'
+        color: primaryItem.id === 'gun' ? '#0f172a' : '#1e293b'
       });
     }
 
     completeCustomerItemReceive(cust, directToWallet = false) {
-      cust.received++;
-      const unitPrice = this.getItemSellPrice(cust.item);
-      const itemId = cust.item.id;
+      const curOrder = cust.orders ? cust.orders[cust.orderIndex || 0] : null;
+      const activeItem = curOrder ? curOrder.item : cust.item;
+      if (curOrder) {
+        curOrder.received++;
+        cust.received = curOrder.received;
+        cust.qty = curOrder.qty;
+      } else {
+        cust.received++;
+      }
+      if (activeItem.tier > (cust.highestTierBought || 1)) {
+        cust.highestTierBought = activeItem.tier;
+      }
+
+      const unitPrice = this.getItemSellPrice(activeItem);
+      const itemId = activeItem.id;
       if (directToWallet || (this.upgrades.seaf_cashier || 0) > 0) {
         this.cash += unitPrice;
         this.audio.playCash();
-        this.spawnFloatingText(cust.x, cust.z - 48, `+$${unitPrice} ${cust.item.icon} SOLD!`, '#4ade80');
+        this.spawnFloatingText(cust.x, cust.z - 48, `+$${unitPrice} ${activeItem.icon} SOLD!`, '#4ade80');
       } else {
         this.counterCash[itemId] = (this.counterCash[itemId] || 0) + unitPrice;
         this.syncTotalCashOnGround();
         this.audio.playCash();
-        this.spawnFloatingText(cust.x, cust.z - 48, `+$${unitPrice} ${cust.item.icon} (#${cust.item.tier})`, '#facc15');
+        this.spawnFloatingText(cust.x, cust.z - 48, `+$${unitPrice} ${activeItem.icon} (#${activeItem.tier})`, '#facc15');
       }
 
-      if (cust.received >= cust.qty) {
-        cust.state = 'leaving';
-        this.totalServed++;
-        this.lifetimeServed++;
-        if (this.totalServed % 5 === 0) {
-          this.medals++;
-          this.spawnFloatingText(cust.x, cust.z - 70, `🎖️ +1 ⭐ FOREVER MEDAL!`, '#fde047');
-          this.saveGame();
+      const doneCurrent = curOrder ? (curOrder.received >= curOrder.qty) : (cust.received >= cust.qty);
+      if (doneCurrent) {
+        if (cust.orders && (cust.orderIndex + 1) < cust.orders.length) {
+          // Advance to the next item in this customer's Mixed Order!
+          cust.orderIndex++;
+          const nextOrd = cust.orders[cust.orderIndex];
+          cust.item = nextOrd.item;
+          cust.qty = nextOrd.qty;
+          cust.received = nextOrd.received;
+          this.spawnFloatingText(cust.x, cust.z - 64, `🔀 NEXT NEED: ${nextOrd.qty}x ${nextOrd.item.icon}!`, '#38bdf8');
+        } else {
+          // All mixed items fulfilled! Now march to the 4 Orbital Hellpod Launch Tubes on the Bridge!
+          cust.state = 'to_hellpod';
+          this.totalServed++;
+          this.lifetimeServed++;
+          if (this.totalServed % 5 === 0) {
+            this.medals++;
+            this.spawnFloatingText(cust.x, cust.z - 70, `🎖️ +1 ⭐ FOREVER MEDAL!`, '#fde047');
+            this.saveGame();
+          }
+        }
+      }
+    }
+
+    launchCustomerInHellpod(cust) {
+      const tier = cust.highestTierBought || cust.item?.tier || 1;
+      const dropFee = this.getHellpodDropFee(tier);
+      this.cash += dropFee;
+      this.totalHellpodDrops = (this.totalHellpodDrops || 0) + 1;
+      this.audio.playCash();
+
+      const tubeX = 220 - 150 + (cust.podTubeIndex || 0) * 100;
+      this.spawnArc(tubeX, -95, tubeX, -230, '🚀', '#38bdf8');
+      this.spawnFloatingText(
+        tubeX,
+        -135,
+        `🚀 HELLPOD LAUNCHED! +$${dropFee} DROP FEE (+1 WAR REINFORCEMENT!)`,
+        '#fde047'
+      );
+
+      // Spawn this geared Helldiver in the War Zone (up to 18 active squad members)!
+      if ((this.alliedUnits || []).length < 18) {
+        const fg = this.getActiveFrontGate();
+        const cmdLvl = this.getTechNodeLevel('tech_war_unit_command');
+        const shieldBonus = 1 + (this.roguelikePerks?.rk_shield_relay || 0) * 0.45;
+        const hpMult = (1 + cmdLvl * 0.35) * shieldBonus;
+        const dmgMult = (1 + cmdLvl * 0.30) * (1 + (this.superSamples || 0) * 0.15);
+
+        let unitType = 'deploy_squad';
+        let label = '🪖 HELLPOD DIVER';
+        let baseHp = 280 + tier * 65;
+        let baseDmg = 26 + tier * 9;
+        let color = '#38bdf8';
+
+        if (tier >= 6) {
+          unitType = 'deploy_mech';
+          label = '🤖 HELLPOD PATRIOT MECH';
+          baseHp = 1250;
+          baseDmg = 98;
+          color = '#f97316';
+        } else if (tier === 5) {
+          unitType = 'deploy_buggy';
+          label = '🚙 HELLPOD RECON BUGGY';
+          baseHp = 640;
+          baseDmg = 52;
+          color = '#eab308';
+        }
+
+        const dropZ = (this.missionType === 'attack') ? -980 : (fg.z - 55);
+        this.alliedUnits.push({
+          id: Math.random(),
+          unitType,
+          label,
+          x: (Math.random() - 0.5) * 260,
+          z: dropZ,
+          hp: Math.round(baseHp * hpMult),
+          maxHp: Math.round(baseHp * hpMult),
+          damage: Math.round(baseDmg * dmgMult),
+          fireRate: 0.30,
+          fireCooldown: 0,
+          range: 420,
+          speed: 145,
+          color,
+          patrolDir: Math.random() > 0.5 ? 1 : -1
+        });
+
+        // If player has `rk_hellpod_crush` Roguelike Perk, slam nearby War Zone enemies for 450 AoE DMG!
+        const crushLvl = this.roguelikePerks?.rk_hellpod_crush || 0;
+        if (crushLvl > 0 && this.enemies.length > 0) {
+          const crushDmg = 450 * crushLvl;
+          for (const e of this.enemies) {
+            e.hp -= crushDmg;
+            this.explosions.push({ x: e.x, z: e.z, maxR: 68, t: 0, duration: 0.35 });
+            if (e.hp <= 0) this.handleEnemyKilled(e);
+          }
+          this.enemies = this.enemies.filter((e) => e.hp > 0);
         }
       }
     }
 
     updateCustomersAndSales(dt) {
-      this.customerSpawnTimer -= dt;
-      if (this.customerSpawnTimer <= 0) {
-        const unlockedCount = CFG.ITEMS.filter((it) => this.unlocked[it.id]).length;
-        this.customerSpawnTimer = Math.max(1.3, 2.7 - unlockedCount * 0.16);
-        this.spawnCustomer();
+      const unlockedItems = CFG.ITEMS.filter((it) => this.unlocked[it.id]);
+      let totalStationLevels = 0;
+      let totalDesks = 0;
+      for (const it of unlockedItems) {
+        totalStationLevels += (this.stations[it.id]?.level || 1);
+        totalDesks += this.getUnlockedCounterCount(it.id);
       }
 
-      // Group active customers by their target item's Dedicated Counter Queue!
-      const activeCustomers = this.customers.filter((c) => c.state !== 'leaving');
+      this.customerSpawnTimer -= dt;
+      if (this.customerSpawnTimer <= 0) {
+        // Customer arrival rate speeds up dramatically as you unlock more items & expand counters!
+        const spawnInterval = Math.max(0.38, 2.25 - unlockedItems.length * 0.22 - totalStationLevels * 0.025);
+        this.customerSpawnTimer = spawnInterval;
+        this.spawnCustomer();
+        // Burst spawn a 2nd customer when multiple counter desks are open!
+        if (totalDesks >= 4 && Math.random() < 0.45) {
+          this.spawnCustomer();
+        }
+      }
+
+      // Group active queueing customers across the 1-to-3 physical counter desks in each lane!
+      const activeCustomers = this.customers.filter((c) => c.state === 'queueing');
       const perItemIndex = {};
 
       for (const c of activeCustomers) {
@@ -2178,56 +2666,63 @@
         const idx = perItemIndex[itemId] || 0;
         perItemIndex[itemId] = idx + 1;
 
+        const deskCount = this.getUnlockedCounterCount(itemId);
+        const subLine = idx % deskCount;
+        const rankInSubLine = Math.floor(idx / deskCount);
         const qStart = c.item.queueStart || CFG.LOCATIONS.customerQueueStart;
-        const tx = qStart.x + idx * 86;
-        const tz = qStart.z + ((idx % 2 === 0) ? -14 : 14);
+
+        const tx = qStart.x + rankInSubLine * 74;
+        const tz = qStart.z + (subLine - (deskCount - 1) * 0.5) * 32;
         const dx = tx - c.x;
         const dz = tz - c.z;
         const dist = Math.hypot(dx, dz);
         if (dist > 8) {
-          c.x += (dx / dist) * 215 * dt;
-          c.z += (dz / dist) * 215 * dt;
-          c.walkPhase += dt * 10;
+          c.x += (dx / dist) * 235 * dt;
+          c.z += (dz / dist) * 235 * dt;
+          c.walkPhase += dt * 11;
         }
       }
 
-      const exit = CFG.LOCATIONS.customerExit;
+      // Move Geared Helldivers (`to_hellpod`) to the 4 Orbital Hellpod Launch Tubes at (220, -100)!
       for (let i = this.customers.length - 1; i >= 0; i--) {
         const c = this.customers[i];
-        if (c.state === 'leaving') {
-          const dx = exit.x - c.x;
-          const dz = c.item.queueStart.z - c.z;
+        if (c.state === 'to_hellpod' || c.state === 'leaving') {
+          const tubeX = 220 - 150 + ((c.podTubeIndex || 0) % 4) * 100;
+          const tubeZ = -92;
+          const dx = tubeX - c.x;
+          const dz = tubeZ - c.z;
           const dist = Math.hypot(dx, dz);
-          if (dist < 30) {
+          if (dist < 32) {
+            this.launchCustomerInHellpod(c);
             this.customers.splice(i, 1);
           } else {
-            c.x += (dx / dist) * 250 * dt;
-            c.z += (dz / dist) * 250 * dt;
-            c.walkPhase += dt * 12;
+            c.x += (dx / dist) * 275 * dt;
+            c.z += (dz / dist) * 275 * dt;
+            c.walkPhase += dt * 13;
           }
         }
       }
 
-      // Dedicated Per-Counter Checkout!
+      // Multi-Counter Checkout: 1, 2, or 3 physical counters in a lane serve up to 3 customers per tick!
       this.cashierTimer -= dt;
       if (this.cashierTimer <= 0) {
-        const cashierSpeed = 0.24 / (1 + (this.upgrades.seaf_cashier || 0) * 0.20);
-        for (const c of activeCustomers) {
-          const itemId = c.item.id;
-          const qStart = c.item.queueStart || CFG.LOCATIONS.customerQueueStart;
-          if ((this.counterBuffer[itemId] || 0) > 0 && Math.abs(c.x - qStart.x) < 260) {
-            this.counterBuffer[itemId]--;
-            this.cashierTimer = cashierSpeed;
-            this.spawnArc(
-              c.item.counterPos.x,
-              c.item.counterPos.z,
-              c.x,
-              c.z - 15,
-              c.item.icon,
-              c.item.color
-            );
-            this.completeCustomerItemReceive(c, false);
-            break;
+        const cashierSpeed = 0.22 / (1 + (this.upgrades.seaf_cashier || 0) * 0.22);
+        this.cashierTimer = cashierSpeed;
+
+        for (const it of unlockedItems) {
+          const deskCount = this.getUnlockedCounterCount(it.id);
+          let servedAtThisLane = 0;
+          for (const c of activeCustomers) {
+            if (c.item.id !== it.id) continue;
+            const qStart = it.queueStart || CFG.LOCATIONS.customerQueueStart;
+            if ((this.counterBuffer[it.id] || 0) > 0 && Math.abs(c.x - qStart.x) < 320) {
+              this.counterBuffer[it.id]--;
+              const deskX = servedAtThisLane === 2 ? (it.counter3Pos?.x || 1140) : (servedAtThisLane === 1 ? (it.counter2Pos?.x || 820) : it.counterPos.x);
+              this.spawnArc(deskX, it.counterPos.z, c.x, c.z - 15, it.icon, it.color);
+              this.completeCustomerItemReceive(c, false);
+              servedAtThisLane++;
+              if (servedAtThisLane >= deskCount) break;
+            }
           }
         }
       }
@@ -2275,7 +2770,8 @@
     completeCurrentWave() {
       const clearedWave = this.waveNumber;
       const planet = this.getCurrentPlanet();
-      const waveRewardCash = Math.round((80 + clearedWave * 35) * planet.reqMult * this.getPrestigeMultiplier());
+      const spoilsMult = 1 + (this.roguelikePerks?.rk_war_spoils || 0) * 0.50;
+      const waveRewardCash = Math.round((110 + clearedWave * 45) * planet.reqMult * this.getPrestigeMultiplier() * spoilsMult);
       const isBossWave = (clearedWave % CFG.WAVE_CONFIG.bossWaveEvery) === 0;
       const waveRewardMedals = isBossWave ? 3 : 1;
 
@@ -2286,23 +2782,58 @@
         this.highestWave = this.waveNumber;
       }
 
+      // Advance Capybara Go! / Operation Stage (1..5)
+      this.missionStage = (this.missionStage || 1) + 1;
+      if (this.missionStage > 5) {
+        // MISSION VICTORY CHEST REWARD (豐厚任務完成獎勵)!
+        this.missionStage = 1;
+        this.missionType = this.missionType === 'attack' ? 'defense' : 'attack';
+        const chestCash = Math.round(550 * clearedWave * planet.reqMult * this.getPrestigeMultiplier() * spoilsMult);
+        const chestMedals = 4 + Math.floor(clearedWave / 3);
+        this.cash += chestCash;
+        this.medals += chestMedals;
+        this.superSamples = (this.superSamples || 0) + 1;
+
+        // Heal all gates & allied units on Operation Victory
+        for (const g of CFG.GATES) {
+          const gs = this.gates[g.id];
+          if (gs) {
+            gs.broken = false;
+            gs.hp = gs.maxHp;
+            gs.ammo = gs.maxAmmo || g.maxAmmo;
+          }
+        }
+        this.spawnFloatingText(
+          this.player.x,
+          this.player.z - 80,
+          `🎁 OPERATION VICTORY CHEST! +$${chestCash} · +${chestMedals} ⭐ MEDALS · +1 🧬 SUPER SAMPLE!`,
+          '#fde047'
+        );
+      } else {
+        this.spawnFloatingText(
+          this.player.x,
+          this.player.z - 60,
+          `🎉 STAGE ${this.missionStage - 1}/5 CLEARED! +$${waveRewardCash} & +${waveRewardMedals} ⭐!`,
+          '#4ade80'
+        );
+      }
+
+      this.attackOutpostMaxHp = Math.round(1200 * Math.pow(1.38, this.waveNumber - 1));
+      this.attackOutpostHp = this.attackOutpostMaxHp;
+
+      // Trigger a 3-Card Roguelike Tactical Perk Draft!
+      this.triggerRoguelikePerkDraft();
+
       this.waveState = 'rest';
       this.waveTimer = CFG.WAVE_CONFIG.betweenWaveRestTime;
       this.audio.playUnlock();
       this.saveGame();
-
-      this.spawnFloatingText(
-        this.player.x,
-        this.player.z - 60,
-        `🎉 WAVE ${clearedWave} CLEARED! +$${waveRewardCash} & +${waveRewardMedals} ⭐! (${this.waveTimer}s REST TIME)`,
-        '#4ade80'
-      );
     }
 
     // Spawns All-Episode Carbot Enemies (Ep1–Ep10+: hunter, bug, spewer, titan, trooper, devastator, hulk, strider)
     spawnWaveEnemy() {
       const planet = this.getCurrentPlanet();
-      const waveScale = (1 + (this.waveNumber - 1) * 0.14) * (planet.enemyHpMult || 1.0);
+      const waveScale = (1 + (this.waveNumber - 1) * 0.28 + ((this.missionStage || 1) - 1) * 0.18) * (planet.enemyHpMult || 1.0);
       const isBossWave = (this.waveNumber % CFG.WAVE_CONFIG.bossWaveEvery) === 0;
       const roll = Math.random();
 
@@ -2358,6 +2889,42 @@
           if (gs && !gs.broken && gs.hp > 0 && gs.hp < gs.maxHp) {
             gs.hp = Math.min(gs.maxHp, gs.hp + armorLvl * 5 * dt);
           }
+        }
+      }
+
+      // 1B. Roguelike Perk Auto-Pick Timer (if player is busy in Shop) & Automatic Eagle Napalm Carpet
+      if (this.pendingPerkChoices && this.pendingPerkChoices.length > 0) {
+        this.perkAutoPickTimer -= dt;
+        if (this.perkAutoPickTimer <= 0) {
+          this.selectRoguelikePerk(this.pendingPerkChoices[0].id);
+        }
+      }
+
+      const napalmLvl = this.roguelikePerks?.rk_eagle_napalm || 0;
+      if (napalmLvl > 0 && this.enemies.length > 0) {
+        this.napalmStrikeTimer = (this.napalmStrikeTimer || 6.0) - dt;
+        if (this.napalmStrikeTimer <= 0) {
+          this.napalmStrikeTimer = Math.max(2.5, 6.2 - napalmLvl * 0.5);
+          const napalmDmg = Math.round((85 + this.waveNumber * 18) * napalmLvl);
+          for (const e of this.enemies) {
+            e.hp -= napalmDmg;
+            this.explosions.push({ x: e.x, z: e.z, maxR: 55, t: 0, duration: 0.28 });
+            if (e.hp <= 0) this.handleEnemyKilled(e);
+          }
+          this.enemies = this.enemies.filter((e) => e.hp > 0);
+        }
+      }
+
+      // 1C. In Attack Expedition Mode, Allied Units & Commander also bombard the Enemy Command Fortress!
+      if (this.missionType === 'attack' && this.waveState === 'combat' && this.attackOutpostHp > 0) {
+        const squadDps = (28 + (this.alliedUnits?.length || 0) * 22) * (1 + (this.superSamples || 0) * 0.15);
+        this.attackOutpostHp = Math.max(0, this.attackOutpostHp - squadDps * dt);
+        if (this.attackOutpostHp <= 0 && this.enemies.length <= 2) {
+          this.waveEnemiesToSpawn = 0;
+          for (const e of this.enemies) this.handleEnemyKilled(e);
+          this.enemies = [];
+          this.completeCurrentWave();
+          return;
         }
       }
 
@@ -2826,7 +3393,65 @@
         if (mendCostEl) {
           const ml = this.mendProjectorLevel || 0;
           const mc = Math.round(160 * Math.pow(1.35, ml));
-          mendCostEl.textContent = ml >= 20 ? 'MAX Lv.20' : `Lv.${ml} ($${mc})`;
+          mendCostEl.textContent = ml >= 20 ? 'MAX Lv.10' : `Lv.${ml} ($${mc})`;
+        }
+
+        const missionTypeEl = document.getElementById('label-mission-type');
+        const missionStageEl = document.getElementById('sub-mission-stage');
+        if (missionTypeEl) {
+          missionTypeEl.textContent = this.missionType === 'attack' ? '⚔️ Attack Op' : '🛡️ Defense Op';
+        }
+        if (missionStageEl) {
+          missionStageEl.textContent = `Stage ${this.missionStage || 1}/5 (🧬${this.superSamples || 0})`;
+        }
+
+        // Update Floating Idle Click-to-Upgrade Inspector Bar
+        const inspTitle = document.getElementById('idle-inspector-title');
+        const inspSub = document.getElementById('idle-inspector-sub');
+        const inspBtn = document.getElementById('btn-idle-quick-upgrade');
+        const beltBtn = document.getElementById('btn-idle-belt-upgrade');
+        if (inspTitle && inspBtn) {
+          const sel = this.selectedInspectTarget || { type: 'station', id: 'cloth' };
+          if (sel.type === 'hellpod') {
+            const hl = this.hellpodBayLevel || 1;
+            const hc = this.getHellpodUpgradeCost();
+            inspTitle.textContent = `🚀 Hellpod Launch Bay (Lv.${hl}/10 · Drop Fee $${this.getHellpodDropFee()})`;
+            if (inspSub) inspSub.textContent = `Served Helldivers queue here, pay Drop Fee & reinforce War Front!`;
+            inspBtn.textContent = hl >= 10 ? 'MAX Lv.10' : `⬆️ Upgrade ($${hc})`;
+            inspBtn.disabled = hl >= 10 || this.cash < hc;
+          } else if (sel.type === 'raw') {
+            const rawCfg = CFG.RAW_EXTRACTORS.find((r) => r.id === sel.id) || CFG.RAW_EXTRACTORS[0];
+            const rl = this.rawExtractors[rawCfg.id]?.level || 0;
+            const rc = this.getRawUpgradeCost(rawCfg.id);
+            inspTitle.textContent = `${rawCfg.icon} ${rawCfg.shortName} (Lv.${rl}/10)`;
+            if (inspSub) inspSub.textContent = `Tap any Machine, 3-Counter Bay, Drill, or Hellpod on deck to upgrade!`;
+            inspBtn.textContent = rl >= 10 ? 'MAX Lv.10' : (rl === 0 ? `🔓 Build ($${rc})` : `⬆️ Lv.${rl + 1} ($${rc})`);
+            inspBtn.disabled = rl >= 10 || this.cash < rc;
+          } else if (sel.type === 'ammo') {
+            const al = this.ammoPress.level || 0;
+            const ac = this.getAmmoPressUpgradeCost();
+            inspTitle.textContent = `🧱 Munitions Ammo Press (Lv.${al}/10)`;
+            inspBtn.textContent = al >= 10 ? 'MAX Lv.10' : (al === 0 ? `🔓 Build ($${ac})` : `⬆️ Lv.${al + 1} ($${ac})`);
+            inspBtn.disabled = al >= 10 || this.cash < ac;
+          } else {
+            const item = this.getItemConfig(sel.id) || CFG.ITEMS[0];
+            const isUnl = !!this.unlocked[item.id];
+            const sl = isUnl ? (this.stations[item.id]?.level || 1) : 0;
+            const desks = isUnl ? this.getUnlockedCounterCount(item.id) : 0;
+            const sc = !isUnl ? (this.unlockRemaining[item.id] ?? item.unlockCost) : this.getStationUpgradeCost(item.id);
+            inspTitle.textContent = `${item.icon} ${item.shortName} (Lv.${sl}/10 · ${desks}/3 Counters · $${this.getItemSellPrice(item)})`;
+            if (inspSub) inspSub.textContent = `Lv.4 unlocks Counter #2 · Lv.8 unlocks Counter #3 · Tap building to upgrade!`;
+            inspBtn.textContent = sl >= 10 ? 'MAX Lv.10' : (!isUnl ? `🔓 Unlock ($${sc})` : `⬆️ Lv.${sl + 1}/10 ($${sc})`);
+            inspBtn.disabled = sl >= 10 || this.cash < sc;
+          }
+
+          if (beltBtn) {
+            const nextBelt = CFG.CONVEYORS.find((c) => (this.conveyorLevels[c.id] || 0) < 10) || CFG.CONVEYORS[0];
+            const bl = this.conveyorLevels[nextBelt.id] || 0;
+            const bc = this.getConveyorUpgradeCost(nextBelt.id);
+            beltBtn.textContent = bl >= 10 ? '🔗 Belts MAX' : `🔗 ${nextBelt.icon} Belt Lv.${bl + 1}/10 ($${bc})`;
+            beltBtn.disabled = bl >= 10 || this.cash < bc;
+          }
         }
 
         const objEl = document.getElementById('objective-text');
@@ -2915,7 +3540,7 @@
       if (!list) return;
       list.innerHTML = '';
 
-      // 1. Quarry Auto-Drills (Lv.0 Locked -> Lv.20)
+      // 1. Quarry Auto-Drills (Lv.0 Locked -> Lv.10)
       for (const raw of CFG.RAW_EXTRACTORS) {
         const rs = this.rawExtractors[raw.id];
         const lvl = rs.level || 0;
@@ -2925,11 +3550,11 @@
         card.className = 'upgrade-item';
         card.innerHTML = `
           <div class="upgrade-info">
-            <h4>${raw.icon} ${raw.name} (Lv.${lvl}/20)</h4>
+            <h4>${raw.icon} ${raw.name} (Lv.${lvl}/10)</h4>
             <p>${raw.desc}</p>
           </div>
           <button class="buy-btn" ${(isMax || this.cash < cost) ? 'disabled' : ''}>
-            ${isMax ? 'MAX Lv.20' : (lvl === 0 ? `🔓 Unlock $${cost}` : `⬆️ Lv.${lvl + 1} ($${cost})`)}
+            ${isMax ? 'MAX Lv.10' : (lvl === 0 ? `🔓 Unlock $${cost}` : `⬆️ Lv.${lvl + 1} ($${cost})`)}
           </button>
         `;
         card.querySelector('button').addEventListener('click', () => {
@@ -2947,7 +3572,7 @@
         list.appendChild(card);
       }
 
-      // 2. Munitions Ammo Press (Lv.0 Locked -> Lv.20)
+      // 2. Munitions Ammo Press (Lv.0 Locked -> Lv.10)
       {
         const AP = CFG.AMMO_PRESS;
         const apLvl = this.ammoPress.level || 0;
@@ -2957,11 +3582,11 @@
         card.className = 'upgrade-item';
         card.innerHTML = `
           <div class="upgrade-info">
-            <h4>🧱 ${AP.name} (Lv.${apLvl}/20)</h4>
+            <h4>🧱 ${AP.name} (Lv.${apLvl}/10)</h4>
             <p>${AP.desc}</p>
           </div>
           <button class="buy-btn" ${(isMax || this.cash < cost) ? 'disabled' : ''}>
-            ${isMax ? 'MAX Lv.20' : (apLvl === 0 ? `🔓 Unlock $${cost}` : `⬆️ Lv.${apLvl + 1} ($${cost})`)}
+            ${isMax ? 'MAX Lv.10' : (apLvl === 0 ? `🔓 Unlock $${cost}` : `⬆️ Lv.${apLvl + 1} ($${cost})`)}
           </button>
         `;
         card.querySelector('button').addEventListener('click', () => {
@@ -2978,7 +3603,7 @@
         list.appendChild(card);
       }
 
-      // 3. All 7 Production Machines + Dedicated Counters (Lv.0 Locked -> Lv.20)
+      // 3. All 7 Production Machines + Dedicated Counters (Lv.0 Locked -> Lv.10)
       for (const item of CFG.ITEMS) {
         const isUnlocked = !!this.unlocked[item.id];
         const st = this.stations[item.id];
@@ -2990,11 +3615,11 @@
         card.className = 'upgrade-item';
         card.innerHTML = `
           <div class="upgrade-info">
-            <h4>${item.icon} ${item.name} &amp; Counter #${item.tier} (Lv.${lvl}/20)</h4>
+            <h4>${item.icon} ${item.name} &amp; Counter #${item.tier} (Lv.${lvl}/10)</h4>
             <p>${item.description} | Sell: $${this.getItemSellPrice(item)}</p>
           </div>
           <button class="buy-btn" ${(isMax || this.cash < cost) ? 'disabled' : ''}>
-            ${isMax ? 'MAX Lv.20' : (!isUnlocked ? `🔓 Unlock $${cost}` : `⬆️ Lv.${lvl + 1} ($${cost})`)}
+            ${isMax ? 'MAX Lv.10' : (!isUnlocked ? `🔓 Unlock $${cost}` : `⬆️ Lv.${lvl + 1} ($${cost})`)}
           </button>
         `;
         card.querySelector('button').addEventListener('click', () => {
@@ -3019,7 +3644,7 @@
         list.appendChild(card);
       }
 
-      // 4. All 6 Factorio Conveyor Belts (Lv.0 Locked -> Lv.20)
+      // 4. All 6 Factorio Conveyor Belts (Lv.0 Locked -> Lv.10)
       for (const c of CFG.CONVEYORS) {
         const lvl = this.conveyorLevels[c.id] || 0;
         const isMax = lvl >= (c.maxLevel || 20);
@@ -3028,11 +3653,11 @@
         card.className = 'upgrade-item';
         card.innerHTML = `
           <div class="upgrade-info">
-            <h4>${c.icon} ${c.name} (Lv.${lvl}/20)</h4>
+            <h4>${c.icon} ${c.name} (Lv.${lvl}/10)</h4>
             <p>${c.desc}</p>
           </div>
           <button class="buy-btn" ${(isMax || this.cash < cost) ? 'disabled' : ''}>
-            ${isMax ? 'MAX Lv.20' : (lvl === 0 ? `🔓 Unlock $${cost}` : `⬆️ Lv.${lvl + 1} ($${cost})`)}
+            ${isMax ? 'MAX Lv.10' : (lvl === 0 ? `🔓 Unlock $${cost}` : `⬆️ Lv.${lvl + 1} ($${cost})`)}
           </button>
         `;
         card.querySelector('button').addEventListener('click', () => {
@@ -3050,7 +3675,7 @@
         list.appendChild(card);
       }
 
-      // 5. 3-Layer Gate Defense Fortification (Lv.1 -> Lv.20)
+      // 5. 3-Layer Gate Defense Fortification (Lv.1 -> Lv.10)
       for (const g of CFG.GATES) {
         const gs = this.gates[g.id];
         const lvl = gs.defenseLevel || 1;
@@ -3060,11 +3685,11 @@
         card.className = 'upgrade-item';
         card.innerHTML = `
           <div class="upgrade-info">
-            <h4>🛡️ ${g.name} (Lv.${lvl}/20) ${gs.broken ? '💥 BROKEN' : ''}</h4>
+            <h4>🛡️ ${g.name} (Lv.${lvl}/10) ${gs.broken ? '💥 BROKEN' : ''}</h4>
             <p>${g.desc} Max HP: ${gs.maxHp}</p>
           </div>
           <button class="buy-btn" ${(isMax || this.cash < cost) ? 'disabled' : ''}>
-            ${isMax ? 'MAX Lv.20' : `⬆️ Fortify Lv.${lvl + 1} ($${cost})`}
+            ${isMax ? 'MAX Lv.10' : `⬆️ Fortify Lv.${lvl + 1} ($${cost})`}
           </button>
         `;
         card.querySelector('button').addEventListener('click', () => {
@@ -3082,7 +3707,7 @@
         list.appendChild(card);
       }
 
-      // 6. SEAF Staff & Commander Upgrades (Lv.0 -> Lv.20)
+      // 6. SEAF Staff & Commander Upgrades (Lv.0 -> Lv.10)
       for (const upg of CFG.UPGRADES) {
         const lvl = this.upgrades[upg.id] || 0;
         const isMax = lvl >= upg.maxLevel;
@@ -3096,7 +3721,7 @@
             <p>${upg.description}</p>
           </div>
           <button class="upg-buy-btn buy-btn" data-upg="${upg.id}" ${canAfford ? '' : 'disabled'}>
-            ${isMax ? 'MAX Lv.20' : `💵 $${cost}`}
+            ${isMax ? 'MAX Lv.10' : `💵 $${cost}`}
           </button>
         `;
         card.querySelector('button').addEventListener('click', () => {
@@ -3149,7 +3774,7 @@
             <p>${sk.desc}</p>
           </div>
           <button class="buy-btn medal-btn" ${(isMax || this.medals < medalCost) ? 'disabled' : ''}>
-            ${isMax ? 'MAX Lv.20' : `⭐ ${medalCost} Medals`}
+            ${isMax ? 'MAX Lv.10' : `⭐ ${medalCost} Medals`}
           </button>
         `;
         card.querySelector('button').addEventListener('click', () => {
@@ -3193,10 +3818,10 @@
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button class="buy-btn medal-btn" id="btn-research-node-medal" ${(!parentUnlocked || isMax || this.medals < medalCost) ? 'disabled' : ''}>
-            ${isMax ? 'MAX Lv.20' : (!parentUnlocked ? '🔒 Unlock Parent First' : `⭐ Research (${medalCost} Medals)`)}
+            ${isMax ? 'MAX Lv.10' : (!parentUnlocked ? '🔒 Unlock Parent First' : `⭐ Research (${medalCost} Medals)`)}
           </button>
           <button class="buy-btn" id="btn-research-node-req" ${(!parentUnlocked || isMax || this.cash < reqCost) ? 'disabled' : ''}>
-            ${isMax ? 'MAX Lv.20' : (!parentUnlocked ? '🔒 Locked' : `💵 Research ($${reqCost})`)}
+            ${isMax ? 'MAX Lv.10' : (!parentUnlocked ? '🔒 Locked' : `💵 Research ($${reqCost})`)}
           </button>
         </div>
       `;
@@ -3375,6 +4000,12 @@
         unlockedBases: this.unlockedBases,
         activeBaseId: this.activeBaseId,
         mendProjectorLevel: this.mendProjectorLevel,
+        hellpodBayLevel: this.hellpodBayLevel,
+        totalHellpodDrops: this.totalHellpodDrops,
+        missionType: this.missionType,
+        missionStage: this.missionStage,
+        roguelikePerks: this.roguelikePerks,
+        superSamples: this.superSamples,
         ownedEquipment: this.ownedEquipment,
         equipped: this.equipped,
         waveNumber: this.waveNumber,
@@ -3422,6 +4053,12 @@
         if (data.unlockedBases) Object.assign(this.unlockedBases, data.unlockedBases);
         if (typeof data.activeBaseId === 'string') this.activeBaseId = data.activeBaseId;
         if (typeof data.mendProjectorLevel === 'number') this.mendProjectorLevel = data.mendProjectorLevel;
+        if (typeof data.hellpodBayLevel === 'number') this.hellpodBayLevel = data.hellpodBayLevel;
+        if (typeof data.totalHellpodDrops === 'number') this.totalHellpodDrops = data.totalHellpodDrops;
+        if (typeof data.missionType === 'string') this.missionType = data.missionType;
+        if (typeof data.missionStage === 'number') this.missionStage = data.missionStage;
+        if (data.roguelikePerks) Object.assign(this.roguelikePerks, data.roguelikePerks);
+        if (typeof data.superSamples === 'number') this.superSamples = data.superSamples;
         if (data.ownedEquipment) Object.assign(this.ownedEquipment, data.ownedEquipment);
         if (data.equipped) Object.assign(this.equipped, data.equipped);
         if (typeof data.cash === 'number') this.cash = Math.max(40, data.cash);
@@ -3485,8 +4122,12 @@
       };
 
       canvas.addEventListener('pointerdown', (e) => {
+        const pt = this.world.screenToWorld(e.clientX, e.clientY);
+        if (this.handleCanvasBuildingClick(pt.x, pt.z)) {
+          return;
+        }
         pointerDown = true;
-        updateTargetFromEvent(e.clientX, e.clientY);
+        this.pointerTarget = pt;
       });
       canvas.addEventListener('pointermove', (e) => {
         if (pointerDown) updateTargetFromEvent(e.clientX, e.clientY);
@@ -3583,6 +4224,42 @@
       document.getElementById('btn-mode-tech')?.addEventListener('click', () => {
         this.renderSkillsModal();
         document.getElementById('modal-skills')?.classList.add('open');
+      });
+
+      // Idle Inspector Quick-Upgrade & Belt-Upgrade Buttons
+      document.getElementById('btn-idle-quick-upgrade')?.addEventListener('click', () => {
+        this.triggerSelectedInspectorUpgrade();
+      });
+      document.getElementById('btn-idle-belt-upgrade')?.addEventListener('click', () => {
+        const nextBelt = CFG.CONVEYORS.find((c) => (this.conveyorLevels[c.id] || 0) < 10) || CFG.CONVEYORS[0];
+        const bl = this.conveyorLevels[nextBelt.id] || 0;
+        const bc = this.getConveyorUpgradeCost(nextBelt.id);
+        if (bl < 10 && this.cash >= bc) {
+          this.cash -= bc;
+          this.conveyorLevels[nextBelt.id] = bl + 1;
+          this.conveyors[nextBelt.id] = true;
+          this.conveyorRemaining[nextBelt.id] = this.getConveyorUpgradeCost(nextBelt.id);
+          this.recalcDerivedStats();
+          this.audio.playUnlock();
+          this.spawnFloatingText(this.player.x, this.player.z - 40, `🔗 ${nextBelt.name.toUpperCase()} Lv.${bl + 1}/10!`, nextBelt.color);
+          this.updateHUD();
+        }
+      });
+
+      // Toggle between Capybara Go! Attack Expedition & 3-Gate Tower Defense Siege
+      document.getElementById('btn-toggle-mission-type')?.addEventListener('click', () => {
+        this.missionType = this.missionType === 'attack' ? 'defense' : 'attack';
+        this.audio.playPickup();
+        this.renderRoguelikeDraftBar();
+        this.updateHUD();
+        this.spawnFloatingText(
+          this.player.x,
+          this.player.z - 45,
+          this.missionType === 'attack'
+            ? '⚔️ SWITCHED TO ATTACK EXPEDITION (CAPYBARA GO! 5-STAGE MARCH)!'
+            : '🛡️ SWITCHED TO 3-GATE TOWER DEFENSE SIEGE!',
+          '#38bdf8'
+        );
       });
 
       // War Front Deployment Dock Buttons

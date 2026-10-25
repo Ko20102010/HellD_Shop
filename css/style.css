@@ -1,6 +1,6 @@
 /* ==========================================================================
    HELLDIVERS PLEASE! — Super Destroyer Warship & Mindustry War-Zone Tycoon
-   Version: v0.0.08 (Minimalist 1-Row HUD, True Split Shop/War & Warship Deck)
+   Version: v0.0.09 (Minimalist 1-Row HUD, True Split Shop/War & Warship Deck)
    Stylesheet: Ultra-Clean Single-Row Floating Pill Bar (<8% Screen Footprint),
                Unified Command Drawer (Hides 90%+ of UI Clutter),
                True Split Shop/War Switcher & Mindustry Tech Tree
@@ -816,5 +816,140 @@ html, body {
 
   #mindustry-tree-canvas {
     height: 250px;
+  }
+}
+
+/* ==========================================================================
+   NEW IN v0.0.09: IDLE CLICK-TO-UPGRADE BAR & ROGUELIKE 3-CARD DRAFT BAR
+   ========================================================================== */
+#idle-inspector-bar {
+  position: absolute;
+  bottom: max(14px, env(safe-area-inset-bottom, 12px));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 14;
+  background: rgba(9, 14, 26, 0.94);
+  backdrop-filter: blur(8px);
+  border: 1.5px solid #facc15;
+  border-radius: 12px;
+  padding: 6px 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.85);
+  pointer-events: auto;
+  max-width: 92vw;
+}
+
+#idle-inspector-bar.hidden-bar {
+  display: none;
+}
+
+#idle-inspector-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+#idle-inspector-title {
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  font-weight: 900;
+  color: #fde047;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#idle-inspector-sub {
+  font-size: 0.65rem;
+  color: #cbd5e1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#roguelike-draft-bar {
+  position: absolute;
+  top: 52px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 18;
+  background: rgba(9, 13, 24, 0.96);
+  backdrop-filter: blur(10px);
+  border: 2px solid #a855f7;
+  border-radius: 14px;
+  padding: 8px 10px;
+  display: none;
+  flex-direction: column;
+  gap: 6px;
+  width: 94vw;
+  max-width: 680px;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.92);
+  pointer-events: auto;
+}
+
+#roguelike-draft-bar.visible {
+  display: flex;
+}
+
+.rk-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-family: var(--font-display);
+  font-size: 0.68rem;
+  font-weight: 900;
+  color: #e9d5ff;
+}
+
+#rk-cards-container {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.rk-card-btn {
+  cursor: pointer;
+  background: linear-gradient(145deg, #1e293b, #0f172a);
+  border: 1.5px solid #facc15;
+  border-radius: 10px;
+  padding: 6px 7px;
+  color: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 3px;
+  transition: transform 0.12s ease, border-color 0.12s ease;
+}
+
+.rk-card-btn:hover {
+  transform: translateY(-2px);
+  border-color: #4ade80;
+}
+
+.rk-card-title {
+  font-family: var(--font-display);
+  font-size: 0.64rem;
+  font-weight: 900;
+  color: #fde047;
+}
+
+.rk-card-desc {
+  font-size: 0.6rem;
+  color: #cbd5e1;
+  line-height: 1.2;
+}
+
+@media (max-width: 768px) {
+  #idle-inspector-bar {
+    bottom: max(106px, calc(env(safe-area-inset-bottom, 10px) + 96px));
+    padding: 5px 8px;
+    gap: 5px;
+  }
+  #idle-inspector-sub {
+    display: none;
   }
 }

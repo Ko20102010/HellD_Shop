@@ -620,7 +620,7 @@
 
       // 3. Flanking Allied SES Super Destroyers cruising in Low Orbit (Port & Starboard)
       this.drawAlliedOrbitingDestroyer(ctx, -2560, 420 + Math.sin(this.time * 0.6) * 25, 0.85, 'SES WINGS OF LIBERTY');
-      this.drawAlliedOrbitingDestroyer(ctx, 2660, 680 + Math.cos(this.time * 0.5) * 25, 0.85, 'SES FIST OF DEMOCRACY');
+      this.drawAlliedOrbitingDestroyer(ctx, 2960, 680 + Math.cos(this.time * 0.5) * 25, 0.85, 'SES FIST OF DEMOCRACY');
 
       // 4. Main SES Super Destroyer Outer Armored Hull Silhouette & Stern Engine Thrusters
       ctx.save();
@@ -655,8 +655,8 @@
       ctx.beginPath();
       ctx.moveTo(-980, -280);
       ctx.lineTo(980, -280);
-      ctx.lineTo(2290, -80);
-      ctx.lineTo(2290, 1950);
+      ctx.lineTo(2620, -80);
+      ctx.lineTo(2620, 1950);
       ctx.lineTo(-2190, 1950);
       ctx.lineTo(-2190, -80);
       ctx.closePath();
@@ -670,8 +670,8 @@
       ctx.beginPath();
       ctx.moveTo(-920, -220);
       ctx.lineTo(920, -220);
-      ctx.lineTo(2210, -40);
-      ctx.lineTo(2210, 1900);
+      ctx.lineTo(2550, -40);
+      ctx.lineTo(2550, 1900);
       ctx.lineTo(-2110, 1900);
       ctx.lineTo(-2110, -40);
       ctx.closePath();
@@ -751,11 +751,11 @@
         ctx,
         100,
         -25,
-        2060,
+        2410,
         1890,
         'rgba(20, 41, 36, 0.55)',
         '#22c55e',
-        '💵 STARBOARD DECK: 7 HELLDIVER COUNTERS'
+        '💵 STARBOARD DECK: 3-COUNTER EXPANSION HALL (Lv.1=1 Desk · Lv.4=2 Desks · Lv.8=3 Desks)'
       );
 
       // 8. Bridge Galactic War Hologram Table, Mindustry Core & 4 Hellpod Drop Tubes
@@ -804,39 +804,57 @@
     }
 
     drawBridgeHellpodLaunchBay(ctx, state) {
+      const hpLvl = state.hellpodBayLevel || 1;
+      const hpCost = state.getHellpodUpgradeCost ? state.getHellpodUpgradeCost() : 140;
+      const dropFee = state.getHellpodDropFee ? state.getHellpodDropFee() : 45;
+      const queuedPodCount = (state.customers || []).filter((c) => c.state === 'to_hellpod').length;
+
       ctx.save();
       ctx.translate(220, -100);
 
       ctx.fillStyle = '#111827';
-      ctx.strokeStyle = '#ef4444';
-      ctx.lineWidth = 3;
+      ctx.strokeStyle = '#facc15';
+      ctx.lineWidth = 3.5;
       ctx.beginPath();
-      ctx.roundRect(-210, -48, 420, 92, 12);
+      ctx.roundRect(-240, -54, 480, 104, 14);
       ctx.fill();
       ctx.stroke();
 
       // 4 Circular Hellpod Launch Tubes
       for (let i = 0; i < 4; i++) {
-        const hx = -135 + i * 90;
-        const pulse = 0.65 + 0.35 * Math.sin(this.time * 5 + i);
+        const hx = -150 + i * 100;
+        const pulse = 0.65 + 0.35 * Math.sin(this.time * 6 + i);
         ctx.fillStyle = '#090d14';
-        ctx.strokeStyle = `rgba(250, 204, 21, ${pulse})`;
-        ctx.lineWidth = 3;
+        ctx.strokeStyle = i < queuedPodCount ? '#4ade80' : `rgba(250, 204, 21, ${pulse})`;
+        ctx.lineWidth = 3.5;
         ctx.beginPath();
-        ctx.arc(hx, 6, 24, 0, Math.PI * 2);
+        ctx.arc(hx, 4, 25, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
 
         ctx.font = '18px sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText('🚀', hx, 7);
+        ctx.fillText('🚀', hx, 5);
       }
 
-      ctx.fillStyle = '#fca5a5';
-      ctx.font = '900 11px Orbitron, sans-serif';
+      ctx.fillStyle = '#fde047';
+      ctx.font = '900 11.5px Orbitron, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('🚀 4x HELLPOD DROP TUBES (TAP ⚔️ WAR FRONT TO DROP)', 0, -28);
+      ctx.fillText(`🚀 HELLPOD LAUNCH BAY (Lv.${hpLvl}/10) — GEARD HELLDIVERS PAY +$${dropFee} TO DROP TO WAR!`, 0, -34);
+
+      // Clickable Idle Upgrade Badge on Hellpod Bay
+      ctx.fillStyle = hpLvl >= 10 ? '#16a34a' : '#0284c7';
+      ctx.beginPath();
+      ctx.roundRect(-145, 32, 290, 22, 6);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '900 10px Orbitron, sans-serif';
+      ctx.fillText(
+        hpLvl >= 10 ? `✅ MAX Lv.10 (Dropped: ${state.totalHellpodDrops || 0} Helldivers)` : `👆 TAP TO UPGRADE Lv.${hpLvl + 1}/10 ($${hpCost}) · Faster Drop & +$25 Fee`,
+        0,
+        44
+      );
       ctx.restore();
     }
 
@@ -862,15 +880,48 @@
       ctx.fillRect(W.corridorMaxX, W.minZ, W.maxX - W.corridorMaxX, (W.wallZ - W.minZ) + 160);
       ctx.strokeRect(W.corridorMaxX, W.minZ, W.maxX - W.corridorMaxX, (W.wallZ - W.minZ) + 160);
 
-      // Clean Wave Header at North Edge
+      // Capybara Go! × Helldivers 2 Attack Expedition & Tower Defense Operation Header
       ctx.save();
-      ctx.fillStyle = 'rgba(248, 113, 113, 0.45)';
-      ctx.font = '900 20px Orbitron, sans-serif';
+      const isAttack = (state.missionType || 'attack') === 'attack';
+      const opStage = state.missionStage || 1;
+      ctx.fillStyle = isAttack ? 'rgba(56, 189, 248, 0.85)' : 'rgba(248, 113, 113, 0.85)';
+      ctx.font = '900 22px Orbitron, sans-serif';
       ctx.textAlign = 'center';
-      const waveBanner = state.waveState === 'rest'
-        ? `⏳ WAVE ${state.waveNumber} IN ${Math.ceil(state.waveTimer)}s`
-        : `🚨 WAVE ${state.waveNumber} — ${state.enemies.length + state.waveEnemiesToSpawn} HOSTILES`;
-      ctx.fillText(waveBanner, 0, -1760);
+      const modeTitle = isAttack
+        ? `⚔️ ATTACK EXPEDITION (CAPYBARA GO! ROGUELIKE MARCH) — STAGE ${opStage}/5`
+        : `🛡️ TOWER DEFENSE SIEGE — WAVE ${state.waveNumber} (STAGE ${opStage}/5)`;
+      ctx.fillText(modeTitle, 0, -1790);
+
+      ctx.fillStyle = '#fde047';
+      ctx.font = '900 15px Orbitron, sans-serif';
+      ctx.fillText(
+        `🎁 CLEAR STAGE 5 FOR OPERATION VICTORY CHEST (+$${Math.round(450 * (state.waveNumber || 1))} + 3 ⭐ MEDALS + 🧬 SAMPLE!) | 🚀 SHOP HELLPOD DROPS: ${state.totalHellpodDrops || 0}`,
+        0,
+        -1752
+      );
+
+      // Draw Enemy Outpost / Hive Objective at the North of the War Corridor during Attack Missions!
+      if (isAttack) {
+        ctx.translate(0, -1620);
+        ctx.fillStyle = '#450a0a';
+        ctx.strokeStyle = '#ef4444';
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.roundRect(-220, -55, 440, 110, 16);
+        ctx.fill();
+        ctx.stroke();
+
+        const outHp = Math.max(0, state.attackOutpostHp || 1200);
+        const outMax = Math.max(1, state.attackOutpostMaxHp || 1200);
+        ctx.fillStyle = '#090d14';
+        ctx.fillRect(-190, 22, 380, 18);
+        ctx.fillStyle = '#ef4444';
+        ctx.fillRect(-188, 24, 376 * (outHp / outMax), 14);
+
+        ctx.fillStyle = '#fca5a5';
+        ctx.font = '900 14px Orbitron, sans-serif';
+        ctx.fillText(`🏴‍☠️ ENEMY COMMAND FORTRESS (STAGE ${opStage}/5): ${Math.ceil(outHp)}/${outMax} HP`, 0, -10);
+      }
       ctx.restore();
 
       for (const c of this.craters) {
@@ -1016,13 +1067,15 @@
 
       // Gate Turret Ammo Belts are rendered in War Mode ('war') only
 
-      // 4. 7 DEDICATED HORIZONTAL OUTPUT-TO-COUNTER BELTS (conv_counter_auto)
+      // 4. 7 DEDICATED HORIZONTAL OUTPUT-TO-COUNTER BELTS (conv_counter_auto -> 1 to 3 Physical Counters!)
       const counterBeltLvl = state.conveyorLevels?.conv_counter_auto || 0;
       for (const item of window.GameConfig.ITEMS) {
         if (!state.unlocked[item.id]) continue;
+        const cCount = state.getUnlockedCounterCount ? state.getUnlockedCounterCount(item.id) : 1;
+        const endX = cCount >= 3 ? item.counter3Pos.x : (cCount >= 2 ? item.counter2Pos.x : item.counterPos.x);
         this.drawBeltPath(ctx, [
           { x: item.pickupPos.x, z: item.pickupPos.z },
-          { x: item.counterPos.x, z: item.counterPos.z }
+          { x: endX, z: item.counterPos.z }
         ], counterBeltLvl, item.color);
       }
     }
@@ -1132,111 +1185,35 @@
     // ========================================================================
     drawFloorPads(ctx, state, mode = 'shop') {
       const L = window.GameConfig.LOCATIONS;
-
-      if (mode === 'war') {
-        for (const c of window.GameConfig.CONVEYORS) {
-          if (!c.gateId) continue;
-          const lvl = state.conveyorLevels?.[c.id] || 0;
-          const isMax = lvl >= c.maxLevel;
-          const rem = Math.max(0, state.conveyorRemaining?.[c.id] ?? state.getConveyorUpgradeCost(c.id));
-          const title = isMax ? `${c.icon} MAX Lv.20` : (lvl === 0 ? `🔓 BELT $${rem}` : `⬆️ BELT Lv.${lvl + 1} ($${rem})`);
-          this.drawPadBox(ctx, c.padX, c.padZ, 162, 68, c.color, title, c.name);
-        }
-        return;
-      }
+      if (mode === 'war') return;
 
       this.drawPadBox(
         ctx,
         L.armoryLoadoutPad.x,
         L.armoryLoadoutPad.z,
-        156,
-        74,
+        152,
+        68,
         '#a855f7',
         '🛡️ ARMORY LOADOUT',
-        'Weapons, Guard Dog & Mechs'
+        'Tap or Step to Equip Gear'
       );
 
-      // Shop Conveyor Belt Pads (Only non-gate belts in Shop Mode!)
-      for (const c of window.GameConfig.CONVEYORS) {
-        if (c.gateId) continue;
-        const lvl = state.conveyorLevels?.[c.id] || 0;
-        const isMax = lvl >= c.maxLevel;
-        const rem = Math.max(0, state.conveyorRemaining?.[c.id] ?? state.getConveyorUpgradeCost(c.id));
-        const activeCount = (state.beltPackets || []).filter((p) => p.beltId === c.id).length;
-        const title = isMax
-          ? `${c.icon} BELT MAX (Lv.20)`
-          : (lvl === 0 ? `🔓 UNLOCK BELT $${rem}` : `⬆️ BELT Lv.${lvl + 1}/20 ($${rem})`);
-        const sub = lvl === 0
-          ? `${c.name} (Off)`
-          : (activeCount > 0 ? `Lv.${lvl}/20 — Moving ${activeCount} Load(s)` : `Lv.${lvl}/20 — Idle (Waiting Stock)`);
-        this.drawPadBox(ctx, c.padX, c.padZ, 184, 82, c.color, title, sub);
-      }
-
-      // Item Unlock & Machine Level 1..20 Upgrade Pads (Safely offset +118px South of stationPos!)
+      // HYBRID IDLE + BURGER PLEASE DESIGN:
+      // Keep Step-and-Pay on the floor ONLY for LOCKED (Lv.0) Production Lines!
+      // Once unlocked, machines & 3-counter bays are upgraded by CLICKING/TAPPING them (no floor clutter)!
       for (const item of window.GameConfig.ITEMS) {
         const isUnlocked = !!state.unlocked[item.id];
-        const st = state.stations[item.id];
-        const lvl = st ? (st.level || 0) : 0;
-
         if (!isUnlocked) {
-          // Draw blueprint placeholder box at stationPos (Non-solid until unlocked!)
-          ctx.save();
-          ctx.translate(item.stationPos.x, item.stationPos.z);
-          ctx.fillStyle = 'rgba(15, 23, 42, 0.45)';
-          ctx.strokeStyle = 'rgba(148, 163, 184, 0.35)';
-          ctx.lineWidth = 2.5;
-          ctx.setLineDash([8, 6]);
-          ctx.fillRect(-56, -56, 112, 112);
-          ctx.strokeRect(-56, -56, 112, 112);
-          ctx.setLineDash([]);
-          ctx.fillStyle = '#94a3b8';
-          ctx.font = '900 12px Orbitron, sans-serif';
-          ctx.textAlign = 'center';
-          ctx.fillText(`🔒 ${item.icon} ${item.shortName.toUpperCase()}`, 0, -4);
-          ctx.font = '700 11px Rajdhani, sans-serif';
-          ctx.fillText(`Blueprint Site (Stand Below to Build)`, 0, 14);
-          ctx.restore();
-
-          // Locked Counter Blueprint Placeholder in Sector C
-          ctx.save();
-          ctx.translate(item.counterPos.x, item.counterPos.z);
-          ctx.fillStyle = 'rgba(15, 23, 42, 0.35)';
-          ctx.strokeStyle = 'rgba(148, 163, 184, 0.25)';
-          ctx.lineWidth = 2;
-          ctx.setLineDash([6, 6]);
-          ctx.fillRect(-70, -44, 140, 88);
-          ctx.strokeRect(-70, -44, 140, 88);
-          ctx.setLineDash([]);
-          ctx.fillStyle = '#64748b';
-          ctx.font = '900 11px Orbitron, sans-serif';
-          ctx.textAlign = 'center';
-          ctx.fillText(`🔒 ${item.icon} COUNTER #${item.tier}`, 0, 4);
-          ctx.restore();
-
           const rem = Math.max(0, state.unlockRemaining[item.id] ?? item.unlockCost);
           this.drawPadBox(
             ctx,
-            item.unlockPos.x,
-            item.unlockPos.z,
-            184,
-            82,
+            item.stationPos.x,
+            item.stationPos.z,
+            210,
+            92,
             item.color,
-            `🔓 UNLOCK ${item.icon} $${rem}`,
-            `${item.shortName} (${item.recipeText})`
-          );
-        } else {
-          // Machine is unlocked -> Show Lv.1..20 Upgrade Pad at item.unlockPos!
-          const isMax = lvl >= item.maxLevel;
-          const upgCost = state.getStationUpgradeCost ? state.getStationUpgradeCost(item.id) : 100;
-          this.drawPadBox(
-            ctx,
-            item.unlockPos.x,
-            item.unlockPos.z,
-            184,
-            72,
-            isMax ? '#4ade80' : item.color,
-            isMax ? `✅ ${item.icon} MAX Lv.20` : `⬆️ UPGRADE ${item.icon} Lv.${lvl + 1}/20 ($${upgCost})`,
-            `Lv.${lvl}/20 | +15% Speed & +12% Value`
+            `🔓 STEP OR TAP: ${item.icon} $${rem}`,
+            `Build ${item.shortName} (${item.recipeText})`
           );
         }
       }
@@ -1364,7 +1341,7 @@
         ctx.font = '900 11.5px Orbitron, sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText(
-          `🛡️ LAYER ${g.layerOrder} — ${g.shortName.toUpperCase()} (Lv.${defLvl}/20): ${Math.ceil(gs.hp)}/${gs.maxHp} HP`,
+          `🛡️ LAYER ${g.layerOrder} — ${g.shortName.toUpperCase()} (Lv.${defLvl}/10): ${Math.ceil(gs.hp)}/${gs.maxHp} HP`,
           0,
           -44
         );
@@ -1388,7 +1365,7 @@
           176,
           76,
           isMax ? '#4ade80' : g.color,
-          isMax ? `✅ FORTIFIED MAX Lv.20` : `⬆️ FORTIFY Lv.${defLvl + 1}/20 ($${upgCost})`,
+          isMax ? `✅ FORTIFIED MAX Lv.10` : `⬆️ FORTIFY Lv.${defLvl + 1}/10 ($${upgCost})`,
           `+Max HP & Dual Turret DMG`
         );
 
@@ -1484,7 +1461,7 @@
     }
 
     // ========================================================================
-    // 5. SECTOR A: MANUAL HARVEST QUARRY + AUTO-MINING RIGS (Lv.0 Locked -> Lv.20)
+    // 5. SECTOR A: MANUAL HARVEST QUARRY + AUTO-MINING RIGS (Lv.0 Locked -> Lv.10)
     // ========================================================================
     drawRawQuarryAndAmmoPress(ctx, state) {
       for (const raw of window.GameConfig.RAW_EXTRACTORS) {
@@ -1556,7 +1533,7 @@
           ctx.fillStyle = '#94a3b8';
           ctx.font = '900 13px Orbitron, sans-serif';
           ctx.textAlign = 'center';
-          ctx.fillText(`🔒 AUTO ${raw.shortName.toUpperCase()} (LOCKED Lv.0/20)`, 0, -6);
+          ctx.fillText(`🔒 AUTO ${raw.shortName.toUpperCase()} (LOCKED Lv.0/10)`, 0, -6);
           ctx.fillStyle = '#fde047';
           ctx.font = '700 12px Rajdhani, sans-serif';
           ctx.fillText(`Stand on Pad Below ($${upgradeCost}) to Build Auto-Rig!`, 0, 16);
@@ -1601,7 +1578,7 @@
           ctx.fillStyle = '#ffffff';
           ctx.font = '900 13px Orbitron, sans-serif';
           ctx.textAlign = 'center';
-          ctx.fillText(`${raw.icon} AUTO ${raw.shortName.toUpperCase()} (Lv.${lvl}/20 — ${visibleRigs} RIGS)`, 0, -88);
+          ctx.fillText(`${raw.icon} AUTO ${raw.shortName.toUpperCase()} (Lv.${lvl}/10 — ${visibleRigs} RIGS)`, 0, -88);
           ctx.fillStyle = '#facc15';
           ctx.font = '700 12px Rajdhani, sans-serif';
           ctx.fillText(`Auto Rate: ${(1 / (rs?.cycleTime || 1.5)).toFixed(1)}/s | Stored: ${stock}/${maxBuf}`, 0, -72);
@@ -1621,16 +1598,26 @@
           );
         }
 
-        this.drawPadBox(
-          ctx,
-          raw.padX,
-          raw.padZ,
-          184,
-          80,
-          isMax ? '#4ade80' : raw.color,
-          isMax ? `✅ MAX SCALE Lv.20` : (lvl === 0 ? `🔓 UNLOCK AUTO ${raw.itemIcon} ($${upgradeCost})` : `⬆️ UPGRADE Lv.${lvl + 1}/20 ($${upgradeCost})`),
-          lvl === 0 ? `Automates ${raw.shortName} Extraction` : `Expand Rigs, Buffer & Speed`
+        // Click-to-Upgrade Badge directly on the Auto-Extractor Rig (No extra floor pad clutter!)
+        ctx.save();
+        ctx.translate(raw.x, raw.z + 82);
+        ctx.fillStyle = isMax ? '#16a34a' : '#0f172a';
+        ctx.strokeStyle = isMax ? '#4ade80' : raw.color;
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.roundRect(-102, -14, 204, 28, 7);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = isMax ? '#4ade80' : '#fde047';
+        ctx.font = '900 10.5px Orbitron, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(
+          isMax ? `✅ AUTO-RIG MAX Lv.10` : (lvl === 0 ? `👆 TAP TO BUILD AUTO ${raw.itemIcon} ($${upgradeCost})` : `👆 TAP UPGRADE Lv.${lvl + 1}/10 ($${upgradeCost})`),
+          0,
+          1
         );
+        ctx.restore();
       }
 
       // E. Munitions Ammo Press (Starts Locked Lv.0 -> Upgrades Lv.1..20!)
@@ -1655,7 +1642,7 @@
         ctx.fillStyle = '#fdba74';
         ctx.font = '900 12px Orbitron, sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText(`🔒 🧱 MUNITIONS PRESS (Lv.0/20)`, 0, -4);
+        ctx.fillText(`🔒 🧱 MUNITIONS PRESS (Lv.0/10)`, 0, -4);
         ctx.font = '700 11px Rajdhani, sans-serif';
         ctx.fillText(`Unlock Below ($${apCost}) to Craft Turret Ammo`, 0, 14);
         ctx.restore();
@@ -1701,7 +1688,7 @@
 
         ctx.fillStyle = '#ffffff';
         ctx.font = '900 12.5px Orbitron, sans-serif';
-        ctx.fillText(`🧱 MUNITIONS PRESS (Lv.${apLvl}/20)`, 0, -72);
+        ctx.fillText(`🧱 MUNITIONS PRESS (Lv.${apLvl}/10)`, 0, -72);
         ctx.restore();
 
         this.drawPadBox(
@@ -1716,16 +1703,25 @@
         );
       }
 
-      this.drawPadBox(
-        ctx,
-        AP.unlockPos.x,
-        AP.unlockPos.z,
-        182,
-        74,
-        apMax ? '#4ade80' : '#f97316',
-        apMax ? `✅ AMMO PRESS MAX Lv.20` : (apLvl === 0 ? `🔓 UNLOCK 🧱 PRESS ($${apCost})` : `⬆️ UPGRADE PRESS Lv.${apLvl + 1}/20 ($${apCost})`),
-        `1x ⛏️ Iron ➔ 3x 🧱 Turret Ammo`
+      ctx.save();
+      ctx.translate(AP.x, AP.z + 78);
+      ctx.fillStyle = apMax ? '#16a34a' : '#0f172a';
+      ctx.strokeStyle = apMax ? '#4ade80' : '#f97316';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.roundRect(-98, -14, 196, 28, 7);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = apMax ? '#4ade80' : '#fde047';
+      ctx.font = '900 10.5px Orbitron, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(
+        apMax ? `✅ PRESS MAX Lv.10` : (apLvl === 0 ? `👆 TAP TO BUILD 🧱 PRESS ($${apCost})` : `👆 TAP UPGRADE Lv.${apLvl + 1}/10 ($${apCost})`),
+        0,
+        1
       );
+      ctx.restore();
     }
 
     drawStationConnectorPipe(ctx, inPos, stPos, outPos, color) {
@@ -1817,11 +1813,21 @@
         ctx.fillRect(-46, 36, 92 * Math.min(1, prog), 8);
 
         ctx.fillStyle = '#ffffff';
-        ctx.font = '900 12.5px Orbitron, sans-serif';
-        ctx.fillText(`${item.icon} ${item.shortName.toUpperCase()} (Lv.${lvl}/20)`, 0, -72);
-        ctx.fillStyle = hasIngredients ? '#fde047' : '#fca5a5';
-        ctx.font = '700 11.5px Rajdhani, sans-serif';
-        ctx.fillText(hasIngredients ? `Recipe: ${item.recipeText}` : `⏸️ WAITING FOR RAW INPUT`, 0, -57);
+        ctx.font = '900 12px Orbitron, sans-serif';
+        ctx.fillText(`${item.icon} ${item.shortName.toUpperCase()} (Lv.${lvl}/10)`, 0, -68);
+
+        const upgCost = state.getStationUpgradeCost ? state.getStationUpgradeCost(item.id) : 100;
+        const stMax = lvl >= 10;
+        ctx.fillStyle = stMax ? '#16a34a' : '#0f172a';
+        ctx.strokeStyle = stMax ? '#4ade80' : item.color;
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        ctx.roundRect(-84, 58, 168, 25, 6);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = stMax ? '#4ade80' : '#fde047';
+        ctx.font = '900 10px Orbitron, sans-serif';
+        ctx.fillText(stMax ? `✅ MAX Lv.10 (3 COUNTERS)` : `👆 TAP Lv.${lvl + 1}/10 ($${upgCost})`, 0, 71);
 
         ctx.restore();
 
@@ -1843,62 +1849,120 @@
     // 7. SECTOR C: 7 DEDICATED ITEM SALES COUNTERS, PER-COUNTER CASH & QUEUES
     //    (1 Item = 1 Dedicated Sales Counter + Drop Pad + Cash Stack + Queue)
     // ========================================================================
+    // ========================================================================
+    // 7. SECTOR C: EXPANDABLE 1-TO-3 PHYSICAL COUNTERS PER LANE (MAX Lv.10!)
+    //    - Lv.1–3: 1 Physical Counter Desk (x = 500)
+    //    - Lv.4–7: 2 Physical Counter Desks (x = 500, x = 820) — 2x Checkout Speed & Buffer!
+    //    - Lv.8–10: 3 Physical Counter Desks (x = 500, x = 820, x = 1140) — 3x Checkout Speed!
+    // ========================================================================
     drawDedicatedCountersAndCash(ctx, state) {
       const L = window.GameConfig.LOCATIONS;
 
       for (const item of window.GameConfig.ITEMS) {
         if (!state.unlocked[item.id]) continue;
+        const st = state.stations[item.id];
+        const lvl = st ? (st.level || 1) : 1;
+        const unlockedDesks = state.getUnlockedCounterCount ? state.getUnlockedCounterCount(item.id) : (lvl >= 8 ? 3 : (lvl >= 4 ? 2 : 1));
         const count = state.counterBuffer[item.id] || 0;
         const sellPrice = state.getItemSellPrice(item);
+        const upgCost = state.getStationUpgradeCost ? state.getStationUpgradeCost(item.id) : 100;
 
-        // 1. Dedicated Drop / Stock Pad on the West side of this item's Counter
+        // 1. Dedicated Drop / Stock Pad on the West side of this item's Counter Hall
         this.drawPadBox(
           ctx,
           item.counterDropPos.x,
           item.counterDropPos.z,
-          144,
-          82,
+          132,
+          76,
           count > 0 ? '#22c55e' : item.color,
           `📦 STOCK ${item.icon}`,
-          `Drop ${item.shortName} Here`
+          `Drop ${item.shortName}`
         );
 
-        // 2. Dedicated Counter Table for this specific Item
-        ctx.save();
-        ctx.translate(item.counterPos.x, item.counterPos.z);
+        // 2. Render all 3 Counter Desk Slots (x = 500, 820, 1140)
+        const deskPositions = [
+          { idx: 1, pos: item.counterPos, reqLvl: 1 },
+          { idx: 2, pos: item.counter2Pos || { x: 820, z: item.counterPos.z }, reqLvl: 4 },
+          { idx: 3, pos: item.counter3Pos || { x: 1140, z: item.counterPos.z }, reqLvl: 8 }
+        ];
 
-        ctx.fillStyle = '#1e293b';
-        ctx.strokeStyle = count > 0 ? item.color : '#475569';
-        ctx.lineWidth = 4;
-        ctx.fillRect(-76, -48, 152, 96);
-        ctx.strokeRect(-76, -48, 152, 96);
+        for (const desk of deskPositions) {
+          const isDeskActive = unlockedDesks >= desk.idx;
+          ctx.save();
+          ctx.translate(desk.pos.x, desk.pos.z);
 
-        ctx.fillStyle = count > 0 ? 'rgba(34, 197, 94, 0.22)' : 'rgba(15, 23, 42, 0.72)';
-        ctx.fillRect(-66, -34, 132, 68);
+          if (!isDeskActive) {
+            // Expansion Slot Blueprint for Counter #2 (Lv.4) or Counter #3 (Lv.8)
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.38)';
+            ctx.strokeStyle = 'rgba(148, 163, 184, 0.28)';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([7, 6]);
+            ctx.fillRect(-110, -44, 220, 88);
+            ctx.strokeRect(-110, -44, 220, 88);
+            ctx.setLineDash([]);
 
-        ctx.fillStyle = item.color;
-        ctx.font = '900 11.5px Orbitron, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText(`COUNTER #${item.tier}: ${item.shortName.toUpperCase()}`, 0, -56);
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '900 10.5px Orbitron, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(`🔒 +COUNTER DESK #${desk.idx} (UNLOCKS AT Lv.${desk.reqLvl})`, 0, -4);
+            ctx.fillStyle = '#fde047';
+            ctx.font = '700 10px Rajdhani, sans-serif';
+            ctx.fillText(`👆 Tap Lane to Upgrade Lv.${lvl}/10 ($${upgCost})`, 0, 14);
+          } else {
+            // Active Physical Sales Counter Desk!
+            ctx.fillStyle = '#1e293b';
+            ctx.strokeStyle = desk.idx === 3 ? '#facc15' : (count > 0 ? item.color : '#475569');
+            ctx.lineWidth = desk.idx === 3 ? 4.5 : 3.5;
+            ctx.fillRect(-114, -46, 228, 92);
+            ctx.strokeRect(-114, -46, 228, 92);
 
-        ctx.font = '26px sans-serif';
-        ctx.textAlign = 'left';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(item.icon, -54, -2);
+            ctx.fillStyle = count > 0 ? 'rgba(34, 197, 94, 0.22)' : 'rgba(15, 23, 42, 0.75)';
+            ctx.fillRect(-102, -32, 204, 64);
 
-        ctx.fillStyle = count > 0 ? '#4ade80' : '#f87171';
-        ctx.font = '900 18px Orbitron, sans-serif';
-        ctx.textAlign = 'right';
-        ctx.fillText(`x${count}`, 56, -6);
+            ctx.fillStyle = item.color;
+            ctx.font = '900 10.5px Orbitron, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(
+              `COUNTER ${item.tier}-${desk.idx} (${unlockedDesks}/3 DESKS · Lv.${lvl}/10)`,
+              0,
+              -54
+            );
 
-        ctx.fillStyle = '#fde047';
-        ctx.font = '700 12px Rajdhani, sans-serif';
-        ctx.textAlign = 'right';
-        ctx.fillText(`$${sellPrice}/ea`, 56, 18);
+            ctx.font = '24px sans-serif';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(item.icon, -88, -2);
 
-        ctx.restore();
+            ctx.fillStyle = count > 0 ? '#4ade80' : '#f87171';
+            ctx.font = '900 16px Orbitron, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(`STOCK x${count}`, 0, -4);
 
-        // 3. Dedicated Cash Stack for this Counter (`state.counterCash[item.id]`)
+            ctx.fillStyle = '#fde047';
+            ctx.font = '700 11.5px Rajdhani, sans-serif';
+            ctx.textAlign = 'right';
+            ctx.fillText(`$${sellPrice}/ea`, 92, -4);
+
+            // Click-to-Upgrade Pill on the primary counter desk
+            if (desk.idx === unlockedDesks) {
+              ctx.fillStyle = lvl >= 10 ? '#16a34a' : '#0284c7';
+              ctx.beginPath();
+              ctx.roundRect(-86, 14, 172, 20, 5);
+              ctx.fill();
+              ctx.fillStyle = '#ffffff';
+              ctx.font = '900 9.5px Orbitron, sans-serif';
+              ctx.textAlign = 'center';
+              ctx.fillText(
+                lvl >= 10 ? '✅ MAX 3 COUNTERS (Lv.10)' : `👆 TAP +UPGRADE Lv.${lvl + 1}/10 ($${upgCost})`,
+                0,
+                25
+              );
+            }
+          }
+          ctx.restore();
+        }
+
+        // 3. Dedicated Cash Stack for this 3-Counter Bay (`state.counterCash[item.id]`)
         const cashVal = (state.counterCash && state.counterCash[item.id]) || 0;
         const cx = item.cashPos.x;
         const cz = item.cashPos.z;
@@ -1907,11 +1971,11 @@
           ctx,
           cx,
           cz,
-          128,
-          76,
+          126,
+          72,
           cashVal > 0 ? '#22c55e' : '#facc15',
-          cashVal > 0 ? `💵 +$${cashVal}` : `💵 CASH #${item.tier}`,
-          cashVal > 0 ? `Walk Here to Collect` : `Counter #${item.tier} Vault`
+          cashVal > 0 ? `💵 +$${cashVal}` : `💵 VAULT #${item.tier}`,
+          cashVal > 0 ? `Step or Tap to Collect` : `Counter #${item.tier} Vault`
         );
 
         const billCount = Math.min(28, Math.ceil(cashVal / 20));
@@ -1932,7 +1996,7 @@
 
       // Trash / Clear Stack Pad
       const TC = L.trashCanZone;
-      this.drawPadBox(ctx, TC.x, TC.z, 136, 82, '#ef4444', '🗑️ DUMP / CLEAR', 'Clear Held Stack');
+      this.drawPadBox(ctx, TC.x, TC.z, 132, 76, '#ef4444', '🗑️ DUMP / CLEAR', 'Clear Held Stack');
     }
 
     drawWarZoneObjects(ctx, state) {
@@ -2015,7 +2079,7 @@
         for (const c of state.customers) {
           renderList.push({
             z: c.z,
-            draw: () => this.drawHelldiverCustomer(ctx, c)
+            draw: () => this.drawHelldiverCustomer(ctx, c, state)
           });
         }
       } else {
@@ -2300,7 +2364,7 @@
       });
     }
 
-    drawHelldiverCustomer(ctx, c) {
+    drawHelldiverCustomer(ctx, c, state = {}) {
       const isVip = c.item && c.item.tier >= 5;
       this.drawCarbotBean(ctx, c.x, c.z, {
         bodyColor: isVip ? '#3b0764' : (c.color || '#1e293b'),
@@ -2326,11 +2390,19 @@
       ctx.stroke();
 
       ctx.fillStyle = '#ffffff';
-      ctx.font = '900 12.5px Orbitron, sans-serif';
+      ctx.font = '900 11px Orbitron, sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      if (c.state === 'leaving') {
+      if (c.state === 'to_hellpod') {
+        const fee = state.getHellpodDropFee ? state.getHellpodDropFee() : 45;
+        ctx.fillText(`🚀 TO HELLPOD (+$${fee})`, 0, -2);
+      } else if (c.state === 'leaving') {
         ctx.fillText('😊 DEMOCRACY!', 0, -2);
+      } else if (c.orders && c.orders.length > 1) {
+        const summary = c.orders
+          .map((o) => `${o.item.icon}${o.received}/${o.qty}`)
+          .join(' ');
+        ctx.fillText(summary, 0, -2);
       } else {
         ctx.fillText(`${c.item.icon} ${c.received}/${c.qty} (#${c.item.tier})`, 0, -2);
       }

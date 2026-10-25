@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>HELLDIVERS PLEASE! — Super Destroyer Warship &amp; Mindustry War-Zone Tycoon (v0.0.08)</title>
+  <title>HELLDIVERS PLEASE! — Super Destroyer Warship &amp; Mindustry War-Zone Tycoon (v0.0.09)</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
@@ -74,7 +74,7 @@
             <div class="brand-badge">
               <span>🚀</span>
               <span class="brand-title">SES SUPER DESTROYER COMMAND</span>
-              <span class="version-pill" id="hud-version">v0.0.08</span>
+              <span class="version-pill" id="hud-version">v0.0.09</span>
             </div>
 
             <div class="stat-pill gate-pill" title="Wave &amp; Rest Timer">
@@ -169,8 +169,31 @@
         </div>
       </header>
 
+      <!-- NEW IN v0.0.09: IDLE CLICK-TO-UPGRADE INSPECTOR PILL (Tap any Machine/Counter/Hellpod on Canvas!) -->
+      <div id="idle-inspector-bar">
+        <div id="idle-inspector-info">
+          <span id="idle-inspector-title">🦺 Counter #1 &amp; Fabricator (Lv.1/10 · 1/3 Counters)</span>
+          <span id="idle-inspector-sub">Tap any Machine, 3-Counter Bay, Drill, Belt, or Hellpod on deck to upgrade!</span>
+        </div>
+        <button class="buy-btn" id="btn-idle-quick-upgrade">⬆️ Upgrade ($80)</button>
+        <button class="buy-btn medal-btn" id="btn-idle-belt-upgrade">🔗 Belt Lv.0 ($150)</button>
+      </div>
+
+      <!-- NEW IN v0.0.09: CAPYBARA GO! × ROGUELIKE 3-CARD PERK DRAFT & MISSION VICTORY CHEST OVERLAY -->
+      <div id="roguelike-draft-bar">
+        <div class="rk-header">
+          <span id="rk-draft-title">🎲 ROGUELIKE TACTICAL PERK DRAFT — CHOOSE 1 OF 3 UPGRADES!</span>
+          <span id="rk-mission-progress">⚔️ ATTACK MISSION STAGE 1/5</span>
+        </div>
+        <div id="rk-cards-container"></div>
+      </div>
+
       <!-- DEDICATED WAR-FRONT COMMAND DEPLOYMENT DOCK (Visible ONLY in ⚔️ War Front Mode) -->
       <div id="war-command-dock">
+        <button class="war-deploy-btn" id="btn-toggle-mission-type" style="border-color:#38bdf8;" title="Switch between Capybara Go! Attack Expedition &amp; 3-Gate Tower Defense">
+          <span id="label-mission-type">⚔️ Attack Op</span>
+          <span class="sub-cost" id="sub-mission-stage">Stage 1/5</span>
+        </button>
         <button class="war-deploy-btn" id="btn-deploy-squad" title="Deploy Autonomous SEAF Rifleman (Uses 1x 🔫 Gun or $80)">
           <span>🪖 +SEAF Squad</span>
           <span class="sub-cost" id="cost-deploy-squad">1x🔫 or $80</span>
@@ -266,7 +289,7 @@
         </div>
         <div class="modal-body">
           <p style="font-size:0.82rem; color:#cbd5e1; line-height:1.4;">
-            Live 60FPS animated preview of all <strong>17 CarbotAnimations Helldivers 2 (Ep1–Ep10+) 2D vector characters, Smart SEAF Staff, Terminids (Scavenger Hunter, Charger, Bile Spewer, Bile Titan), Automatons (Trooper, Rocket Devastator, Flame-Saw Hulk, Factory Strider), Vehicles, Mechs, and Sentries</strong> in <code>v0.0.08</code>.
+            Live 60FPS animated preview of all <strong>17 CarbotAnimations Helldivers 2 (Ep1–Ep10+) 2D vector characters, Smart SEAF Staff, Terminids (Scavenger Hunter, Charger, Bile Spewer, Bile Titan), Automatons (Trooper, Rocket Devastator, Flame-Saw Hulk, Factory Strider), Vehicles, Mechs, and Sentries</strong> in <code>v0.0.09</code>.
           </p>
           <div class="char-showcase-grid" id="char-showcase-grid"></div>
         </div>
@@ -351,7 +374,7 @@
     <div class="modal-backdrop" id="modal-save">
       <div class="modal-card">
         <div class="modal-header">
-          <div class="modal-title">💾 SAVE / EXPORT COMMAND PROGRESS (v0.0.08)</div>
+          <div class="modal-title">💾 SAVE / EXPORT COMMAND PROGRESS (v0.0.09)</div>
           <button class="modal-close-btn modal-close" id="btn-close-save">✕</button>
         </div>
         <div class="modal-body">
@@ -372,12 +395,12 @@
     <div class="modal-backdrop" id="modal-github">
       <div class="modal-card">
         <div class="modal-header">
-          <div class="modal-title">📦 GITHUB &amp; GITHUB PAGES REPOSITORY PACKAGER (v0.0.08)</div>
+          <div class="modal-title">📦 GITHUB &amp; GITHUB PAGES REPOSITORY PACKAGER (v0.0.09)</div>
           <button class="modal-close-btn modal-close" id="btn-close-github">✕</button>
         </div>
         <div class="modal-body">
           <p style="font-size:0.84rem; color:#cbd5e1; line-height:1.45;">
-            Download a clean, modular GitHub repository archive ready for <strong>GitHub Pages</strong> deployment. Includes <code>index.html</code>, <code>css/style.css</code>, <code>js/config.js</code>, <code>js/audio.js</code>, <code>js/world.js</code>, <code>js/game.js</code>, and <code>README.md</code> (with full <code>v0.0.00</code>–<code>v0.0.08</code> changelog history).
+            Download a clean, modular GitHub repository archive ready for <strong>GitHub Pages</strong> deployment. Includes <code>index.html</code>, <code>css/style.css</code>, <code>js/config.js</code>, <code>js/audio.js</code>, <code>js/world.js</code>, <code>js/game.js</code>, and <code>README.md</code> (with full <code>v0.0.00</code>–<code>v0.0.09</code> changelog history).
           </p>
           <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:4px;">
             <button class="upg-buy-btn hud-btn btn-primary" id="btn-ingame-dl-full">
