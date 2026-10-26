@@ -200,14 +200,8 @@
       ctx.translate(-this.camX, -this.camZ);
 
       if (isWarMode) {
-        // TRUE SPLIT WAR FRONT SCENE: Render ONLY the Planetary 3-Layer War Front!
-        this.drawPlanetaryWarFrontTerrain(ctx, state);
-        this.drawConveyorNetwork(ctx, state, 'war');
-        this.drawFloorPads(ctx, state, 'war');
-        this.drawThreeLayerGates(ctx, state);
-        this.drawBeltPackets(ctx, state, 'war');
-        this.drawWarZoneObjects(ctx, state);
-        this.drawSortedEntities(ctx, state, 'war');
+        // v0.0.12 CAPYBARA GO! ROGUELIKE PATH WAR SCENE (Sample Search Diff 1-10 & 10-Wave Planet Capture)
+        this.drawCapybaraRoguelikeBattlefield(ctx, state);
         this.drawProjectilesAndArcs(ctx, state);
         this.drawEagleFlyover(ctx, state);
       } else {
@@ -733,7 +727,7 @@
         1890,
         'rgba(17, 34, 54, 0.55)',
         '#38bdf8',
-        '⛏️ PORT CARGO BAY: RAW ORE & AMMO'
+        '🛸 LEFT-HAND TRANSPORT SHIP PORT: FIXED 1🛢️/1⛏️ + PLANET ORE UNLOADING BAY'
       );
 
       this.drawFloorSector(
@@ -820,7 +814,7 @@
         390,
         'rgba(12, 36, 38, 0.72)',
         '#22c55e',
-        '🧬 SECTOR D: DEDICATED SEAF CLONE VAT CHAMBER & TACTICAL WAR SQUAD MUSTER BAY'
+        '🧬 SECTOR D: SEAF CLONE VAT CHAMBER & 🏋️ HELLDIVER TRAINING ROOM (Lv.1–100)'
       );
 
       // LEFT WING (x: -2040..-1270, z: -395..-62): 6 BUBBLING BIO-CLONE VATS & 6-JOB ASSIGNMENT TERMINAL
@@ -917,89 +911,120 @@
     }
 
     drawShopSquadMusterBay(ctx, state) {
-      const squadsCfg = window.GameConfig.WAR_SQUADS || [];
-      const totalTroops = state.getTotalSquadTroops ? state.getTotalSquadTroops() : 7;
+      const roster = state.helldiverRoster || [];
+      const lineup = state.capybaraLineup || [null, null, null, null];
+      const classesCfg = window.GameConfig.HELLDIVER_CLASSES || [];
 
       ctx.save();
       ctx.translate(-840, -230);
 
+      // Training Room Outer Hull
       ctx.fillStyle = '#0c1629';
-      ctx.strokeStyle = '#38bdf8';
+      ctx.strokeStyle = '#facc15';
       ctx.lineWidth = 4;
       ctx.beginPath();
       ctx.roundRect(-385, -155, 770, 310, 16);
       ctx.fill();
       ctx.stroke();
 
-      ctx.fillStyle = '#7dd3fc';
+      ctx.fillStyle = '#fde047';
       ctx.font = '900 12.5px Orbitron, sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText(
-        `🪖 WAR SQUAD MUSTER BAY (${totalTroops}/24 TROOPS READY — JOINS NIGHTFALL CASTLE WAR!)`,
+        `🏋️ HELLDIVER TRAINING & RECRUITMENT ROOM (${roster.length} HEROES · MAX Lv.100 & SKILLS)`,
         0,
         -130
       );
 
-      for (let sIdx = 0; sIdx < squadsCfg.length; sIdx++) {
-        const sq = squadsCfg[sIdx];
-        const sqState = (state.warSquads && state.warSquads[sq.id]) || { count: sq.initialSize, tier: 1 };
-        const count = sqState.count || 0;
-        const tier = sqState.tier || 1;
-        const padX = -245 + sIdx * 245;
+      const slotLabels = [
+        '⚔️ ACTIVE #1 (FRONT)',
+        '⚔️ ACTIVE #2 (MID)',
+        '⚔️ ACTIVE #3 (REAR)',
+        '🚀 SPARE #4 (REINFORCE)'
+      ];
+      const slotColors = ['#facc15', '#38bdf8', '#22c55e', '#f97316'];
+
+      for (let sIdx = 0; sIdx < 4; sIdx++) {
+        const heroId = lineup[sIdx];
+        const hero = roster.find((h) => h.id === heroId) || null;
+        const cls = hero ? (classesCfg.find((c) => c.id === hero.classId) || classesCfg[0]) : null;
+        const padX = -276 + sIdx * 184;
         const padZ = -18;
 
-        ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
-        ctx.strokeStyle = sq.color;
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
+        ctx.strokeStyle = slotColors[sIdx];
         ctx.lineWidth = 2.5;
         ctx.beginPath();
-        ctx.roundRect(padX - 108, padZ - 86, 216, 172, 10);
+        ctx.roundRect(padX - 84, padZ - 86, 168, 172, 10);
         ctx.fill();
         ctx.stroke();
 
-        ctx.fillStyle = sq.color;
-        ctx.font = '900 10px Orbitron, sans-serif';
+        ctx.fillStyle = slotColors[sIdx];
+        ctx.font = '900 9px Orbitron, sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText(`${sq.icon} ${sq.name.split(' ')[0].toUpperCase()} (${count}/8 · T${tier})`, padX, padZ - 68);
+        ctx.fillText(slotLabels[sIdx], padX, padZ - 68);
 
-        // Draw 2x4 Formation Grid (just like Nightfall: Kingdom Frontier TD barracks formations!)
-        for (let slot = 0; slot < 8; slot++) {
-          const col = slot % 4;
-          const row = Math.floor(slot / 4);
-          const ux = padX - 66 + col * 44;
-          const uz = padZ - 26 + row * 48;
-          const isFilled = slot < count;
-
-          ctx.fillStyle = isFilled ? 'rgba(56, 189, 248, 0.2)' : 'rgba(30, 41, 59, 0.5)';
-          ctx.strokeStyle = isFilled ? sq.color : '#334155';
+        if (hero && cls) {
+          // Animated training holo-ring
+          const pulse = 0.6 + 0.4 * Math.sin(this.time * 5 + sIdx);
+          ctx.fillStyle = `rgba(56, 189, 248, ${0.18 * pulse})`;
+          ctx.strokeStyle = cls.color;
           ctx.lineWidth = 2;
           ctx.beginPath();
-          ctx.arc(ux, uz, 15, 0, Math.PI * 2);
+          ctx.arc(padX, padZ - 14, 28, 0, Math.PI * 2);
           ctx.fill();
           ctx.stroke();
 
-          if (isFilled) {
-            const bob = Math.sin(this.time * 5 + slot) * 2;
-            ctx.font = '15px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(sq.icon, ux, uz + bob);
-          }
-        }
+          // Draw Mini Carbot Helldiver Bean practicing in gym
+          this.drawCarbotBean(ctx, padX, padZ - 10, {
+            bodyColor: cls.bodyColor || '#1e293b',
+            capeColor: cls.capeColor || '#eab308',
+            trimColor: cls.trimColor || '#facc15',
+            visorColor: '#38bdf8',
+            isCommander: hero.level >= 25,
+            hasRifle: true,
+            bobPhase: this.time * 6 + sIdx
+          });
 
-        ctx.fillStyle = '#fde047';
-        ctx.font = '700 9.5px Rajdhani, sans-serif';
-        ctx.fillText(`Recruit: $${sq.recruitCashCost} or Shop Gear`, padX, padZ + 72);
+          ctx.fillStyle = '#ffffff';
+          ctx.font = '900 10px Orbitron, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText(`${cls.icon} ${hero.name}`, padX, padZ + 32);
+
+          ctx.fillStyle = '#4ade80';
+          ctx.font = '900 9.5px Orbitron, sans-serif';
+          ctx.fillText(`Lv.${hero.level}/100 · ❤️${Math.round(hero.maxHp)} ⚔️${Math.round(hero.atk)}`, padX, padZ + 48);
+
+          // 4-Slot Equipment + Unlocked Skills Badges
+          const eqIcons = [
+            hero.equip?.weapon ? '🔫' : '▫️',
+            hero.equip?.armor ? '🦺' : '▫️',
+            hero.equip?.pack ? '🎒' : '▫️',
+            hero.equip?.mech ? '🤖' : '▫️'
+          ].join('');
+          const skCount = hero.level >= 60 ? 3 : (hero.level >= 25 ? 2 : 1);
+          ctx.fillStyle = '#fde047';
+          ctx.font = '700 9.5px Rajdhani, sans-serif';
+          ctx.fillText(`Gear: ${eqIcons} · ⚡${skCount}/3 Skills`, padX, padZ + 66);
+        } else {
+          ctx.fillStyle = '#ef4444';
+          ctx.font = '900 11px Orbitron, sans-serif';
+          ctx.fillText('⚠️ EMPTY SLOT', padX, padZ - 10);
+          ctx.fillStyle = '#cbd5e1';
+          ctx.font = '700 10px Rajdhani, sans-serif';
+          ctx.fillText('Tap to Hire & Assign Hero!', padX, padZ + 12);
+        }
       }
 
-      ctx.fillStyle = '#1d4ed8';
+      ctx.fillStyle = '#b45309';
       ctx.beginPath();
-      ctx.roundRect(-345, 98, 690, 38, 8);
+      ctx.roundRect(-355, 98, 710, 38, 8);
       ctx.fill();
       ctx.fillStyle = '#ffffff';
-      ctx.font = '900 11px Orbitron, sans-serif';
+      ctx.font = '900 10.8px Orbitron, sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText(
-        `👆 TAP HERE TO MANAGE WAR SQUADS (RECRUIT TROOPS, EQUIP SHOP GEAR & SET SALLY-OUT ORDERS!)`,
+        `👆 TAP TRAINING ROOM: ➕ HIRE HELLDIVERS · ⬆️ TRAIN Lv.1–100 · 🛡️ EQUIP 4-SLOT GEAR & 3+1 SQUAD!`,
         0,
         121
       );
@@ -1068,6 +1093,275 @@
     //     - Winding Frontier River Moat + Southern Stone Arch Bridge + Central Ford
     //     - 3 Destructible Eastern Enemy Strongholds (據點) for Sally-Out Counter-Attack!
     // ========================================================================
+    // ========================================================================
+    // NEW IN v0.0.12: CAPYBARA GO! ROGUELIKE PATH BATTLEFIELD
+    // - Powers both Attack War Pages:
+    //   1) 🧬 Sample Search (Diff 1-10: 1-3 Common 🟢, 4-6 Rare 🟠, 7-10 Super Rare 🟣)
+    //   2) 🚩 Planet Capture (Select adjacent planet on Space Map, 10 Waves, Retreat after
+    //      each wave, True Permadeath if a Helldiver dies, 3 Active + 1 Spare Reinforcement!)
+    // ========================================================================
+    drawCapybaraRoguelikeBattlefield(ctx, state) {
+      const W = window.GameConfig.WORLD;
+      const run = state.capybaraRun || {};
+      const isCapture = (state.warSubPage || 'sample') === 'capture';
+      const faction = run.faction || 'bugs';
+      const isBugs = faction === 'bugs';
+      const diff = run.difficulty || state.sampleSearchDiff || 1;
+      const wave = run.wave || 1;
+      const maxWaves = run.maxWaves || (isCapture ? 10 : 5);
+
+      // 1. Single-Faction Planet Backdrop (Strictly Terminid Bugs OR Automaton Bots!)
+      const bgGrad = ctx.createLinearGradient(W.minX, -1850, W.maxX, -100);
+      if (isBugs) {
+        bgGrad.addColorStop(0, '#0a1f17');
+        bgGrad.addColorStop(0.5, '#132e22');
+        bgGrad.addColorStop(1, '#271a0c');
+      } else {
+        bgGrad.addColorStop(0, '#0f172a');
+        bgGrad.addColorStop(0.5, '#1e1b2e');
+        bgGrad.addColorStop(1, '#2d0f16');
+      }
+      ctx.fillStyle = bgGrad;
+      ctx.fillRect(W.minX - 400, W.minZ - 400, (W.maxX - W.minX) + 800, (W.wallZ - W.minZ) + 800);
+
+      // 2. Top Capybara Go! 10-Wave / 5-Wave Expedition Node Trail Banner (x: -1150..+1150, z: -1560)
+      ctx.save();
+      ctx.translate(0, -1520);
+      ctx.fillStyle = 'rgba(9, 13, 22, 0.92)';
+      ctx.strokeStyle = isCapture ? '#f97316' : '#4ade80';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.roundRect(-1060, -135, 2120, 220, 20);
+      ctx.fill();
+      ctx.stroke();
+
+      const headerTitle = isCapture
+        ? `🚩 PLANET CAPTURE EXPEDITION: ${(run.planetName || 'Target Planet').toUpperCase()} (DIFF ${diff}/10 · ${isBugs ? '🐛 TERMINID BUGS ONLY' : '🤖 AUTOMATON BOTS ONLY'})`
+        : `🧬 SAMPLE SEARCH EXPEDITION — DIFFICULTY ${diff}/10 (${diff <= 3 ? '🟢 NORMAL SAMPLES ONLY' : (diff <= 6 ? '🟢 NORMAL + 🟠 RARE SAMPLES' : '🟢 + 🟠 RARE + 🟣 SUPER RARE SAMPLES!')})`;
+
+      ctx.fillStyle = '#fde047';
+      ctx.font = '900 19px Orbitron, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(headerTitle, 0, -92);
+
+      ctx.fillStyle = '#cbd5e1';
+      ctx.font = '700 14px Rajdhani, sans-serif';
+      ctx.fillText(
+        `🐹 CAPYBARA GO! ROGUELIKE PATH · WAVE ${wave}/${maxWaves} · 3 ACTIVE HELLDIVERS + 1 SPARE REINFORCEMENT · ⚠️ TRUE PERMADEATH ON DEATH (RETREAT AFTER ANY WAVE!)`,
+        0,
+        -64
+      );
+
+      // Draw Wave Nodes along the Trail (1..maxWaves)
+      const trailLeft = -880;
+      const trailRight = 880;
+      const stepX = maxWaves > 1 ? (trailRight - trailLeft) / (maxWaves - 1) : 0;
+
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 8;
+      ctx.beginPath();
+      ctx.moveTo(trailLeft, 12);
+      ctx.lineTo(trailRight, 12);
+      ctx.stroke();
+
+      const clearedW = Math.max(0, (wave - 1) / Math.max(1, maxWaves - 1)) * (trailRight - trailLeft);
+      ctx.strokeStyle = isCapture ? '#f97316' : '#22c55e';
+      ctx.lineWidth = 8;
+      ctx.beginPath();
+      ctx.moveTo(trailLeft, 12);
+      ctx.lineTo(trailLeft + clearedW, 12);
+      ctx.stroke();
+
+      for (let wIdx = 1; wIdx <= maxWaves; wIdx++) {
+        const nx = trailLeft + (wIdx - 1) * stepX;
+        const ny = 12;
+        const isPast = wIdx < wave;
+        const isCur = wIdx === wave;
+        const isBoss = wIdx === maxWaves || wIdx % 5 === 0;
+
+        ctx.fillStyle = isPast ? '#16a34a' : (isCur ? '#facc15' : '#1e293b');
+        ctx.strokeStyle = isCur ? '#ffffff' : (isBoss ? '#ef4444' : '#64748b');
+        ctx.lineWidth = isCur ? 4 : 2.5;
+        ctx.beginPath();
+        ctx.arc(nx, ny, isCur ? 28 : 22, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = isCur ? '#090d14' : '#ffffff';
+        ctx.font = '900 12px Orbitron, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(isPast ? '✓' : (isBoss ? '💀' : `W${wIdx}`), nx, ny);
+
+        ctx.fillStyle = isCur ? '#fde047' : '#94a3b8';
+        ctx.font = '900 10px Orbitron, sans-serif';
+        ctx.fillText(wIdx === maxWaves ? (isCapture ? '🚩 CAPTURE' : '🎁 EXTRACT') : `WAVE ${wIdx}`, nx, ny + 42);
+      }
+      ctx.restore();
+
+      // 3. Main Capybara Go! Combat Road (x: -1150..+1150, z: -1220..-560)
+      ctx.save();
+      ctx.fillStyle = isBugs ? 'rgba(42, 32, 18, 0.85)' : 'rgba(24, 30, 44, 0.88)';
+      ctx.strokeStyle = isBugs ? '#84cc16' : '#ef4444';
+      ctx.lineWidth = 6;
+      ctx.beginPath();
+      ctx.roundRect(-1120, -1240, 2240, 680, 36);
+      ctx.fill();
+      ctx.stroke();
+
+      // Scrolling dashed center lane lines (moves as squad marches!)
+      const marchScroll = run.phase === 'marching' ? -this.time * 180 : -this.time * 25;
+      ctx.strokeStyle = 'rgba(250, 204, 21, 0.22)';
+      ctx.lineWidth = 4;
+      ctx.setLineDash([36, 36]);
+      ctx.lineDashOffset = marchScroll;
+      ctx.beginPath();
+      ctx.moveTo(-1060, -900);
+      ctx.lineTo(1060, -900);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Biome props along top/bottom of road
+      for (let i = 0; i < 8; i++) {
+        const px = -920 + i * 260;
+        const pzTop = -1190;
+        const pzBot = -610;
+        ctx.font = '28px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(isBugs ? (i % 2 === 0 ? '🍄' : '🛢️') : (i % 2 === 0 ? '⚙️' : '🚩'), px, pzTop);
+        ctx.fillText(isBugs ? (i % 2 === 0 ? '🪲' : '🟢') : (i % 2 === 0 ? '🔩' : '📡'), px, pzBot);
+      }
+      ctx.restore();
+
+      // 4. Orbital Spare Helldiver Reserve Pod Box (Top-Left of Road: Slot #4)
+      const spareHero = run.spareHero;
+      ctx.save();
+      ctx.translate(-860, -1145);
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.94)';
+      ctx.strokeStyle = spareHero && !spareHero.dead ? '#f97316' : '#475569';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.roundRect(-190, -52, 380, 104, 14);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = '#fdba74';
+      ctx.font = '900 11px Orbitron, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('🚀 ORBITAL SPARE REINFORCEMENT (SLOT #4)', 0, -30);
+
+      if (spareHero && !spareHero.dead) {
+        ctx.fillStyle = '#4ade80';
+        ctx.font = '900 13px Orbitron, sans-serif';
+        ctx.fillText(`${spareHero.icon || '🪖'} ${spareHero.name} (Lv.${spareHero.level}/100) — STANDBY`, 0, -4);
+        ctx.fillStyle = '#cbd5e1';
+        ctx.font = '700 11.5px Rajdhani, sans-serif';
+        ctx.fillText(`Auto-drops via Hellpod if any of the 3 Active Heroes dies!`, 0, 20);
+      } else {
+        ctx.fillStyle = '#ef4444';
+        ctx.font = '900 12px Orbitron, sans-serif';
+        ctx.fillText(run.spareUsed ? '⚡ SPARE ALREADY DEPLOYED INTO BATTLE!' : '⚠️ NO SPARE HERO ASSIGNED IN SLOT #4', 0, 2);
+      }
+      ctx.restore();
+
+      // 5. Loot & Sample Bag Collected So Far in This Run (Top-Right of Road)
+      const bag = run.lootBag || { cash: 0, common: 0, rare: 0, superRare: 0 };
+      ctx.save();
+      ctx.translate(760, -1145);
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.94)';
+      ctx.strokeStyle = '#facc15';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.roundRect(-250, -52, 500, 104, 14);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = '#fde047';
+      ctx.font = '900 11.5px Orbitron, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('🎒 CURRENT EXPEDITION LOOT & SAMPLES (RETREAT SAVES 65%!)', 0, -28);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '900 14px Orbitron, sans-serif';
+      ctx.fillText(
+        `💵 $${bag.cash || 0}  ·  🟢 Common: ${bag.common || 0}  ·  🟠 Rare: ${bag.rare || 0}  ·  🟣 Super: ${bag.superRare || 0}`,
+        0,
+        2
+      );
+      ctx.fillStyle = '#86efac';
+      ctx.font = '700 11.5px Rajdhani, sans-serif';
+      ctx.fillText(`Clear all ${maxWaves} Waves for 100% Full Bonus${isCapture ? ' + 🚩 Capture Planet!' : '!'}`, 0, 26);
+      ctx.restore();
+
+      // 6. Draw the 3 Active Helldiver Heroes on the Left Side of the Capybara Go! Path
+      const activeHeroes = run.activeHeroes || [];
+      for (let i = 0; i < activeHeroes.length; i++) {
+        const h = activeHeroes[i];
+        if (!h || h.dead) continue;
+        const hx = h.x || (-520 + (i === 0 ? 90 : 0));
+        const hz = h.z || (-900 + (i === 1 ? -135 : (i === 2 ? 135 : 0)));
+
+        ctx.save();
+        ctx.translate(hx, hz);
+
+        // Shield Aura if active
+        if ((h.shield || 0) > 0) {
+          ctx.fillStyle = 'rgba(56, 189, 248, 0.22)';
+          ctx.strokeStyle = '#38bdf8';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.arc(0, -12, 42, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+        }
+
+        // Draw Mech if Mech Pilot class or equipped Mech
+        if (h.classId === 'cls_mechpilot' || h.equip?.mech) {
+          this.drawPatriotMechSprite(ctx, 0, 0, this.time * 6 + i, 0.95, true);
+        } else {
+          this.drawCarbotBean(ctx, 0, 0, {
+            bodyColor: h.bodyColor || '#1e293b',
+            capeColor: h.capeColor || '#eab308',
+            trimColor: h.trimColor || '#facc15',
+            visorColor: '#38bdf8',
+            isCommander: true,
+            hasRifle: true,
+            bobPhase: this.time * 7 + i
+          });
+        }
+
+        // HP Bar & Level Badge above Hero
+        const hpRatio = Math.max(0, Math.min(1, h.hp / Math.max(1, h.maxHp)));
+        ctx.fillStyle = '#090d14';
+        ctx.fillRect(-54, -68, 108, 13);
+        ctx.fillStyle = hpRatio > 0.5 ? '#22c55e' : (hpRatio > 0.25 ? '#facc15' : '#ef4444');
+        ctx.fillRect(-52, -66, 104 * hpRatio, 9);
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1.2;
+        ctx.strokeRect(-54, -68, 108, 13);
+
+        ctx.fillStyle = '#fde047';
+        ctx.font = '900 10.5px Orbitron, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(`${h.icon || '🦅'} ${h.name} (Lv.${h.level}/100)`, 0, -76);
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '900 9.5px Orbitron, sans-serif';
+        ctx.fillText(`❤️ ${Math.ceil(h.hp)}/${Math.round(h.maxHp)} · ⚔️ ${Math.round(h.atk)}`, 0, 38);
+        ctx.restore();
+      }
+
+      // 7. Draw Deployed Engineer Turret Sentries on the Path
+      for (const s of (run.sentries || [])) {
+        this.drawSingleTurretMount(ctx, s.x, s.z, '#a855f7', 99, 99, 0, this.time, '🗼 SENTRY');
+      }
+
+      // 8. Draw Advancing Enemy Wave (Strictly Single Faction: Bugs OR Bots!)
+      for (const en of (state.enemies || [])) {
+        this.drawEnemy(ctx, en);
+      }
+    }
+
     drawPlanetaryWarFrontTerrain(ctx, state) {
       const W = window.GameConfig.WORLD;
       const NF = window.GameConfig.NIGHTFALL_CASTLE;
@@ -1883,9 +2177,156 @@
     }
 
     // ========================================================================
-    // 5. SECTOR A: MANUAL HARVEST QUARRY + AUTO-MINING RIGS (Lv.0 Locked -> Lv.10)
+    // 5. SECTOR A: LEFT-HAND TRANSPORT SHIP PORTS (#1–#4), ANIMATED CARGO SHIPS
+    //    & PORT STORAGE SILOS (Fixed 1 Oil + 1 Iron at Start + Planet Ore Hauling!)
     // ========================================================================
+    drawLeftHandTransportPortsAndShips(ctx, state) {
+      const PL = window.GameConfig.PORT_LOGISTICS;
+      if (!PL) return;
+      const pState = state.portLogistics || {
+        portsUnlocked: 1,
+        shipsCount: 1,
+        unloadSpeedLvl: 1,
+        storageLimitLvl: 1,
+        shipCargoLvl: 1
+      };
+      const portsUnlocked = pState.portsUnlocked || 1;
+      const ships = state.transportShips || [];
+      const oilStock = state.rawExtractors?.raw_e710?.stock || 0;
+      const ironStock = state.rawExtractors?.raw_iron?.stock || 0;
+      const maxStorage = state.getPortStorageLimit ? state.getPortStorageLimit() : 25;
+      const unloadRate = state.getPortUnloadRate ? state.getPortUnloadRate() : 1.5;
+
+      // Left-Hand Deep-Space Docking Trench Banner (x: -2060..-1680, z: 40..1160)
+      ctx.save();
+      ctx.fillStyle = 'rgba(6, 12, 24, 0.88)';
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 3.5;
+      ctx.beginPath();
+      ctx.roundRect(-2065, 55, 380, 1110, 16);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = '#fde047';
+      ctx.font = '900 12px Orbitron, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(`🛸 LEFT-HAND TRANSPORT PORT (${ships.length}/${PL.maxShips} SHIPS)`, -1875, 84);
+      ctx.fillStyle = '#7dd3fc';
+      ctx.font = '700 11px Rajdhani, sans-serif';
+      ctx.fillText(`Fixed Start: +1🛢️ & +1⛏️/s · Unload: ${unloadRate.toFixed(1)}/s · Cap: ${maxStorage}`, -1875, 102);
+
+      // Draw 4 Orbital Docking Ports along the left hull
+      for (const port of PL.portPositions) {
+        const isUnlocked = port.index <= portsUnlocked;
+        ctx.save();
+        ctx.translate(port.x, port.z);
+
+        // Docking Pier extending left
+        ctx.fillStyle = isUnlocked ? '#1e293b' : 'rgba(15, 23, 42, 0.45)';
+        ctx.strokeStyle = isUnlocked ? '#facc15' : '#475569';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.roundRect(-215, -62, 290, 124, 12);
+        ctx.fill();
+        ctx.stroke();
+
+        // Glowing Landing Pad Ring
+        ctx.fillStyle = isUnlocked ? 'rgba(56, 189, 248, 0.16)' : 'rgba(30, 41, 59, 0.3)';
+        ctx.strokeStyle = isUnlocked ? '#38bdf8' : '#64748b';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.arc(-115, 0, 42, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = isUnlocked ? '#fde047' : '#94a3b8';
+        ctx.font = '900 10.5px Orbitron, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(isUnlocked ? `⚓ ${port.label}` : `🔒 PORT #${port.index} (LOCKED)`, -70, -44);
+
+        if (!isUnlocked) {
+          const addPortCost = state.getAddPortCost ? state.getAddPortCost() : 280;
+          ctx.fillStyle = '#4ade80';
+          ctx.font = '900 10px Orbitron, sans-serif';
+          ctx.fillText(`👆 TAP TO ADD PORT ($${addPortCost})`, -70, 6);
+        } else {
+          ctx.fillStyle = '#cbd5e1';
+          ctx.font = '700 10px Rajdhani, sans-serif';
+          ctx.fillText(`Unloads 🛢️ Oil & ⛏️ Iron ➔ Silos`, -55, 46);
+        }
+        ctx.restore();
+      }
+
+      // Draw Animated Transport Ships flying in from the left space corridor & unloading at Ports!
+      for (let i = 0; i < ships.length; i++) {
+        const sh = ships[i];
+        const portCfg = PL.portPositions[(sh.portIndex || 0) % PL.portPositions.length] || PL.portPositions[0];
+        let sx = portCfg.x - 115;
+        let sz = portCfg.z;
+        if (sh.state === 'inbound') {
+          sx = -2420 + (portCfg.x - 115 - (-2420)) * Math.min(1, sh.progress || 0);
+        } else if (sh.state === 'outbound') {
+          sx = (portCfg.x - 115) + (-2420 - (portCfg.x - 115)) * Math.min(1, sh.progress || 0);
+        }
+
+        ctx.save();
+        ctx.translate(sx, sz);
+
+        // Engine flame
+        const flameLen = sh.state === 'docked' ? 12 : (28 + Math.sin(this.time * 18 + i) * 8);
+        ctx.fillStyle = '#38bdf8';
+        ctx.beginPath();
+        if (sh.state === 'outbound') {
+          ctx.ellipse(48, 0, flameLen, 10, 0, 0, Math.PI * 2);
+        } else {
+          ctx.ellipse(-48, 0, flameLen, 10, 0, 0, Math.PI * 2);
+        }
+        ctx.fill();
+
+        // Transport Ship Hull (Pelican Cargo Dropship style)
+        ctx.fillStyle = '#0f172a';
+        ctx.strokeStyle = '#facc15';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.roundRect(-42, -26, 84, 52, 10);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#fde047';
+        ctx.font = '900 9px Orbitron, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(`🛸 SHIP #${i + 1} (${sh.sourceName || 'Orbit'})`, 0, -32);
+
+        const cOil = Math.ceil(sh.cargoOil || 0);
+        const cIron = Math.ceil(sh.cargoIron || 0);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '900 10px Orbitron, sans-serif';
+        ctx.fillText(`🛢️${cOil} ⛏️${cIron}`, 0, 3);
+
+        if (sh.state === 'docked') {
+          const uProg = Math.max(0, Math.min(1, sh.unloadProgress || 0.5));
+          ctx.fillStyle = '#090d14';
+          ctx.fillRect(-34, 12, 68, 8);
+          ctx.fillStyle = '#4ade80';
+          ctx.fillRect(-32, 13, 64 * uProg, 6);
+        }
+        ctx.restore();
+      }
+
+      // Bottom Interactive Upgrade Button on the Left Port Trench
+      ctx.fillStyle = '#0284c7';
+      ctx.beginPath();
+      ctx.roundRect(-2045, 1112, 340, 42, 8);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '900 10.5px Orbitron, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(`👆 TAP PORT: 🛸 BUY SHIP / ⚓ ADD PORT / ⚡ UNLOAD`, -1875, 1137);
+      ctx.restore();
+    }
+
     drawRawQuarryAndAmmoPress(ctx, state) {
+      this.drawLeftHandTransportPortsAndShips(ctx, state);
       for (const raw of window.GameConfig.RAW_EXTRACTORS) {
         const rs = state.rawExtractors[raw.id];
         const lvl = rs ? rs.level : 0;

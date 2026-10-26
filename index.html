@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>HELLDIVERS PLEASE! — Super Destroyer Warship &amp; Mindustry War-Zone Tycoon (v0.0.11)</title>
+  <title>HELLDIVERS PLEASE! — Super Destroyer Warship &amp; Mindustry War-Zone Tycoon (v0.0.12)</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
@@ -50,20 +50,43 @@
                 <div class="stat-val"><span id="hud-carry">3</span>/<span id="hud-carry-max">14</span></div>
               </div>
             </div>
+
+            <div class="stat-pill" style="border-color:#4ade80;" title="Collected Samples (🟢 Common / 🟠 Rare / 🟣 Super Rare)">
+              <span>🧬</span>
+              <div>
+                <div class="stat-label">Samples</div>
+                <div class="stat-val" id="hud-samples-pill">🟢0 🟠0 🟣0</div>
+              </div>
+            </div>
           </div>
 
           <!-- Center: True Split Scene Switcher (Warship Shop, Clone Sector, Squad Manager & Nightfall Castle War Front) -->
           <div id="mode-switcher-bar">
-            <button class="mode-tab-btn active-shop" id="btn-mode-shop" title="SES Super Destroyer Orbital Warship Shop &amp; 7 Production Lanes">
+            <button class="mode-tab-btn active-shop" id="btn-mode-shop" title="SES HallTown Super Destroyer Shop, Left-Hand Transport Port &amp; Training Room">
               🏪 工廠 Shop
+            </button>
+            <button class="mode-tab-btn" id="btn-open-port-top" style="border-color:#38bdf8;color:#7dd3fc;" title="Left-Hand Transport Ship Fleet &amp; Docking Port Logistics (Fixed 1🛢️/1⛏️ + Planet Ore Hauling)">
+              🛸 港口 (<span id="hud-ships-count">1/1</span>)
+            </button>
+            <button class="mode-tab-btn" id="btn-open-training-top" style="border-color:#facc15;color:#fde047;" title="Shop Helldiver Training &amp; Recruitment Room (Max Lv.100, Skills &amp; 3+1 Hero Roster)">
+              🏋️ 訓練室 (<span id="hud-heroes-count">4</span>)
+            </button>
+            <button class="mode-tab-btn" id="btn-open-space-map" style="border-color:#c084fc;color:#e9d5ff;" title="Galactic Space Map: Planet Ores, Mines, Garrison Defense &amp; Enemy Army Tracking">
+              🪐 星圖 (<span id="hud-planets-owned">2/11</span>)
+            </button>
+            <button class="mode-tab-btn" id="btn-mode-sample" style="border-color:#4ade80;color:#86efac;" title="Attack Page 1: Capybara Go! Sample Search (Difficulty 1-10: 1-3🟢, 4-6🟠, 7-10🟣)">
+              🧬 樣本搜尋
+            </button>
+            <button class="mode-tab-btn" id="btn-mode-capture" style="border-color:#f97316;color:#fdba74;" title="Attack Page 2: Capybara Go! 10-Wave Planet Capture (Retreat After Any Wave · True Permadeath!)">
+              🚩 星球佔領
             </button>
             <button class="mode-tab-btn" id="btn-open-clone-top" style="border-color:#22c55e;color:#86efac;" title="Open Sector D SEAF Clone Vat Room &amp; 6-Sector Worker Job Assignment">
               🧬 克隆室 (<span id="hud-clone-count">0/6</span>)
             </button>
-            <button class="mode-tab-btn" id="btn-open-squad-top" style="border-color:#38bdf8;color:#7dd3fc;" title="Manage Your 3 Tactical War Squad Formations (Alpha/Bravo/Charlie) &amp; Hero">
+            <button class="mode-tab-btn" id="btn-open-squad-top" style="display:none;" title="Legacy Squad Manager">
               🪖 小隊 (<span id="hud-squad-count">7/24</span>)
             </button>
-            <button class="mode-tab-btn" id="btn-mode-war" title="Enter Nightfall: Kingdom Frontier TD Castle Defense &amp; Stronghold Counter-Attack">
+            <button class="mode-tab-btn" id="btn-mode-war" style="display:none;" title="Legacy War Switch">
               🏰 戰場 Castle War (<span id="hud-war-units-count">7</span>)
             </button>
           </div>
@@ -80,7 +103,7 @@
             <div class="brand-badge">
               <span>🚀</span>
               <span class="brand-title">SES SUPER DESTROYER COMMAND</span>
-              <span class="version-pill" id="hud-version">v0.0.11</span>
+              <span class="version-pill" id="hud-version">v0.0.12</span>
             </div>
 
             <div class="stat-pill gate-pill" title="Wave &amp; Rest Timer">
@@ -186,7 +209,7 @@
         <button class="buy-btn medal-btn" id="btn-idle-belt-upgrade">🔗 Belt Lv.0 ($150)</button>
       </div>
 
-      <!-- NEW IN v0.0.11: IDLE GAME FLOATING LITTLE POP-UP WINDOW FOR MULTI-ABILITY UPGRADES -->
+      <!-- NEW IN v0.0.12: IDLE GAME FLOATING LITTLE POP-UP WINDOW FOR MULTI-ABILITY UPGRADES -->
       <div id="building-upgrade-popover" class="building-popover">
         <div class="popover-header">
           <div>
@@ -198,7 +221,7 @@
         <div class="popover-abilities-list" id="popover-abilities-list"></div>
       </div>
 
-      <!-- NEW IN v0.0.11: GAME-BY-GAME ROGUELIKE WAR OPERATIONS BAR (ATTACK VS DEFENSE, SHOP POWER, CLIENT HIRE & HERO) -->
+      <!-- NEW IN v0.0.12: GAME-BY-GAME ROGUELIKE WAR OPERATIONS BAR (ATTACK VS DEFENSE, SHOP POWER, CLIENT HIRE & HERO) -->
       <div id="war-game-panel">
         <div class="war-panel-top">
           <div class="war-mode-tabs">
@@ -213,13 +236,29 @@
             🏪 Shop Supply: <strong>+25% ATK/HP · 🧱 Ammo: <span id="war-hud-ammo-stock">9</span></strong>
           </div>
           <div class="war-match-controls">
-            <button class="buy-btn" id="btn-war-start-match" title="Call Next Nightfall Enemy Wave Immediately (+25% Early Bonus $REQ)!">
+            <label style="font-family:var(--font-display);font-size:0.72rem;color:#fde047;display:flex;align-items:center;gap:4px;">
+              🧬 Diff (1-10):
+              <select id="sample-diff-select" style="background:#0f172a;color:#fde047;border:1px solid #facc15;border-radius:6px;padding:3px 6px;font-family:var(--font-display);font-size:0.72rem;font-weight:800;">
+                <option value="1">Lv.1 Trivial (🟢 Only)</option>
+                <option value="2">Lv.2 Easy (🟢 Only)</option>
+                <option value="3">Lv.3 Medium (🟢 Only)</option>
+                <option value="4">Lv.4 Challenging (🟢+🟠 Rare)</option>
+                <option value="5">Lv.5 Hard (🟢+🟠 Rare)</option>
+                <option value="6">Lv.6 Extreme (🟢+🟠 Rare)</option>
+                <option value="7">Lv.7 Suicide (🟢+🟠+🟣 Super!)</option>
+                <option value="8">Lv.8 Impossible (🟢+🟠+🟣 Super!)</option>
+                <option value="9">Lv.9 Helldive (🟢+🟠+🟣 Super!)</option>
+                <option value="10">Lv.10 Super Helldive (🟣 MAX!)</option>
+              </select>
+            </label>
+            <button class="buy-btn" id="btn-war-start-match" title="Start / Restart Current Capybara Go! Operation">
               🌙 Call Nightfall Wave #<span id="war-match-num">1</span>
             </button>
-            <button class="hud-btn" id="btn-war-continuous" style="border-color:#f97316;color:#fdba74;" title="Toggle Continuous Endless Enemy Siege vs. Day/Prep + Nightfall Wave Rhythm">
-              🔥 Continuous Siege: OFF
+            <button class="hud-btn" id="btn-war-retreat-now" style="border-color:#ef4444;color:#fca5a5;" title="Emergency Retreat: Save Surviving Helldivers &amp; Take 65% Collected Loot!">
+              🚁 撤退 Retreat
             </button>
-            <button class="hud-btn" id="btn-war-autopilot" style="border-color:#4ade80;color:#4ade80;" title="Low-Control Mode: Commander auto-positions, auto-dodges &amp; auto-fires!">
+            <button class="hud-btn" id="btn-war-continuous" style="display:none;">🔥 Continuous Siege: OFF</button>
+            <button class="hud-btn" id="btn-war-autopilot" style="border-color:#4ade80;color:#4ade80;" title="Capybara Go! Auto-Combat &amp; Auto-Skill Casting">
               🤖 Auto-Pilot: ON
             </button>
           </div>
@@ -244,7 +283,28 @@
         </div>
       </div>
 
-      <!-- NEW IN v0.0.11: CAPYBARA GO! × ROGUELIKE 3-CARD PERK DRAFT & MISSION VICTORY CHEST OVERLAY -->
+      <!-- NEW IN v0.0.12: CAPYBARA GO! POST-WAVE RETREAT OR CONTINUE DECISION BAR -->
+      <div id="capybara-wave-retreat-bar" style="display:none;position:fixed;top:118px;left:50%;transform:translateX(-50%);z-index:85;width:min(760px,95vw);background:rgba(9,13,24,0.97);border:2.5px solid #facc15;border-radius:16px;padding:14px 18px;box-shadow:0 16px 45px rgba(0,0,0,0.88);pointer-events:auto;">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
+          <div style="font-family:var(--font-display);font-weight:900;font-size:1rem;color:#fde047;" id="retreat-bar-title">
+            🚁 WAVE 1/10 CLEARED — CONTINUE OR RETREAT?
+          </div>
+          <span class="version-pill" style="border-color:#ef4444;color:#fca5a5;">⚠️ PERMADEATH WARNING: Fallen Helldivers die forever!</span>
+        </div>
+        <div style="font-size:0.84rem;color:#e2e8f0;margin-bottom:12px;line-height:1.45;" id="retreat-bar-desc">
+          Surviving Squad: 3/3 Active + 1 Spare. If you retreat now, all surviving Helldivers return safely with 65% of collected resources!
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;">
+          <button class="hud-btn" id="btn-wave-retreat" style="background:linear-gradient(135deg,#dc2626,#991b1b);color:#fff;border-color:#fca5a5;padding:9px 16px;font-size:0.86rem;">
+            🚁 撤退保命 Retreat Now (Keep 65% Loot · Save Squad!)
+          </button>
+          <button class="buy-btn" id="btn-wave-continue" style="background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;padding:9px 18px;font-size:0.88rem;">
+            ⚔️ 繼續推進下一波 Continue Next Wave (+Draft Perk!)
+          </button>
+        </div>
+      </div>
+
+      <!-- NEW IN v0.0.12: CAPYBARA GO! × ROGUELIKE 3-CARD PERK DRAFT & MISSION VICTORY CHEST OVERLAY -->
       <div id="roguelike-draft-bar">
         <div class="rk-header">
           <span id="rk-draft-title">🎲 ROGUELIKE TACTICAL PERK DRAFT — CHOOSE 1 OF 3 UPGRADES!</span>
@@ -358,14 +418,14 @@
         </div>
         <div class="modal-body">
           <p style="font-size:0.82rem; color:#cbd5e1; line-height:1.4;">
-            Live 60FPS animated preview of all <strong>17 CarbotAnimations Helldivers 2 (Ep1–Ep10+) 2D vector characters, Smart SEAF Staff, Terminids (Scavenger Hunter, Charger, Bile Spewer, Bile Titan), Automatons (Trooper, Rocket Devastator, Flame-Saw Hulk, Factory Strider), Vehicles, Mechs, and Sentries</strong> in <code>v0.0.11</code>.
+            Live 60FPS animated preview of all <strong>17 CarbotAnimations Helldivers 2 (Ep1–Ep10+) 2D vector characters, Smart SEAF Staff, Terminids (Scavenger Hunter, Charger, Bile Spewer, Bile Titan), Automatons (Trooper, Rocket Devastator, Flame-Saw Hulk, Factory Strider), Vehicles, Mechs, and Sentries</strong> in <code>v0.0.12</code>.
           </p>
           <div class="char-showcase-grid" id="char-showcase-grid"></div>
         </div>
       </div>
     </div>
 
-    <!-- NEW IN v0.0.11: SEAF CLONE VAT ROOM & 6-SECTOR JOB ASSIGNMENT MODAL (🧬 克隆室與工作分配) -->
+    <!-- NEW IN v0.0.12: SEAF CLONE VAT ROOM & 6-SECTOR JOB ASSIGNMENT MODAL (🧬 克隆室與工作分配) -->
     <div class="modal-backdrop" id="modal-clone-room">
       <div class="modal-card modal-wide">
         <div class="modal-header">
@@ -402,7 +462,7 @@
       </div>
     </div>
 
-    <!-- NEW IN v0.0.11: TACTICAL WAR SQUAD & FORMATION MANAGER MODAL (🪖 戰術小隊編制與據點出擊管理) -->
+    <!-- NEW IN v0.0.12: TACTICAL WAR SQUAD & FORMATION MANAGER MODAL (🪖 戰術小隊編制與據點出擊管理) -->
     <div class="modal-backdrop" id="modal-squad">
       <div class="modal-card modal-wide">
         <div class="modal-header">
@@ -438,6 +498,96 @@
             🏴‍☠️ EASTERN ENEMY STRONGHOLDS (敵方三大據點 — DESTROY FOR MASSIVE $REQ, ⭐ MEDALS &amp; 🧬 SAMPLES!)
           </h4>
           <div class="upgrade-grid" id="strongholds-status-grid"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================================================================
+         NEW IN v0.0.12: LEFT-HAND TRANSPORT SHIP & PORT LOGISTICS MODAL (🛸 港口與運輸艦管理)
+         ====================================================================== -->
+    <div class="modal-backdrop" id="modal-port-logistics">
+      <div class="modal-card modal-wide">
+        <div class="modal-header">
+          <div class="modal-title">🛸 LEFT-HAND TRANSPORT SHIP FLEET &amp; ORBITAL DOCKING PORT LOGISTICS (左舷運輸艦隊與港口擴建)</div>
+          <button class="modal-close-btn modal-close" id="btn-close-port-logistics">✕</button>
+        </div>
+        <div class="modal-body">
+          <div id="port-logistics-summary" style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;background:rgba(56,189,248,0.12);border:1.5px solid #38bdf8;padding:10px 14px;border-radius:10px;"></div>
+          <h4 style="font-family:var(--font-display);color:#fde047;font-size:0.84rem;margin-top:4px;">
+            ⚓ PORT &amp; FLEET UPGRADES (BUY SHIPS, ADD PORTS, UNLOADING SPEED &amp; STORAGE LIMIT)
+          </h4>
+          <div class="upgrade-grid" id="port-upgrades-grid"></div>
+          <h4 style="font-family:var(--font-display);color:#4ade80;font-size:0.84rem;margin-top:6px;">
+            🛸 ACTIVE TRANSPORT SHIP FLEET STATUS (HAULING ORES FROM CAPTURED PLANETS TO HALLTOWN LEFT PORT)
+          </h4>
+          <div class="upgrade-grid" id="transport-ships-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================================================================
+         NEW IN v0.0.12: GALACTIC SPACE MAP, PLANET MINING & TRAVIAN DEFENSE MODAL (🪐 星際戰略星圖)
+         ====================================================================== -->
+    <div class="modal-backdrop" id="modal-space-map">
+      <div class="modal-card modal-wide">
+        <div class="modal-header">
+          <div class="modal-title">🪐 GALACTIC SPACE MAP — PLANET ORES, MINES, TRAVIAN DEFENSE &amp; 10-WAVE CAPTURE (星際戰略星圖與星球防禦)</div>
+          <button class="modal-close-btn modal-close" id="btn-close-space-map">✕</button>
+        </div>
+        <div class="modal-body">
+          <div id="space-map-summary-banner" style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;background:rgba(168,85,247,0.14);border:1.5px solid #c084fc;padding:10px 14px;border-radius:10px;"></div>
+
+          <!-- Interactive 2D Space Map Network Canvas -->
+          <div style="background:#050811;border:2px solid #38bdf8;border-radius:12px;padding:8px;text-align:center;">
+            <canvas id="space-map-canvas" width="900" height="320" style="width:100%;max-width:900px;height:auto;cursor:pointer;border-radius:8px;"></canvas>
+            <div style="font-size:0.75rem;color:#94a3b8;margin-top:4px;">
+              👆 Tap any Planet Node on the Space Map above (or inspect below) to upgrade Mines/Storage, build Travian Walls/Turrets, hire SEAF/Helldiver Garrisons, launch Pre-Emptive Troop Strikes, or start a <strong>10-Wave Capture Expedition</strong>!
+            </div>
+          </div>
+
+          <!-- Selected Planet Deep Inspector -->
+          <div id="space-planet-inspector" style="background:rgba(15,23,42,0.95);border:2px solid #facc15;border-radius:12px;padding:12px;"></div>
+
+          <!-- Travian-Style Planetary Defense Battle Reports -->
+          <h4 style="font-family:var(--font-display);color:#f97316;font-size:0.84rem;margin-top:6px;">
+            📜 TRAVIAN-STYLE PLANETARY DEFENSE WAR CALCULATIONS &amp; INVASION LOG (自動防禦戰鬥結算報告)
+          </h4>
+          <div id="travian-battle-log" style="max-height:160px;overflow-y:auto;background:rgba(9,13,20,0.9);border:1px solid #475569;border-radius:8px;padding:8px;font-size:0.78rem;color:#e2e8f0;"></div>
+
+          <h4 style="font-family:var(--font-display);color:#38bdf8;font-size:0.84rem;margin-top:6px;">
+            🪐 ALL GALACTIC SECTOR PLANETS (SINGLE FACTION PER PLANET: 🐛 BUGS OR 🤖 AUTOBOTS)
+          </h4>
+          <div id="space-planets-grid" class="upgrade-grid"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================================================================
+         NEW IN v0.0.12: SHOP HELLDIVER TRAINING & RECRUITMENT ROOM MODAL (🏋️ 戰士訓練與招募室 — MAX Lv.100 & SKILLS)
+         ====================================================================== -->
+    <div class="modal-backdrop" id="modal-training-room">
+      <div class="modal-card modal-wide">
+        <div class="modal-header">
+          <div class="modal-title">🏋️ SHOP HELLDIVER TRAINING &amp; RECRUITMENT ROOM (戰士訓練與招募室 — MAX Lv.100, SKILLS &amp; 3+1 SQUAD)</div>
+          <button class="modal-close-btn modal-close" id="btn-close-training-room">✕</button>
+        </div>
+        <div class="modal-body">
+          <div id="training-room-summary" style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;background:rgba(250,204,21,0.12);border:1.5px solid #facc15;padding:10px 14px;border-radius:10px;"></div>
+
+          <h4 style="font-family:var(--font-display);color:#4ade80;font-size:0.84rem;margin-top:4px;">
+            ⚔️ YOUR 4-HERO CAPYBARA GO! EXPEDITION LINEUP (3 ACTIVE SIMULTANEOUSLY + 1 ORBITAL SPARE REINFORCEMENT)
+          </h4>
+          <div class="upgrade-grid" id="training-lineup-grid"></div>
+
+          <h4 style="font-family:var(--font-display);color:#fde047;font-size:0.84rem;margin-top:6px;">
+            🎖️ YOUR HELLDIVER HERO ROSTER (TRAIN Lv.1–100, EQUIP 4-SLOT SHOP GEAR &amp; UNLOCK Lv.1/25/60 SKILLS — ⚠️ PERMADEATH IF KILLED!)
+          </h4>
+          <div class="upgrade-grid" id="training-roster-grid"></div>
+
+          <h4 style="font-family:var(--font-display);color:#38bdf8;font-size:0.84rem;margin-top:6px;">
+            ➕ RECRUIT NEW HELLDIVER ARCHETYPES (6 CLASSES · MAX ABILITY 100 · 3 SIGNATURE SKILLS EACH)
+          </h4>
+          <div class="upgrade-grid" id="training-recruit-grid"></div>
         </div>
       </div>
     </div>
@@ -520,7 +670,7 @@
     <div class="modal-backdrop" id="modal-save">
       <div class="modal-card">
         <div class="modal-header">
-          <div class="modal-title">💾 SAVE / EXPORT COMMAND PROGRESS (v0.0.11)</div>
+          <div class="modal-title">💾 SAVE / EXPORT COMMAND PROGRESS (v0.0.12)</div>
           <button class="modal-close-btn modal-close" id="btn-close-save">✕</button>
         </div>
         <div class="modal-body">
@@ -541,12 +691,12 @@
     <div class="modal-backdrop" id="modal-github">
       <div class="modal-card">
         <div class="modal-header">
-          <div class="modal-title">📦 GITHUB &amp; GITHUB PAGES REPOSITORY PACKAGER (v0.0.11)</div>
+          <div class="modal-title">📦 GITHUB &amp; GITHUB PAGES REPOSITORY PACKAGER (v0.0.12)</div>
           <button class="modal-close-btn modal-close" id="btn-close-github">✕</button>
         </div>
         <div class="modal-body">
           <p style="font-size:0.84rem; color:#cbd5e1; line-height:1.45;">
-            Download a clean, modular GitHub repository archive ready for <strong>GitHub Pages</strong> deployment. Includes <code>index.html</code>, <code>css/style.css</code>, <code>js/config.js</code>, <code>js/audio.js</code>, <code>js/world.js</code>, <code>js/game.js</code>, and <code>README.md</code> (with full <code>v0.0.00</code>–<code>v0.0.11</code> changelog history).
+            Download a clean, modular GitHub repository archive ready for <strong>GitHub Pages</strong> deployment. Includes <code>index.html</code>, <code>css/style.css</code>, <code>js/config.js</code>, <code>js/audio.js</code>, <code>js/world.js</code>, <code>js/game.js</code>, and <code>README.md</code> (with full <code>v0.0.00</code>–<code>v0.0.12</code> changelog history).
           </p>
           <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:4px;">
             <button class="upg-buy-btn hud-btn btn-primary" id="btn-ingame-dl-full">

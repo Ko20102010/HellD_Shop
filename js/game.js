@@ -1063,11 +1063,19 @@
         return true;
       }
 
-      // 0B. Check Dedicated Shop Sector D Right Wing: War Squad Muster Bay (-1250..-440, -410..-60)
+      // 0B. Check Dedicated Shop Sector D Right Wing: Helldiver Training & Recruitment Room (-1255..-435, -420..-50)
       if (wx >= -1255 && wx <= -435 && wz >= -420 && wz <= -50) {
         this.audio.playPickup();
-        this.renderSquadModal();
-        document.getElementById('modal-squad')?.classList.add('open');
+        this.renderTrainingRoomModal();
+        document.getElementById('modal-training-room')?.classList.add('open');
+        return true;
+      }
+
+      // 0C. Check Left-Hand Transport Ship Docking Ports & Trench (-2150..-1660, 40..1180)
+      if (wx >= -2150 && wx <= -1660 && wz >= 40 && wz <= 1180) {
+        this.audio.playPickup();
+        this.renderPortLogisticsModal();
+        document.getElementById('modal-port-logistics')?.classList.add('open');
         return true;
       }
 
@@ -1237,35 +1245,46 @@
       this.updateHUD();
     }
 
-    setViewMode(mode) {
+    setViewMode(mode, subPage = null) {
+      if (subPage) this.warSubPage = subPage;
       this.viewMode = mode === 'war' ? 'war' : 'shop';
       const shopBtn = document.getElementById('btn-mode-shop');
       const warBtn = document.getElementById('btn-mode-war');
+      const sampleBtn = document.getElementById('btn-mode-sample');
+      const captureBtn = document.getElementById('btn-mode-capture');
       const warDock = document.getElementById('war-command-dock');
 
       const warPanel = document.getElementById('war-game-panel');
       const idleBar = document.getElementById('idle-inspector-bar');
+      const retreatBar = document.getElementById('capybara-wave-retreat-bar');
       if (this.viewMode === 'war') {
         this.closeBuildingPopover();
         idleBar?.classList.add('hidden-bar');
         warPanel?.classList.add('visible');
         shopBtn?.classList.remove('active-shop');
         warBtn?.classList.add('active-war');
-        warDock?.classList.add('visible');
-        this.player.x = -450;
-        this.player.z = -920;
+        sampleBtn?.classList.toggle('active-war', this.warSubPage === 'sample');
+        captureBtn?.classList.toggle('active-war', this.warSubPage === 'capture');
+        warDock?.classList.remove('visible');
+        this.player.x = -520;
+        this.player.z = -900;
         this.pointerTarget = null;
-        this.world.camX = -180;
-        this.world.camZ = -960;
-        if (!this.warMatchActive) {
-          this.startNewWarGame(this.missionType || 'defense');
-        } else {
-          this.syncWarSquadUnits();
+        this.world.camX = 0;
+        this.world.camZ = -1040;
+        if (!this.capybaraRun || !this.capybaraRun.active) {
+          if (this.warSubPage === 'capture') {
+            this.startPlanetCaptureRun(this.targetCapturePlanetId);
+          } else {
+            this.startSampleSearchRun(this.sampleSearchDiff || 1);
+          }
         }
       } else {
         warPanel?.classList.remove('visible');
+        if (retreatBar) retreatBar.style.display = 'none';
         idleBar?.classList.remove('hidden-bar');
         warBtn?.classList.remove('active-war');
+        sampleBtn?.classList.remove('active-war');
+        captureBtn?.classList.remove('active-war');
         shopBtn?.classList.add('active-shop');
         warDock?.classList.remove('visible');
         if (this.player.z < -160) {
@@ -1275,7 +1294,7 @@
           this.world.camX = -120;
           this.world.camZ = 240;
         }
-        this.spawnFloatingText(this.player.x, this.player.z - 40, '🏪 SHOP & FACTORY VIEW ACTIVE', '#4ade80');
+        this.spawnFloatingText(this.player.x, this.player.z - 40, '🏪 HALLTOWN SHOP & TRANSPORT PORT VIEW', '#4ade80');
       }
       this.updateHUD();
     }
@@ -1405,18 +1424,18 @@
         attackTimer: 0
       };
 
-      // Raw Quarry Extractors start at Lv.0 (Locked — Manual Harvest at Start!)
+      // v0.0.12: Left-Hand Port Storage Silos (Fed by Fixed 1 Oil + 1 Iron starter supply + Transport Ships!)
       this.rawExtractors = {};
       for (const raw of CFG.RAW_EXTRACTORS) {
         this.rawExtractors[raw.id] = {
-          level: raw.unlockedAtStart ? 1 : 0,
+          level: 1,
           speedLvl: 1,
           yieldLvl: 1,
           bufferLvl: 1,
-          stock: 0,
-          maxBuffer: raw.baseBuffer,
+          stock: 4,
+          maxBuffer: 25,
           progress: 0,
-          cycleTime: raw.baseCycleTime
+          cycleTime: 1.0
         };
       }
 
@@ -1607,6 +1626,35 @@
         { id: 'west', x: CFG.LOCATIONS.brazierWest.x, z: CFG.LOCATIONS.brazierWest.z, fed: 0, needed: 3, rescued: false, cooldown: 0 },
         { id: 'east', x: CFG.LOCATIONS.brazierEast.x, z: CFG.LOCATIONS.brazierEast.z, fed: 0, needed: 3, rescued: false, cooldown: 0 }
       ];
+
+      // v0.0.12: Samples Inventory (🟢 Common, 🟠 Rare, 🟣 Super Rare)
+      this.samples = this.samples || {
+        common: 5,
+        rare: 1,
+        superRare: this.superSamples || 0
+      };
+
+      // v0.0.12: Left-Hand Transport Ship & Port Logistics State
+      this.portLogistics = this.portLogistics || {
+        portsUnlocked: 1,
+        shipsCount: 1,
+        unloadSpeedLvl: 1,
+        storageLimitLvl: 1,
+        shipCargoLvl: 1
+      };
+      this.fixedStartSupplyBuffer = this.fixedStartSupplyBuffer || { oil: 2, iron: 2 };
+      this.initTransportShips();
+
+      // v0.0.12: Galactic Space Map Planets, Mines, Storage & Travian Defense State
+      this.initSpaceMapState();
+
+      // v0.0.12: Shop Helldiver Training Room Roster (Max Lv.100, 6 Classes, 4+ Heroes, 3 Active + 1 Spare)
+      this.initHelldiverRoster();
+
+      // v0.0.12: Capybara Go! Two-Part Attack War State ('sample' Diff 1-10 & 'capture' 10 Waves)
+      this.warSubPage = this.warSubPage || 'sample';
+      this.sampleSearchDiff = this.sampleSearchDiff || 1;
+      this.targetCapturePlanetId = this.targetCapturePlanetId || 'sp_angels';
 
       this.recalcDerivedStats();
       this.buildSolidObstacles();
@@ -2178,18 +2226,8 @@
     // RAW QUARRY AUTO-DRILLS (ONLY IF Lv.1+) & RECIPE-BASED PRODUCTION
     // ========================================================================
     updateRawAndAmmoProduction(dt) {
-      for (const raw of CFG.RAW_EXTRACTORS) {
-        const rs = this.rawExtractors[raw.id];
-        if (!rs || (rs.level || 0) <= 0) continue;
-        if (rs.stock < rs.maxBuffer) {
-          rs.progress += dt;
-          if (rs.progress >= rs.cycleTime) {
-            rs.progress = 0;
-            const batch = 1 + Math.floor((rs.yieldLvl || rs.level || 1) / 2);
-            rs.stock = Math.min(rs.maxBuffer, rs.stock + batch);
-          }
-        }
-      }
+      // v0.0.12: Raw Oil & Iron are supplied by Left-Hand Transport Ships (Fixed 1/s Starter + Space Map Planet Mines)!
+      this.updatePortAndSpaceLogistics(dt);
 
       if ((this.ammoPress.level || 0) >= 1) {
         const apIn = this.ammoPress.inputStock;
@@ -4004,6 +4042,10 @@
     }
 
     updateWaveAndGates(dt) {
+      if (this.capybaraRun && this.capybaraRun.active) {
+        this.updateCapybaraRoguelikeWar(dt);
+        return;
+      }
       // 1. STRICT RULE: Permanent Skill auto-maintenance ONLY heals UNBROKEN gates (`!gs.broken && gs.hp > 0`)!
       const armorLvl = this.foreverSkills.perm_gate_armor || 0;
       if (armorLvl > 0) {
@@ -4500,6 +4542,24 @@
 
       const carryMaxEl = document.getElementById('hud-carry-max');
       if (carryMaxEl) carryMaxEl.textContent = `${this.getPlayerMaxCapacity()}`;
+
+      const samplesPillEl = document.getElementById('hud-samples-pill');
+      if (samplesPillEl && this.samples) {
+        samplesPillEl.textContent = `🟢${this.samples.common || 0} 🟠${this.samples.rare || 0} 🟣${this.samples.superRare || 0}`;
+      }
+      const shipsHudEl = document.getElementById('hud-ships-count');
+      if (shipsHudEl && this.portLogistics) {
+        shipsHudEl.textContent = `${this.portLogistics.shipsCount || 1}🛸/${this.portLogistics.portsUnlocked || 1}⚓`;
+      }
+      const heroesHudEl = document.getElementById('hud-heroes-count');
+      if (heroesHudEl && this.helldiverRoster) {
+        heroesHudEl.textContent = `${this.helldiverRoster.length}`;
+      }
+      const planetsHudEl = document.getElementById('hud-planets-owned');
+      if (planetsHudEl && this.spacePlanets) {
+        const ownedCnt = (CFG.SPACE_MAP_PLANETS || []).filter((p) => this.spacePlanets[p.id]?.owned).length;
+        planetsHudEl.textContent = `${ownedCnt}/${(CFG.SPACE_MAP_PLANETS || []).length}`;
+      }
 
       const seafEl = document.getElementById('hud-seaf');
       if (seafEl) seafEl.textContent = `${this.workers.length}`;
@@ -5208,6 +5268,1762 @@
       }
     }
 
+
+    // ========================================================================
+    // NEW IN v0.0.12: LEFT-HAND TRANSPORT SHIP & PORT LOGISTICS ENGINE
+    // - Fixed 1 Oil/s + 1 Iron/s at start from HallTown Orbital Supply.
+    // - Transport Ships fly to Captured Space Map Planets, load mined Ore,
+    //   dock at Left-Hand Ports (#1-#4), and unload into Port Storage Silos!
+    // ========================================================================
+    getPortStorageLimit() {
+      const lvl = this.portLogistics?.storageLimitLvl || 1;
+      return 25 + (lvl - 1) * 22;
+    }
+
+    getPortUnloadRate() {
+      const lvl = this.portLogistics?.unloadSpeedLvl || 1;
+      return 1.6 + (lvl - 1) * 0.95;
+    }
+
+    getShipCargoCap() {
+      const lvl = this.portLogistics?.shipCargoLvl || 1;
+      return 6 + (lvl - 1) * 5;
+    }
+
+    getBuyShipCost() {
+      const PL = CFG.PORT_LOGISTICS;
+      const cnt = this.portLogistics?.shipsCount || 1;
+      return Math.round(PL.baseBuyShipCost * Math.pow(PL.buyShipCostScale, cnt - 1));
+    }
+
+    getAddPortCost() {
+      const PL = CFG.PORT_LOGISTICS;
+      const cnt = this.portLogistics?.portsUnlocked || 1;
+      return Math.round(PL.baseAddPortCost * Math.pow(PL.addPortCostScale, cnt - 1));
+    }
+
+    getPortUpgradeCost(key) {
+      const PL = CFG.PORT_LOGISTICS;
+      const lvl = this.portLogistics?.[key] || 1;
+      if (key === 'unloadSpeedLvl') return Math.round(PL.baseUnloadSpeedCost * Math.pow(PL.unloadSpeedCostScale, lvl - 1));
+      if (key === 'storageLimitLvl') return Math.round(PL.baseStorageLimitCost * Math.pow(PL.storageLimitCostScale, lvl - 1));
+      return Math.round(PL.baseShipCargoCost * Math.pow(PL.shipCargoCostScale, lvl - 1));
+    }
+
+    initTransportShips() {
+      const count = this.portLogistics?.shipsCount || 1;
+      const ports = this.portLogistics?.portsUnlocked || 1;
+      if (!Array.isArray(this.transportShips)) this.transportShips = [];
+      while (this.transportShips.length < count) {
+        const idx = this.transportShips.length;
+        this.transportShips.push({
+          id: `ship_${idx + 1}`,
+          index: idx,
+          portIndex: idx % Math.max(1, ports),
+          state: 'inbound',
+          progress: 0.35 + (idx * 0.22) % 0.6,
+          unloadProgress: 0,
+          cargoOil: 3,
+          cargoIron: 3,
+          sourcePlanetId: 'planet_halltown',
+          sourceName: 'HallTown Fixed 1/s'
+        });
+      }
+      if (this.transportShips.length > count) {
+        this.transportShips.length = count;
+      }
+      const maxS = this.getPortStorageLimit();
+      if (this.rawExtractors?.raw_e710) this.rawExtractors.raw_e710.maxBuffer = maxS;
+      if (this.rawExtractors?.raw_iron) this.rawExtractors.raw_iron.maxBuffer = maxS;
+    }
+
+    buyTransportShip() {
+      const PL = CFG.PORT_LOGISTICS;
+      if ((this.portLogistics.shipsCount || 1) >= PL.maxShips) return;
+      const cost = this.getBuyShipCost();
+      if (this.cash < cost) {
+        this.spawnFloatingText(this.player.x, this.player.z - 35, `⚠️ NEED $${cost} TO BUY TRANSPORT SHIP`, '#ef4444');
+        return;
+      }
+      this.cash -= cost;
+      this.portLogistics.shipsCount = (this.portLogistics.shipsCount || 1) + 1;
+      this.initTransportShips();
+      this.audio.playUnlock();
+      this.spawnFloatingText(-1820, 320, `🛸 PURCHASED TRANSPORT SHIP #${this.portLogistics.shipsCount}!`, '#38bdf8');
+      this.saveGame();
+      this.renderPortLogisticsModal();
+      this.updateHUD();
+    }
+
+    addDockingPort() {
+      const PL = CFG.PORT_LOGISTICS;
+      if ((this.portLogistics.portsUnlocked || 1) >= PL.maxPorts) return;
+      const cost = this.getAddPortCost();
+      if (this.cash < cost) {
+        this.spawnFloatingText(this.player.x, this.player.z - 35, `⚠️ NEED $${cost} TO ADD DOCKING PORT`, '#ef4444');
+        return;
+      }
+      this.cash -= cost;
+      this.portLogistics.portsUnlocked = (this.portLogistics.portsUnlocked || 1) + 1;
+      this.initTransportShips();
+      this.audio.playUnlock();
+      this.spawnFloatingText(-1820, 480, `⚓ BUILT LEFT-HAND DOCKING PORT #${this.portLogistics.portsUnlocked}!`, '#facc15');
+      this.saveGame();
+      this.renderPortLogisticsModal();
+      this.updateHUD();
+    }
+
+    upgradePortStat(key) {
+      const cur = this.portLogistics[key] || 1;
+      if (cur >= 10) return;
+      const cost = this.getPortUpgradeCost(key);
+      if (this.cash < cost) {
+        this.spawnFloatingText(this.player.x, this.player.z - 35, `⚠️ NEED $${cost} FOR PORT UPGRADE`, '#ef4444');
+        return;
+      }
+      this.cash -= cost;
+      this.portLogistics[key] = cur + 1;
+      this.initTransportShips();
+      this.audio.playUnlock();
+      this.spawnFloatingText(-1620, 360, `⬆️ PORT UPGRADED TO Lv.${cur + 1}/10!`, '#4ade80');
+      this.saveGame();
+      this.renderPortLogisticsModal();
+      this.updateHUD();
+    }
+
+    updatePortAndSpaceLogistics(dt) {
+      const PL = CFG.PORT_LOGISTICS;
+      const maxPortStorage = this.getPortStorageLimit();
+      if (this.rawExtractors.raw_e710) this.rawExtractors.raw_e710.maxBuffer = maxPortStorage;
+      if (this.rawExtractors.raw_iron) this.rawExtractors.raw_iron.maxBuffer = maxPortStorage;
+
+      // 1. Fixed Starter Providing Speed: Strictly 1 Oil/s and 1 Iron/s at HallTown Orbit!
+      this.fixedStartSupplyBuffer = this.fixedStartSupplyBuffer || { oil: 2, iron: 2 };
+      this.fixedStartSupplyBuffer.oil = Math.min(40, (this.fixedStartSupplyBuffer.oil || 0) + (PL?.fixedStartOilPerSec || 1.0) * dt);
+      this.fixedStartSupplyBuffer.iron = Math.min(40, (this.fixedStartSupplyBuffer.iron || 0) + (PL?.fixedStartIronPerSec || 1.0) * dt);
+
+      // 2. Update Space Map Planet Mining & Travian Enemy Army Buildup
+      this.updateSpaceMapAndTravianWars(dt);
+
+      // 3. Update Left-Hand Transport Ships (Inbound -> Docked Unloading -> Outbound Pickup)
+      const unloadRate = this.getPortUnloadRate();
+      const cargoCap = this.getShipCargoCap();
+      const shipSpeed = 0.42 + ((this.portLogistics?.shipCargoLvl || 1) - 1) * 0.06;
+      const portsUnlocked = Math.max(1, this.portLogistics?.portsUnlocked || 1);
+
+      this.initTransportShips();
+      for (let i = 0; i < this.transportShips.length; i++) {
+        const sh = this.transportShips[i];
+        sh.portIndex = i % portsUnlocked;
+
+        if (sh.state === 'inbound') {
+          sh.progress = (sh.progress || 0) + shipSpeed * dt;
+          if (sh.progress >= 1) {
+            sh.progress = 1;
+            sh.state = 'docked';
+            sh.unloadProgress = 0;
+          }
+        } else if (sh.state === 'docked') {
+          const totalCargo = Math.max(0.1, (sh.cargoOil || 0) + (sh.cargoIron || 0));
+          const unloadStep = unloadRate * dt;
+          sh.unloadProgress = Math.min(1, (sh.unloadProgress || 0) + unloadStep / Math.max(1, totalCargo * 0.5));
+
+          if (sh.unloadProgress >= 1) {
+            const addOil = Math.round(sh.cargoOil || 0);
+            const addIron = Math.round(sh.cargoIron || 0);
+            if (this.rawExtractors.raw_e710 && addOil > 0) {
+              this.rawExtractors.raw_e710.stock = Math.min(maxPortStorage, (this.rawExtractors.raw_e710.stock || 0) + addOil);
+            }
+            if (this.rawExtractors.raw_iron && addIron > 0) {
+              this.rawExtractors.raw_iron.stock = Math.min(maxPortStorage, (this.rawExtractors.raw_iron.stock || 0) + addIron);
+            }
+            sh.cargoOil = 0;
+            sh.cargoIron = 0;
+            sh.state = 'outbound';
+            sh.progress = 0;
+          }
+        } else {
+          // Outbound to Space Map planets to pick up mined Ore + Fixed 1 Oil/1 Iron starter supply
+          sh.progress = (sh.progress || 0) + shipSpeed * 1.15 * dt;
+          if (sh.progress >= 1) {
+            sh.progress = 0;
+            sh.state = 'inbound';
+
+            let pickedOil = 0;
+            let pickedIron = 0;
+            let pickedName = 'HallTown (1🛢️/1⛏️)';
+
+            // First pull from fixed starter supply (1 per Oil & Iron)
+            const takeStartOil = Math.min(cargoCap * 0.5, Math.floor(this.fixedStartSupplyBuffer.oil || 0));
+            const takeStartIron = Math.min(cargoCap * 0.5, Math.floor(this.fixedStartSupplyBuffer.iron || 0));
+            if (takeStartOil >= 1 || takeStartIron >= 1) {
+              pickedOil += takeStartOil;
+              pickedIron += takeStartIron;
+              this.fixedStartSupplyBuffer.oil -= takeStartOil;
+              this.fixedStartSupplyBuffer.iron -= takeStartIron;
+            }
+
+            // Next pull from our Captured Planets' Storage Silos!
+            const ownedPlanets = (CFG.SPACE_MAP_PLANETS || []).filter((p) => !p.isHome && this.spacePlanets?.[p.id]?.owned);
+            if (ownedPlanets.length > 0) {
+              const targetP = ownedPlanets[(i + Math.floor(this.playTimeSeconds)) % ownedPlanets.length];
+              const ps = this.spacePlanets[targetP.id];
+              if (ps) {
+                const remCap = Math.max(1, cargoCap - (pickedOil + pickedIron));
+                const pOil = Math.min(remCap, Math.floor(ps.storedOil || 0));
+                const pIron = Math.min(Math.max(0, remCap - pOil), Math.floor(ps.storedIron || 0));
+                if (pOil > 0 || pIron > 0) {
+                  ps.storedOil -= pOil;
+                  ps.storedIron -= pIron;
+                  pickedOil += pOil;
+                  pickedIron += pIron;
+                  pickedName = targetP.name.split(' ')[0];
+                }
+              }
+            }
+
+            // Guarantee at least 1 Oil + 1 Iron per trip from fixed starter supply
+            if (pickedOil <= 0 && pickedIron <= 0) {
+              pickedOil = 1;
+              pickedIron = 1;
+            }
+            sh.cargoOil = pickedOil;
+            sh.cargoIron = pickedIron;
+            sh.sourceName = pickedName;
+          }
+        }
+      }
+
+      // 4. Keep Munitions Ammo Press crafting 🧱 Ammo from ⛏️ Iron
+      if ((this.ammoPress.level || 0) >= 1) {
+        const apIn = this.ammoPress.inputStock;
+        const reqIron = CFG.AMMO_PRESS.recipe.raw_iron || 1;
+        if (this.ammoPress.stock < this.ammoPress.maxBuffer && (apIn.raw_iron || 0) >= reqIron) {
+          this.ammoPress.progress += dt;
+          if (this.ammoPress.progress >= this.ammoPress.cycleTime) {
+            this.ammoPress.progress = 0;
+            const saveChance = Math.min(0.50, (this.foreverSkills.perm_raw_speed || 0) * 0.025);
+            if (Math.random() > saveChance) {
+              apIn.raw_iron = Math.max(0, apIn.raw_iron - reqIron);
+            }
+            const outBatch = (CFG.AMMO_PRESS.outputBatch || 3) + ((this.ammoPress.yieldLvl || 1) - 1);
+            this.ammoPress.stock = Math.min(this.ammoPress.maxBuffer, this.ammoPress.stock + outBatch);
+          }
+        }
+      }
+    }
+
+    renderPortLogisticsModal() {
+      const sumEl = document.getElementById('port-logistics-summary');
+      const upgGrid = document.getElementById('port-upgrades-grid');
+      const shipGrid = document.getElementById('transport-ships-list');
+      if (!sumEl || !upgGrid || !shipGrid) return;
+
+      const PL = CFG.PORT_LOGISTICS;
+      const p = this.portLogistics;
+      const oilStock = this.rawExtractors?.raw_e710?.stock || 0;
+      const ironStock = this.rawExtractors?.raw_iron?.stock || 0;
+      const maxS = this.getPortStorageLimit();
+
+      sumEl.innerHTML = `
+        <div>
+          <div style="font-family:var(--font-display);font-weight:900;color:#fde047;font-size:0.94rem;">
+            🛸 LEFT-HAND PORT FLEET: ${p.shipsCount}/${PL.maxShips} SHIPS · ⚓ DOCKING PORTS: ${p.portsUnlocked}/${PL.maxPorts}
+          </div>
+          <div style="font-size:0.78rem;color:#e2e8f0;margin-top:2px;">
+            Fixed Starter Supply: <strong>1.0 🛢️ Oil/s + 1.0 ⛏️ Iron/s</strong> · Port Storage: <strong>🛢️ ${oilStock}/${maxS} | ⛏️ ${ironStock}/${maxS}</strong> · Unload Speed: <strong>${this.getPortUnloadRate().toFixed(1)}/s</strong>
+          </div>
+        </div>
+        <div style="font-family:var(--font-display);font-weight:900;color:#4ade80;font-size:0.9rem;">
+          💵 Wallet: $${Math.floor(this.cash)}
+        </div>
+      `;
+
+      const buyShipCost = this.getBuyShipCost();
+      const addPortCost = this.getAddPortCost();
+      const unloadCost = this.getPortUpgradeCost('unloadSpeedLvl');
+      const storageCost = this.getPortUpgradeCost('storageLimitLvl');
+      const cargoCost = this.getPortUpgradeCost('shipCargoLvl');
+
+      upgGrid.innerHTML = `
+        <div class="upgrade-card">
+          <div class="upg-top"><span class="upg-title">🛸 Buy Transport Ship (${p.shipsCount}/${PL.maxShips})</span></div>
+          <p class="upg-desc">Adds a new Orbital Cargo Ship that flies between your Captured Planets on the Space Map and HallTown Left Port!</p>
+          <button class="buy-btn" id="btn-port-buy-ship" ${p.shipsCount >= PL.maxShips || this.cash < buyShipCost ? 'disabled' : ''}>
+            ${p.shipsCount >= PL.maxShips ? 'MAX 10 SHIPS' : `➕ Buy Ship #${p.shipsCount + 1} ($${buyShipCost})`}
+          </button>
+        </div>
+        <div class="upgrade-card">
+          <div class="upg-top"><span class="upg-title">⚓ Add Left-Hand Docking Port (${p.portsUnlocked}/${PL.maxPorts})</span></div>
+          <p class="upg-desc">Builds an additional physical Docking Pier on the left side of the ship so multiple Transport Ships dock in parallel!</p>
+          <button class="buy-btn medal-btn" id="btn-port-add-port" ${p.portsUnlocked >= PL.maxPorts || this.cash < addPortCost ? 'disabled' : ''}>
+            ${p.portsUnlocked >= PL.maxPorts ? 'MAX 4 PORTS' : `➕ Add Port #${p.portsUnlocked + 1} ($${addPortCost})`}
+          </button>
+        </div>
+        <div class="upgrade-card">
+          <div class="upg-top"><span class="upg-title">⚡ Port Unloading Speed (Lv.${p.unloadSpeedLvl}/10)</span></div>
+          <p class="upg-desc">Unloads docked Transport Ships faster (${this.getPortUnloadRate().toFixed(1)} ➔ ${(this.getPortUnloadRate() + 0.95).toFixed(1)} raw/sec).</p>
+          <button class="buy-btn" id="btn-port-upg-unload" ${p.unloadSpeedLvl >= 10 || this.cash < unloadCost ? 'disabled' : ''}>
+            ${p.unloadSpeedLvl >= 10 ? 'MAX Lv.10' : `⬆️ Upgrade Lv.${p.unloadSpeedLvl + 1} ($${unloadCost})`}
+          </button>
+        </div>
+        <div class="upgrade-card">
+          <div class="upg-top"><span class="upg-title">📦 Port Storage Limit (Lv.${p.storageLimitLvl}/10)</span></div>
+          <p class="upg-desc">Increases HallTown Port Silo capacity (${maxS} ➔ ${maxS + 22} max 🛢️ Oil & ⛏️ Iron).</p>
+          <button class="buy-btn" id="btn-port-upg-storage" ${p.storageLimitLvl >= 10 || this.cash < storageCost ? 'disabled' : ''}>
+            ${p.storageLimitLvl >= 10 ? 'MAX Lv.10' : `⬆️ Upgrade Lv.${p.storageLimitLvl + 1} ($${storageCost})`}
+          </button>
+        </div>
+        <div class="upgrade-card">
+          <div class="upg-top"><span class="upg-title">🚀 Ship Cargo Capacity & Thrusters (Lv.${p.shipCargoLvl}/10)</span></div>
+          <p class="upg-desc">Each Transport Ship carries more ore per trip (${this.getShipCargoCap()} ➔ ${this.getShipCargoCap() + 5} units) & flies faster!</p>
+          <button class="buy-btn" id="btn-port-upg-cargo" ${p.shipCargoLvl >= 10 || this.cash < cargoCost ? 'disabled' : ''}>
+            ${p.shipCargoLvl >= 10 ? 'MAX Lv.10' : `⬆️ Upgrade Lv.${p.shipCargoLvl + 1} ($${cargoCost})`}
+          </button>
+        </div>
+      `;
+
+      document.getElementById('btn-port-buy-ship')?.addEventListener('click', () => this.buyTransportShip());
+      document.getElementById('btn-port-add-port')?.addEventListener('click', () => this.addDockingPort());
+      document.getElementById('btn-port-upg-unload')?.addEventListener('click', () => this.upgradePortStat('unloadSpeedLvl'));
+      document.getElementById('btn-port-upg-storage')?.addEventListener('click', () => this.upgradePortStat('storageLimitLvl'));
+      document.getElementById('btn-port-upg-cargo')?.addEventListener('click', () => this.upgradePortStat('shipCargoLvl'));
+
+      shipGrid.innerHTML = (this.transportShips || []).map((sh, idx) => `
+        <div class="upgrade-card" style="padding:8px 10px;">
+          <div style="font-family:var(--font-display);font-weight:800;color:#38bdf8;font-size:0.8rem;">
+            🛸 Transport Ship #${idx + 1} (Assigned to Port #${(sh.portIndex || 0) + 1})
+          </div>
+          <div style="font-size:0.75rem;color:#e2e8f0;margin-top:3px;">
+            Route: <strong>${sh.sourceName || 'Orbit'} ➔ HallTown</strong> · Status: <strong style="color:#fde047;">${sh.state.toUpperCase()}</strong> · Cargo: 🛢️${Math.ceil(sh.cargoOil || 0)} ⛏️${Math.ceil(sh.cargoIron || 0)}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // ========================================================================
+    // NEW IN v0.0.12: GALACTIC SPACE MAP, PLANET MINING & TRAVIAN DEFENSE ENGINE
+    // - Single enemy faction per planet ('bugs' OR 'autobots').
+    // - Upgrade Mine & Storage on captured planets; Transport Ships haul the ore.
+    // - Enemy planets store army based on Difficulty (1-10); when >= threshold,
+    //   launches Travian-style auto-calculated attack on our closest linked planet!
+    // - Send Troops to Attack reduces enemy army (cannot capture; capture = 10-wave run).
+    // ========================================================================
+    initSpaceMapState() {
+      if (!this.spacePlanets) this.spacePlanets = {};
+      for (const p of (CFG.SPACE_MAP_PLANETS || [])) {
+        if (!this.spacePlanets[p.id]) {
+          this.spacePlanets[p.id] = {
+            owned: !!p.ownedAtStart,
+            mineLvl: 1,
+            storageLvl: 1,
+            storedOil: p.ownedAtStart ? 6 : 0,
+            storedIron: p.ownedAtStart ? 6 : 0,
+            buildings: {
+              def_wall: p.ownedAtStart ? 1 : 0,
+              def_flak: 0,
+              def_rail: 0
+            },
+            garrison: {
+              g_seaf_militia: p.ownedAtStart ? 2 : 0,
+              g_seaf_heavy: 0,
+              g_helldiver_vet: p.ownedAtStart ? 1 : 0,
+              g_patriot_mech: 0
+            },
+            enemyArmy: p.ownedAtStart ? 0 : Math.round(25 + p.difficulty * 18),
+            enemyThreshold: Math.round(85 + p.difficulty * 55)
+          };
+        }
+      }
+      this.selectedSpacePlanetId = this.selectedSpacePlanetId || 'sp_heeth';
+      this.travianBattleLogs = this.travianBattleLogs || [
+        '📡 [System] Galactic Space Map initialized. Heeth (Lv.1 Bugs) is under Super Earth control. Enemy planets are accumulating armies!'
+      ];
+      this.galacticDayTimer = this.galacticDayTimer || 0;
+    }
+
+    isPlanetAdjacentToOwned(planetId) {
+      const pCfg = (CFG.SPACE_MAP_PLANETS || []).find((p) => p.id === planetId);
+      if (!pCfg) return false;
+      return (pCfg.links || []).some((linkedId) => this.spacePlanets?.[linkedId]?.owned);
+    }
+
+    getPlanetStorageCap(planetId) {
+      const ps = this.spacePlanets?.[planetId];
+      const lvl = ps?.storageLvl || 1;
+      return 30 + (lvl - 1) * 35;
+    }
+
+    getPlanetMineRate(planetId) {
+      const pCfg = (CFG.SPACE_MAP_PLANETS || []).find((p) => p.id === planetId);
+      const ps = this.spacePlanets?.[planetId];
+      if (!pCfg || !ps) return 1.0;
+      return pCfg.baseMineRate * (1 + ((ps.mineLvl || 1) - 1) * 0.42);
+    }
+
+    getPlanetDefenseStats(planetId) {
+      const ps = this.spacePlanets?.[planetId];
+      if (!ps) return { wallLvl: 0, wallShield: 0, totalDef: 0, troopDef: 0, bldDef: 0, dailyUpkeep: 0 };
+      const wallLvl = ps.buildings?.def_wall || 0;
+      const flakLvl = ps.buildings?.def_flak || 0;
+      const railLvl = ps.buildings?.def_rail || 0;
+
+      const wallShield = wallLvl * 480 + flakLvl * 180 + railLvl * 320;
+      const defBonusMult = 1 + wallLvl * 0.15 + flakLvl * 0.05 + railLvl * 0.10;
+      const rawBldDef = wallLvl * 65 + flakLvl * 210 + railLvl * 450;
+
+      let rawTroopDef = 0;
+      let rawRaidAtk = 0;
+      let dailyUpkeep = wallLvl * 3 + flakLvl * 5 + railLvl * 9;
+
+      for (const u of (CFG.PLANET_GARRISON_UNITS || [])) {
+        const cnt = ps.garrison?.[u.id] || 0;
+        rawTroopDef += cnt * u.defValue;
+        rawRaidAtk += cnt * u.atkValue;
+        dailyUpkeep += cnt * u.dailyWage;
+      }
+
+      const totalDef = Math.round((rawBldDef + rawTroopDef) * defBonusMult);
+      return {
+        wallLvl,
+        flakLvl,
+        railLvl,
+        wallShield,
+        defBonusMult,
+        troopDef: Math.round(rawTroopDef * defBonusMult),
+        bldDef: Math.round(rawBldDef * defBonusMult),
+        totalDef,
+        raidAtk: rawRaidAtk,
+        dailyUpkeep
+      };
+    }
+
+    updateSpaceMapAndTravianWars(dt) {
+      this.initSpaceMapState();
+      const planets = CFG.SPACE_MAP_PLANETS || [];
+
+      // 1. Daily Upkeep Timer (Every 25 seconds = 1 Galactic Day for Garrison Wages & Building Maintenance)
+      this.galacticDayTimer = (this.galacticDayTimer || 0) + dt;
+      if (this.galacticDayTimer >= 25.0) {
+        this.galacticDayTimer = 0;
+        let totalDailyWage = 0;
+        for (const p of planets) {
+          if (p.isHome || !this.spacePlanets[p.id]?.owned) continue;
+          const st = this.getPlanetDefenseStats(p.id);
+          totalDailyWage += st.dailyUpkeep;
+        }
+        if (totalDailyWage > 0) {
+          this.cash = Math.max(0, this.cash - totalDailyWage);
+        }
+      }
+
+      // 2. Mine Ores on Owned Planets & Accumulate Enemy Armies on Linked Enemy Planets
+      for (const p of planets) {
+        const ps = this.spacePlanets[p.id];
+        if (!ps || p.isHome) continue;
+
+        if (ps.owned) {
+          // Mine planet-specific ore into Planet Storage
+          const cap = this.getPlanetStorageCap(p.id);
+          const rate = this.getPlanetMineRate(p.id);
+          ps.storedOil = Math.min(cap, (ps.storedOil || 0) + rate * p.oilRatio * dt);
+          ps.storedIron = Math.min(cap, (ps.storedIron || 0) + rate * p.ironRatio * dt);
+        } else if (this.isPlanetAdjacentToOwned(p.id)) {
+          // Enemy planet linked to our territory accumulates army based on Difficulty (1-10)
+          const growth = (0.65 + p.difficulty * 0.48) * dt;
+          ps.enemyArmy = (ps.enemyArmy || 0) + growth;
+          if (ps.enemyArmy >= ps.enemyThreshold) {
+            this.triggerEnemyPlanetInvasion(p);
+          }
+        }
+      }
+    }
+
+    triggerEnemyPlanetInvasion(attackerCfg) {
+      const atkState = this.spacePlanets[attackerCfg.id];
+      if (!atkState) return;
+
+      // Find closest linked owned planet (prefer non-homeworld planets first; if only HallTown is linked, raid Heeth or HallTown buffer)
+      const linkedOwned = (attackerCfg.links || [])
+        .map((id) => (CFG.SPACE_MAP_PLANETS || []).find((p) => p.id === id))
+        .filter((p) => p && this.spacePlanets[p.id]?.owned);
+
+      if (linkedOwned.length === 0) {
+        atkState.enemyArmy = atkState.enemyThreshold * 0.5;
+        return;
+      }
+
+      const targetCfg = linkedOwned.find((p) => !p.isHome) || linkedOwned[0];
+      const defState = this.spacePlanets[targetCfg.id];
+      const defStats = this.getPlanetDefenseStats(targetCfg.id);
+
+      const enemyTroops = Math.round(atkState.enemyArmy);
+      const atkPower = Math.round(enemyTroops * (11 + attackerCfg.difficulty * 4.2));
+      const defPower = Math.max(50, defStats.totalDef + (targetCfg.isHome ? 650 : 0));
+
+      // Reset attacker army after launching invasion
+      atkState.enemyArmy = Math.round(atkState.enemyThreshold * 0.18);
+
+      // PHASE 1: Break the Planetary Wall First! (Travian Wall Mechanics)
+      let wallDrop = 0;
+      const oldWall = defState.buildings.def_wall || 0;
+      if (oldWall > 0 && atkPower > defStats.wallShield * 0.65) {
+        wallDrop = atkPower > defStats.wallShield * 1.4 ? Math.min(oldWall, 2) : 1;
+        defState.buildings.def_wall = Math.max(0, oldWall - wallDrop);
+      }
+
+      // PHASE 2: Travian Troop Casualties & Interior Building Level-Down (only if Wall is broken!)
+      const ratio = atkPower / Math.max(1, defPower);
+      const troopLossPct = Math.min(1.0, Math.pow(ratio, 1.15) * 0.65);
+      let remainingTroops = 0;
+      for (const u of (CFG.PLANET_GARRISON_UNITS || [])) {
+        const cur = defState.garrison[u.id] || 0;
+        const lost = Math.min(cur, Math.ceil(cur * troopLossPct));
+        defState.garrison[u.id] = Math.max(0, cur - lost);
+        remainingTroops += defState.garrison[u.id];
+      }
+
+      let bldDropMsg = '';
+      if (defState.buildings.def_wall === 0 && atkPower > defPower) {
+        if ((defState.buildings.def_flak || 0) > 0) {
+          defState.buildings.def_flak--;
+          bldDropMsg += ' · 🗼Flak -1Lv';
+        }
+        if ((defState.buildings.def_rail || 0) > 0 && ratio > 1.35) {
+          defState.buildings.def_rail--;
+          bldDropMsg += ' · ⚡Rail -1Lv';
+        }
+        if ((defState.mineLvl || 1) > 1) {
+          defState.mineLvl--;
+          bldDropMsg += ' · ⛏️Mine -1Lv';
+        }
+      }
+
+      const remBuildings = (defState.buildings.def_wall || 0) + (defState.buildings.def_flak || 0) + (defState.buildings.def_rail || 0);
+
+      // PHASE 3: Lose Planet Control if ALL troops die AND all defense buildings are broken!
+      if (!targetCfg.isHome && remainingTroops <= 0 && remBuildings <= 0 && atkPower > defPower) {
+        defState.owned = false;
+        defState.enemyArmy = Math.round(40 + targetCfg.difficulty * 25);
+        const logMsg = `💀 [PLANET LOST] ${attackerCfg.name} (Diff ${attackerCfg.difficulty} · ${enemyTroops} Army, PWR ${atkPower}) overwhelmed ${targetCfg.name} (DEF ${defPower})! Wall & Garrison wiped out — Planet Control LOST!`;
+        this.travianBattleLogs.unshift(logMsg);
+        this.spawnFloatingText(this.player.x, this.player.z - 55, `💀 LOST CONTROL OF ${targetCfg.name.toUpperCase()}!`, '#ef4444');
+      } else {
+        const logMsg = `🛡️ [DEFENSE REPORT] ${attackerCfg.name} (${enemyTroops} Army, PWR ${atkPower}) attacked ${targetCfg.name} (DEF ${defPower}). Wall Lv.${oldWall}➔${defState.buildings.def_wall}${bldDropMsg} · Troops lost: ${Math.round(troopLossPct * 100)}%. Planet Held!`;
+        this.travianBattleLogs.unshift(logMsg);
+        this.spawnFloatingText(this.player.x, this.player.z - 55, `🛡️ ${targetCfg.name.toUpperCase()} DEFENDED AGAINST INVASION!`, '#38bdf8');
+      }
+
+      if (this.travianBattleLogs.length > 15) this.travianBattleLogs.length = 15;
+      if (document.getElementById('modal-space-map')?.classList.contains('open')) {
+        this.renderSpaceMapModal();
+      }
+      this.updateHUD();
+    }
+
+    sendPreemptiveTroopAttack(enemyPlanetId) {
+      const enemyCfg = (CFG.SPACE_MAP_PLANETS || []).find((p) => p.id === enemyPlanetId);
+      const enemyState = this.spacePlanets?.[enemyPlanetId];
+      if (!enemyCfg || !enemyState || enemyState.owned) return;
+
+      // Gather strike force from all owned planets
+      let totalRaidPower = 0;
+      let totalTroopsSent = 0;
+      for (const p of (CFG.SPACE_MAP_PLANETS || [])) {
+        const ps = this.spacePlanets[p.id];
+        if (!ps || !ps.owned) continue;
+        for (const u of (CFG.PLANET_GARRISON_UNITS || [])) {
+          const cnt = ps.garrison?.[u.id] || 0;
+          if (cnt > 0) {
+            totalRaidPower += cnt * u.atkValue;
+            totalTroopsSent += cnt;
+          }
+        }
+      }
+
+      if (totalTroopsSent <= 0) {
+        this.spawnFloatingText(this.player.x, this.player.z - 40, '⚠️ HIRE GARRISON TROOPS ON YOUR PLANETS FIRST TO LAUNCH A STRIKE!', '#ef4444');
+        return;
+      }
+
+      const armyReduction = Math.max(18, Math.round(totalRaidPower / Math.max(4, 6 + enemyCfg.difficulty * 2)));
+      const oldArmy = Math.round(enemyState.enemyArmy || 0);
+      enemyState.enemyArmy = Math.max(0, oldArmy - armyReduction);
+
+      // Small attrition (10-15%) on attacking troops
+      for (const p of (CFG.SPACE_MAP_PLANETS || [])) {
+        const ps = this.spacePlanets[p.id];
+        if (!ps || !ps.owned) continue;
+        for (const u of (CFG.PLANET_GARRISON_UNITS || [])) {
+          if ((ps.garrison[u.id] || 0) > 1 && Math.random() < 0.25) {
+            ps.garrison[u.id]--;
+          }
+        }
+      }
+
+      const logMsg = `⚔️ [PRE-EMPTIVE RAID] Our Garrison Strike Force (${totalTroopsSent} units, ATK ${totalRaidPower}) raided ${enemyCfg.name}! Enemy Army reduced from ${oldArmy} ➔ ${Math.round(enemyState.enemyArmy)} (Cannot capture via troop raid; use 10-Wave Capture to claim planet).`;
+      this.travianBattleLogs.unshift(logMsg);
+      this.audio.playStratagem();
+      this.spawnFloatingText(this.player.x, this.player.z - 50, `⚔️ RAIDED ${enemyCfg.name.toUpperCase()}: ENEMY ARMY -${armyReduction}!`, '#4ade80');
+      this.saveGame();
+      this.renderSpaceMapModal();
+      this.updateHUD();
+    }
+
+    renderSpaceMapModal() {
+      this.initSpaceMapState();
+      const bannerEl = document.getElementById('space-map-summary-banner');
+      const inspEl = document.getElementById('space-planet-inspector');
+      const logEl = document.getElementById('travian-battle-log');
+      const gridEl = document.getElementById('space-planets-grid');
+      if (!bannerEl || !inspEl || !gridEl) return;
+
+      const planets = CFG.SPACE_MAP_PLANETS || [];
+      const ownedCount = planets.filter((p) => this.spacePlanets[p.id]?.owned).length;
+      let totalUpkeep = 0;
+      for (const p of planets) {
+        if (!p.isHome && this.spacePlanets[p.id]?.owned) {
+          totalUpkeep += this.getPlanetDefenseStats(p.id).dailyUpkeep;
+        }
+      }
+
+      bannerEl.innerHTML = `
+        <div>
+          <div style="font-family:var(--font-display);font-weight:900;color:#fde047;font-size:0.92rem;">
+            🪐 LIBERATED PLANETS: ${ownedCount}/${planets.length} · 🛸 TRANSPORT SHIPS: ${this.portLogistics.shipsCount} · 💵 DAILY GARRISON UPKEEP: $${totalUpkeep}/day
+          </div>
+          <div style="font-size:0.76rem;color:#e2e8f0;margin-top:2px;">
+            Each planet has <strong>1 Enemy Faction (🐛 Bugs OR 🤖 Autobots)</strong> &amp; specific Ores. Enemy planets store armies and attack our closest linked planet when full!
+          </div>
+        </div>
+        <div style="font-family:var(--font-display);font-weight:900;color:#4ade80;font-size:0.88rem;">
+          💵 $${Math.floor(this.cash)} | 🟢${this.samples.common} 🟠${this.samples.rare} 🟣${this.samples.superRare}
+        </div>
+      `;
+
+      this.drawSpaceMapCanvas();
+
+      // Render Selected Planet Inspector
+      const selCfg = planets.find((p) => p.id === this.selectedSpacePlanetId) || planets[1];
+      const selState = this.spacePlanets[selCfg.id];
+      const isOwned = !!selState.owned;
+      const isAdj = this.isPlanetAdjacentToOwned(selCfg.id);
+      const defStats = this.getPlanetDefenseStats(selCfg.id);
+
+      if (selCfg.isHome) {
+        inspEl.innerHTML = `
+          <div style="font-family:var(--font-display);font-weight:900;color:#fde047;font-size:0.95rem;">
+            🛸 ${selCfg.name} — SUPER EARTH ORBITAL HQ
+          </div>
+          <p style="font-size:0.8rem;color:#cbd5e1;margin-top:4px;">${selCfg.desc}</p>
+        `;
+      } else if (isOwned) {
+        const mineCost = Math.round(130 * Math.pow(1.42, (selState.mineLvl || 1) - 1));
+        const storCost = Math.round(120 * Math.pow(1.40, (selState.storageLvl || 1) - 1));
+        const maxCap = this.getPlanetStorageCap(selCfg.id);
+
+        const bldCards = (CFG.PLANET_DEFENSE_BUILDINGS || []).map((b) => {
+          const bLvl = selState.buildings?.[b.id] || 0;
+          const bCost = Math.round(b.baseBuildCost * Math.pow(b.costScale, bLvl));
+          return `
+            <div style="background:rgba(30,41,59,0.85);border:1px solid ${b.color};border-radius:8px;padding:8px;">
+              <div style="font-family:var(--font-display);font-weight:800;color:${b.color};font-size:0.78rem;">
+                ${b.icon} ${b.name} (Lv.${bLvl}/10)
+              </div>
+              <div style="font-size:0.71rem;color:#cbd5e1;margin:3px 0;">
+                ${b.breaksFirst ? '🛡️ Breaks First! ' : ''}+${b.defPowerPerLvl} DEF · Maint: $${b.dailyMaintPerLvl}/day
+              </div>
+              <button class="buy-btn btn-planet-bld" data-bld="${b.id}" ${bLvl >= 10 || this.cash < bCost ? 'disabled' : ''} style="width:100%;padding:4px 8px;font-size:0.72rem;">
+                ${bLvl >= 10 ? 'MAX Lv.10' : `🔨 Build Lv.${bLvl + 1} ($${bCost})`}
+              </button>
+            </div>
+          `;
+        }).join('');
+
+        const unitCards = (CFG.PLANET_GARRISON_UNITS || []).map((u) => {
+          const uCnt = selState.garrison?.[u.id] || 0;
+          return `
+            <div style="background:rgba(30,41,59,0.85);border:1px solid ${u.color};border-radius:8px;padding:8px;">
+              <div style="font-family:var(--font-display);font-weight:800;color:${u.color};font-size:0.78rem;">
+                ${u.icon} ${u.name} (Stationed: ${uCnt})
+              </div>
+              <div style="font-size:0.71rem;color:#cbd5e1;margin:3px 0;">
+                🛡️ DEF ${u.defValue} · ⚔️ Raid ${u.atkValue} · Wage: $${u.dailyWage}/day
+              </div>
+              <button class="buy-btn btn-planet-hire" data-unit="${u.id}" ${this.cash < u.hireCost ? 'disabled' : ''} style="width:100%;padding:4px 8px;font-size:0.72rem;">
+                ➕ Hire +1 ($${u.hireCost})
+              </button>
+            </div>
+          `;
+        }).join('');
+
+        inspEl.innerHTML = `
+          <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;">
+            <div>
+              <div style="font-family:var(--font-display);font-weight:900;color:#4ade80;font-size:0.95rem;">
+                🚩 CAPTURED PLANET: ${selCfg.name} (Diff ${selCfg.difficulty} · ${selCfg.factionLabel})
+              </div>
+              <div style="font-size:0.76rem;color:#e2e8f0;">
+                Specialty Ore: <strong>${selCfg.oreName}</strong> · Stored for Transport Ship Pickup: <strong>🛢️ ${Math.floor(selState.storedOil || 0)}/${maxCap} | ⛏️ ${Math.floor(selState.storedIron || 0)}/${maxCap}</strong>
+              </div>
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+              <button class="buy-btn" id="btn-sp-upg-mine" ${selState.mineLvl >= 10 || this.cash < mineCost ? 'disabled' : ''}>
+                ⛏️ Mine Lv.${selState.mineLvl}/10 ($${mineCost})
+              </button>
+              <button class="buy-btn" id="btn-sp-upg-storage" ${selState.storageLvl >= 10 || this.cash < storCost ? 'disabled' : ''}>
+                📦 Storage Lv.${selState.storageLvl}/10 ($${storCost})
+              </button>
+            </div>
+          </div>
+          <div style="font-size:0.76rem;color:#fde047;margin-bottom:6px;">
+            🛡️ Total Planet Defense Power: <strong>${defStats.totalDef} DEF</strong> (Wall Shield: ${defStats.wallShield} · Wall Bonus: +${Math.round((defStats.defBonusMult - 1) * 100)}% · Upkeep: $${defStats.dailyUpkeep}/day)
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;margin-bottom:8px;">
+            ${bldCards}
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px;">
+            ${unitCards}
+          </div>
+        `;
+
+        document.getElementById('btn-sp-upg-mine')?.addEventListener('click', () => {
+          if (this.cash >= mineCost && selState.mineLvl < 10) {
+            this.cash -= mineCost;
+            selState.mineLvl++;
+            this.audio.playUnlock();
+            this.saveGame();
+            this.renderSpaceMapModal();
+          }
+        });
+        document.getElementById('btn-sp-upg-storage')?.addEventListener('click', () => {
+          if (this.cash >= storCost && selState.storageLvl < 10) {
+            this.cash -= storCost;
+            selState.storageLvl++;
+            this.audio.playUnlock();
+            this.saveGame();
+            this.renderSpaceMapModal();
+          }
+        });
+        inspEl.querySelectorAll('.btn-planet-bld').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const bId = btn.getAttribute('data-bld');
+            const bCfg = CFG.PLANET_DEFENSE_BUILDINGS.find((x) => x.id === bId);
+            const curL = selState.buildings[bId] || 0;
+            const cost = Math.round(bCfg.baseBuildCost * Math.pow(bCfg.costScale, curL));
+            if (curL < 10 && this.cash >= cost) {
+              this.cash -= cost;
+              selState.buildings[bId] = curL + 1;
+              this.audio.playUnlock();
+              this.saveGame();
+              this.renderSpaceMapModal();
+            }
+          });
+        });
+        inspEl.querySelectorAll('.btn-planet-hire').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const uId = btn.getAttribute('data-unit');
+            const uCfg = CFG.PLANET_GARRISON_UNITS.find((x) => x.id === uId);
+            if (this.cash >= uCfg.hireCost) {
+              this.cash -= uCfg.hireCost;
+              selState.garrison[uId] = (selState.garrison[uId] || 0) + 1;
+              this.audio.playUnlock();
+              this.saveGame();
+              this.renderSpaceMapModal();
+            }
+          });
+        });
+      } else {
+        // Enemy Planet Inspector: Shows Stored Enemy Army, Pre-Emptive Troop Strike, & 10-Wave Capture Button
+        const armyPct = Math.min(100, Math.round(((selState.enemyArmy || 0) / Math.max(1, selState.enemyThreshold)) * 100));
+        inspEl.innerHTML = `
+          <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px;">
+            <div>
+              <div style="font-family:var(--font-display);font-weight:900;color:#f87171;font-size:0.95rem;">
+                🏴‍☠️ ENEMY PLANET: ${selCfg.name} (Difficulty ${selCfg.difficulty}/10 · ${selCfg.factionLabel})
+              </div>
+              <div style="font-size:0.78rem;color:#e2e8f0;margin-top:3px;">
+                Specialty Ore When Captured: <strong>${selCfg.oreName}</strong> · Base Yield: <strong>${selCfg.baseMineRate}/s</strong>
+              </div>
+              <div style="font-size:0.78rem;color:#fde047;margin-top:3px;">
+                👾 Enemy Stored Army: <strong>${Math.round(selState.enemyArmy)} / ${selState.enemyThreshold} (${armyPct}%)</strong> — Once full, automatically attacks our closest linked planet!
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button class="hud-btn" id="btn-sp-raid-army" ${!isAdj ? 'disabled' : ''} style="border-color:#38bdf8;color:#7dd3fc;padding:8px 12px;">
+                ⚔️ Send Troop Strike (Reduce Enemy Army · Cannot Capture)
+              </button>
+              <button class="buy-btn" id="btn-sp-start-capture" ${!isAdj ? 'disabled' : ''} style="background:linear-gradient(135deg,#f97316,#ea580c);color:#fff;padding:8px 14px;">
+                ${isAdj ? `🚩 Launch 10-Wave Capture (Diff ${selCfg.difficulty}/10)` : '🔒 Must Link to Owned Planet First'}
+              </button>
+            </div>
+          </div>
+        `;
+
+        document.getElementById('btn-sp-raid-army')?.addEventListener('click', () => {
+          this.sendPreemptiveTroopAttack(selCfg.id);
+        });
+        document.getElementById('btn-sp-start-capture')?.addEventListener('click', () => {
+          this.targetCapturePlanetId = selCfg.id;
+          document.getElementById('modal-space-map')?.classList.remove('open');
+          this.startPlanetCaptureRun(selCfg.id);
+        });
+      }
+
+      if (logEl) {
+        logEl.innerHTML = (this.travianBattleLogs || []).map((msg) => `<div style="margin-bottom:5px;border-bottom:1px solid rgba(148,163,184,0.15);padding-bottom:3px;">${msg}</div>`).join('');
+      }
+
+      gridEl.innerHTML = planets.filter((p) => !p.isHome).map((p) => {
+        const ps = this.spacePlanets[p.id];
+        const owned = !!ps?.owned;
+        const adj = this.isPlanetAdjacentToOwned(p.id);
+        return `
+          <div class="upgrade-card" style="border-color:${owned ? '#22c55e' : (adj ? '#f97316' : '#475569')};cursor:pointer;" data-planet-card="${p.id}">
+            <div class="upg-top">
+              <span class="upg-title" style="color:${owned ? '#4ade80' : '#fde047'};">${p.oreIcon} ${p.name} (Diff ${p.difficulty})</span>
+              <span class="version-pill">${owned ? '🚩 OWNED' : (adj ? '⚔️ NEXT TO US' : '🔒 DEEP SPACE')}</span>
+            </div>
+            <p class="upg-desc">
+              <strong>${p.factionLabel}</strong> · Ore: ${p.oreName}<br/>
+              ${owned
+                ? `⛏️ Mine Lv.${ps.mineLvl}/10 · 📦 Stored: 🛢️${Math.floor(ps.storedOil)} ⛏️${Math.floor(ps.storedIron)} · 🛡️ DEF: ${this.getPlanetDefenseStats(p.id).totalDef}`
+                : `👾 Stored Enemy Army: <strong>${Math.round(ps.enemyArmy)}/${ps.enemyThreshold}</strong>`}
+            </p>
+          </div>
+        `;
+      }).join('');
+
+      gridEl.querySelectorAll('[data-planet-card]').forEach((card) => {
+        card.addEventListener('click', () => {
+          this.selectedSpacePlanetId = card.getAttribute('data-planet-card');
+          this.audio.playPickup();
+          this.renderSpaceMapModal();
+        });
+      });
+    }
+
+    drawSpaceMapCanvas() {
+      const canvas = document.getElementById('space-map-canvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const w = canvas.width;
+      const h = canvas.height;
+      ctx.clearRect(0, 0, w, h);
+
+      ctx.fillStyle = '#040814';
+      ctx.fillRect(0, 0, w, h);
+
+      const planets = CFG.SPACE_MAP_PLANETS || [];
+      // Draw hyperlane links
+      for (const p of planets) {
+        const x1 = p.nx * w;
+        const y1 = p.ny * h;
+        for (const lid of (p.links || [])) {
+          const lp = planets.find((x) => x.id === lid);
+          if (!lp) continue;
+          const bothOwned = this.spacePlanets[p.id]?.owned && this.spacePlanets[lp.id]?.owned;
+          ctx.strokeStyle = bothOwned ? 'rgba(74, 222, 128, 0.55)' : 'rgba(148, 163, 184, 0.28)';
+          ctx.lineWidth = bothOwned ? 3 : 2;
+          ctx.beginPath();
+          ctx.moveTo(x1, y1);
+          ctx.lineTo(lp.nx * w, lp.ny * h);
+          ctx.stroke();
+        }
+      }
+
+      // Draw planet nodes
+      for (const p of planets) {
+        const px = p.nx * w;
+        const py = p.ny * h;
+        const ps = this.spacePlanets[p.id];
+        const owned = !!ps?.owned;
+        const isSel = this.selectedSpacePlanetId === p.id;
+
+        ctx.save();
+        ctx.translate(px, py);
+        ctx.fillStyle = owned ? '#064e3b' : (p.faction === 'bugs' ? '#3f2e0e' : '#3b0a14');
+        ctx.strokeStyle = isSel ? '#facc15' : (owned ? '#4ade80' : p.color);
+        ctx.lineWidth = isSel ? 4 : 2.5;
+        ctx.beginPath();
+        ctx.arc(0, 0, p.isHome ? 24 : 19, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.font = '14px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(p.isHome ? '🛸' : (owned ? '🚩' : (p.faction === 'bugs' ? '🐛' : '🤖')), 0, 0);
+
+        ctx.fillStyle = isSel ? '#fde047' : '#ffffff';
+        ctx.font = '900 10px Orbitron, sans-serif';
+        ctx.fillText(`${p.name.split(' ')[0]} ${p.isHome ? '(HQ)' : `(Lv.${p.difficulty})`}`, 0, -26);
+
+        if (!p.isHome) {
+          ctx.fillStyle = owned ? '#86efac' : '#fca5a5';
+          ctx.font = '700 9.5px Rajdhani, sans-serif';
+          ctx.fillText(
+            owned ? `🛢️${Math.floor(ps.storedOil)} ⛏️${Math.floor(ps.storedIron)}` : `👾${Math.round(ps.enemyArmy)}/${ps.enemyThreshold}`,
+            0,
+            28
+          );
+        }
+        ctx.restore();
+      }
+    }
+
+    // ========================================================================
+    // NEW IN v0.0.12: SHOP TRAINING & RECRUITMENT ROOM (MAX Lv.100 & SKILLS)
+    // - Keep at least 4+ Helldiver Heroes (3 Active + 1 Spare Reinforcement)
+    // - True Permadeath when a Helldiver dies in Sample Search or Planet Capture!
+    // ========================================================================
+    initHelldiverRoster() {
+      if (!Array.isArray(this.helldiverRoster) || this.helldiverRoster.length === 0) {
+        this.nextHeroUid = 5;
+        this.helldiverRoster = [
+          this.createHelldiverHero('cls_vanguard', 'Capt. Raynor', 5, 'h_starter_1'),
+          this.createHelldiverHero('cls_bulwark', 'Sgt. Titan', 4, 'h_starter_2'),
+          this.createHelldiverHero('cls_medic', 'Doc Mercy', 4, 'h_starter_3'),
+          this.createHelldiverHero('cls_sniper', 'Ghost Viper', 4, 'h_starter_4')
+        ];
+        this.capybaraLineup = ['h_starter_1', 'h_starter_2', 'h_starter_3', 'h_starter_4'];
+      }
+      for (const h of this.helldiverRoster) {
+        this.recalcHeroStats(h);
+      }
+    }
+
+    createHelldiverHero(classId, customName = null, startLvl = 1, forcedId = null) {
+      const cls = (CFG.HELLDIVER_CLASSES || []).find((c) => c.id === classId) || CFG.HELLDIVER_CLASSES[0];
+      const uid = forcedId || `hero_${Date.now()}_${(this.nextHeroUid = (this.nextHeroUid || 10) + 1)}`;
+      const callsigns = ['Viper', 'Hawk', 'Wolf', 'Nova', 'Rex', 'Blaze', 'Iron', 'Storm', 'Zero', 'Apex'];
+      const hero = {
+        id: uid,
+        classId: cls.id,
+        name: customName || `${cls.name.split(' ')[0]} ${callsigns[Math.floor(Math.random() * callsigns.length)]}`,
+        icon: cls.icon,
+        color: cls.color,
+        bodyColor: cls.bodyColor,
+        capeColor: cls.capeColor,
+        trimColor: cls.trimColor,
+        level: startLvl,
+        maxLevel: 100,
+        equip: { weapon: true, armor: true, pack: false, mech: classId === 'cls_mechpilot' },
+        maxHp: cls.baseHp,
+        hp: cls.baseHp,
+        atk: cls.baseAtk,
+        fireRate: cls.baseFireRate,
+        stats100: { ...cls.baseStats100 }
+      };
+      this.recalcHeroStats(hero);
+      return hero;
+    }
+
+    recalcHeroStats(hero) {
+      const cls = (CFG.HELLDIVER_CLASSES || []).find((c) => c.id === hero.classId) || CFG.HELLDIVER_CLASSES[0];
+      const lvl = Math.max(1, Math.min(100, hero.level || 1));
+      const scale = 0.22 + (lvl / 100) * 0.78;
+      hero.stats100 = {
+        firepower: Math.min(100, Math.round(cls.baseStats100.firepower * scale)),
+        vitality: Math.min(100, Math.round(cls.baseStats100.vitality * scale)),
+        agility: Math.min(100, Math.round(cls.baseStats100.agility * scale)),
+        tactics: Math.min(100, Math.round(cls.baseStats100.tactics * scale))
+      };
+      const eqHpMult = 1 + (hero.equip?.armor ? 0.25 : 0) + (hero.equip?.pack ? 0.20 : 0) + (hero.equip?.mech ? 0.55 : 0);
+      const eqAtkMult = 1 + (hero.equip?.weapon ? 0.25 : 0) + (hero.equip?.mech ? 0.45 : 0);
+      hero.maxHp = Math.round((cls.baseHp + (lvl - 1) * 32 + hero.stats100.vitality * 4) * eqHpMult);
+      hero.hp = hero.maxHp;
+      hero.atk = Math.round((cls.baseAtk + (lvl - 1) * 3.4 + hero.stats100.firepower * 0.5) * eqAtkMult);
+      hero.fireRate = Math.max(0.14, cls.baseFireRate * (1 - hero.stats100.agility * 0.003));
+    }
+
+    getHeroTrainCost(hero, levels = 1) {
+      let cashCost = 0;
+      let sampleCost = 0;
+      for (let i = 0; i < levels; i++) {
+        const l = (hero.level || 1) + i;
+        if (l >= 100) break;
+        cashCost += Math.round(45 + l * 18);
+        if (l >= 15) sampleCost += 1;
+      }
+      return { cashCost, sampleCost };
+    }
+
+    hireHelldiverHero(classId) {
+      const cls = (CFG.HELLDIVER_CLASSES || []).find((c) => c.id === classId);
+      if (!cls) return;
+      if (this.cash < cls.hireCost) {
+        this.spawnFloatingText(this.player.x, this.player.z - 35, `⚠️ NEED $${cls.hireCost} TO HIRE ${cls.name.toUpperCase()}`, '#ef4444');
+        return;
+      }
+      this.cash -= cls.hireCost;
+      const newHero = this.createHelldiverHero(classId, null, 1);
+      this.helldiverRoster.push(newHero);
+
+      // Auto-fill any empty slot in the 4-hero lineup (3 Active + 1 Spare)
+      for (let s = 0; s < 4; s++) {
+        const curId = this.capybaraLineup[s];
+        if (!curId || !this.helldiverRoster.some((h) => h.id === curId)) {
+          this.capybaraLineup[s] = newHero.id;
+          break;
+        }
+      }
+      this.audio.playUnlock();
+      this.spawnFloatingText(-840, -240, `🎖️ HIRED ${newHero.name.toUpperCase()} (${cls.name})!`, cls.color);
+      this.saveGame();
+      this.renderTrainingRoomModal();
+      this.updateHUD();
+    }
+
+    trainHelldiverHero(heroId, levels = 1) {
+      const hero = (this.helldiverRoster || []).find((h) => h.id === heroId);
+      if (!hero || hero.level >= 100) return;
+      const actualLvls = Math.min(levels, 100 - hero.level);
+      const { cashCost, sampleCost } = this.getHeroTrainCost(hero, actualLvls);
+      if (this.cash < cashCost || (this.samples.common || 0) < sampleCost) {
+        this.spawnFloatingText(this.player.x, this.player.z - 35, `⚠️ NEED $${cashCost} & 🟢${sampleCost} SAMPLES TO TRAIN!`, '#ef4444');
+        return;
+      }
+      this.cash -= cashCost;
+      this.samples.common = Math.max(0, (this.samples.common || 0) - sampleCost);
+      hero.level += actualLvls;
+      this.recalcHeroStats(hero);
+      this.audio.playUnlock();
+      this.spawnFloatingText(-840, -240, `⬆️ ${hero.name.toUpperCase()} TRAINED TO Lv.${hero.level}/100!`, '#4ade80');
+      this.saveGame();
+      this.renderTrainingRoomModal();
+      this.updateHUD();
+    }
+
+    equipHelldiverHeroAllGear(heroId) {
+      const hero = (this.helldiverRoster || []).find((h) => h.id === heroId);
+      if (!hero) return;
+      const cost = 120;
+      if (this.cash < cost) {
+        this.spawnFloatingText(this.player.x, this.player.z - 35, `⚠️ NEED $${cost} TO EQUIP FULL 4-SLOT SHOP GEAR`, '#ef4444');
+        return;
+      }
+      this.cash -= cost;
+      hero.equip = { weapon: true, armor: true, pack: true, mech: true };
+      this.recalcHeroStats(hero);
+      this.audio.playUnlock();
+      this.spawnFloatingText(-840, -240, `🛡️ ${hero.name.toUpperCase()} EQUIPPED WITH 4-SLOT SHOP GEAR!`, '#facc15');
+      this.saveGame();
+      this.renderTrainingRoomModal();
+      this.updateHUD();
+    }
+
+    renderTrainingRoomModal() {
+      this.initHelldiverRoster();
+      const sumEl = document.getElementById('training-room-summary');
+      const lineupGrid = document.getElementById('training-lineup-grid');
+      const rosterGrid = document.getElementById('training-roster-grid');
+      const recruitGrid = document.getElementById('training-recruit-grid');
+      if (!sumEl || !lineupGrid || !rosterGrid || !recruitGrid) return;
+
+      sumEl.innerHTML = `
+        <div>
+          <div style="font-family:var(--font-display);font-weight:900;color:#fde047;font-size:0.94rem;">
+            🏋️ HELLDIVER BARRACKS: ${this.helldiverRoster.length} HEROES · MAX ABILITY LEVEL 100 · 3 ACTIVE + 1 SPARE
+          </div>
+          <div style="font-size:0.77rem;color:#e2e8f0;margin-top:2px;">
+            Train Helldivers up to <strong>Lv.100</strong> to unlock <strong>Lv.1, Lv.25 &amp; Lv.60 Class Skills</strong>. ⚠️ <strong>Permadeath Rule</strong>: If a Helldiver dies in combat, they are lost forever and your Slot #4 Spare automatically drops in!
+          </div>
+        </div>
+        <div style="font-family:var(--font-display);font-weight:900;color:#4ade80;font-size:0.88rem;">
+          💵 $${Math.floor(this.cash)} | 🟢${this.samples.common} 🟠${this.samples.rare} 🟣${this.samples.superRare}
+        </div>
+      `;
+
+      const slotTitles = [
+        '⚔️ SLOT #1: ACTIVE FRONT VANGUARD',
+        '⚔️ SLOT #2: ACTIVE MID SUPPORT',
+        '⚔️ SLOT #3: ACTIVE REAR FIREPOWER',
+        '🚀 SLOT #4: ORBITAL SPARE REINFORCEMENT (Auto-Drops if 1 Dies!)'
+      ];
+
+      lineupGrid.innerHTML = [0, 1, 2, 3].map((sIdx) => {
+        const hId = this.capybaraLineup[sIdx];
+        const h = this.helldiverRoster.find((x) => x.id === hId);
+        const options = this.helldiverRoster.map((r) => `<option value="${r.id}" ${r.id === hId ? 'selected' : ''}>${r.icon} ${r.name} (Lv.${r.level}/100)</option>`).join('');
+        return `
+          <div class="upgrade-card" style="border-color:${sIdx === 3 ? '#f97316' : '#4ade80'};">
+            <div style="font-family:var(--font-display);font-weight:900;color:${sIdx === 3 ? '#fdba74' : '#86efac'};font-size:0.78rem;margin-bottom:4px;">
+              ${slotTitles[sIdx]}
+            </div>
+            <select class="lineup-slot-select" data-slot="${sIdx}" style="width:100%;background:#0f172a;color:#fde047;border:1px solid #facc15;border-radius:6px;padding:5px;font-family:var(--font-display);font-size:0.76rem;">
+              <option value="">-- Select Helldiver Hero --</option>
+              ${options}
+            </select>
+            <div style="font-size:0.74rem;color:#cbd5e1;margin-top:5px;">
+              ${h ? `❤️ HP: <strong>${h.maxHp}</strong> · ⚔️ ATK: <strong>${h.atk}</strong> · Stats(100): 🔥${h.stats100.firepower} 🛡️${h.stats100.vitality} ⚡${h.stats100.agility} 🧠${h.stats100.tactics}` : '⚠️ Slot Empty — Assign a Hero!'}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      lineupGrid.querySelectorAll('.lineup-slot-select').forEach((sel) => {
+        sel.addEventListener('change', () => {
+          const slot = parseInt(sel.getAttribute('data-slot'), 10);
+          const chosenId = sel.value || null;
+          // Swap if already in another slot
+          const otherIdx = this.capybaraLineup.indexOf(chosenId);
+          if (chosenId && otherIdx !== -1 && otherIdx !== slot) {
+            this.capybaraLineup[otherIdx] = this.capybaraLineup[slot];
+          }
+          this.capybaraLineup[slot] = chosenId;
+          this.saveGame();
+          this.renderTrainingRoomModal();
+        });
+      });
+
+      rosterGrid.innerHTML = this.helldiverRoster.map((h) => {
+        const cls = (CFG.HELLDIVER_CLASSES || []).find((c) => c.id === h.classId) || CFG.HELLDIVER_CLASSES[0];
+        const c1 = this.getHeroTrainCost(h, 1);
+        const c5 = this.getHeroTrainCost(h, 5);
+        const fullGear = h.equip?.weapon && h.equip?.armor && h.equip?.pack && h.equip?.mech;
+        const skillBadges = (cls.skills || []).map((sk) => {
+          const unlocked = h.level >= sk.reqLvl;
+          return `<div style="font-size:0.71rem;color:${unlocked ? '#4ade80' : '#64748b'};">${unlocked ? '✅' : `🔒Lv.${sk.reqLvl}`} ${sk.icon} <strong>${sk.name}</strong>: ${sk.desc}</div>`;
+        }).join('');
+
+        return `
+          <div class="upgrade-card" style="border-color:${cls.color};">
+            <div class="upg-top">
+              <span class="upg-title" style="color:${cls.color};">${cls.icon} ${h.name} — Lv.${h.level}/100</span>
+              <span class="version-pill">${cls.name}</span>
+            </div>
+            <div style="font-size:0.74rem;color:#fde047;margin:3px 0;">
+              ❤️ HP: ${h.maxHp} · ⚔️ ATK: ${h.atk} · 🔥Firepower: ${h.stats100.firepower}/100 · 🛡️Vitality: ${h.stats100.vitality}/100 · ⚡Agility: ${h.stats100.agility}/100 · 🧠Tactics: ${h.stats100.tactics}/100
+            </div>
+            <div style="background:rgba(9,13,20,0.85);padding:6px;border-radius:6px;margin:4px 0;">
+              ${skillBadges}
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;">
+              <button class="buy-btn btn-train-1" data-hero="${h.id}" ${h.level >= 100 || this.cash < c1.cashCost || this.samples.common < c1.sampleCost ? 'disabled' : ''}>
+                ${h.level >= 100 ? 'MAX Lv.100' : `⬆️ +1 Lv ($${c1.cashCost}${c1.sampleCost ? ` + 🟢${c1.sampleCost}` : ''})`}
+              </button>
+              <button class="buy-btn medal-btn btn-train-5" data-hero="${h.id}" ${h.level >= 100 || this.cash < c5.cashCost || this.samples.common < c5.sampleCost ? 'disabled' : ''}>
+                ${h.level >= 100 ? 'MAX' : `⬆️ +5 Lv ($${c5.cashCost}${c5.sampleCost ? ` + 🟢${c5.sampleCost}` : ''})`}
+              </button>
+              <button class="hud-btn btn-equip-hero" data-hero="${h.id}" ${fullGear || this.cash < 120 ? 'disabled' : ''} style="border-color:#38bdf8;color:#7dd3fc;">
+                ${fullGear ? '🛡️ 4-Slot Gear Equipped' : '🛡️ Equip 4-Slot Gear ($120)'}
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      rosterGrid.querySelectorAll('.btn-train-1').forEach((b) => {
+        b.addEventListener('click', () => this.trainHelldiverHero(b.getAttribute('data-hero'), 1));
+      });
+      rosterGrid.querySelectorAll('.btn-train-5').forEach((b) => {
+        b.addEventListener('click', () => this.trainHelldiverHero(b.getAttribute('data-hero'), 5));
+      });
+      rosterGrid.querySelectorAll('.btn-equip-hero').forEach((b) => {
+        b.addEventListener('click', () => this.equipHelldiverHeroAllGear(b.getAttribute('data-hero')));
+      });
+
+      recruitGrid.innerHTML = (CFG.HELLDIVER_CLASSES || []).map((cls) => `
+        <div class="upgrade-card" style="border-color:${cls.color};">
+          <div class="upg-top">
+            <span class="upg-title" style="color:${cls.color};">${cls.icon} ${cls.name} (${cls.zhName})</span>
+            <span class="version-pill">Max Lv.100</span>
+          </div>
+          <p class="upg-desc">${cls.desc}</p>
+          <div style="font-size:0.72rem;color:#86efac;margin-bottom:6px;">
+            Lv.100 Caps: 🔥${cls.baseStats100.firepower} · 🛡️${cls.baseStats100.vitality} · ⚡${cls.baseStats100.agility} · 🧠${cls.baseStats100.tactics}
+          </div>
+          <button class="buy-btn btn-hire-class" data-cls="${cls.id}" ${this.cash < cls.hireCost ? 'disabled' : ''}>
+            ➕ Hire ${cls.name} ($${cls.hireCost})
+          </button>
+        </div>
+      `).join('');
+
+      recruitGrid.querySelectorAll('.btn-hire-class').forEach((b) => {
+        b.addEventListener('click', () => this.hireHelldiverHero(b.getAttribute('data-cls')));
+      });
+    }
+
+    // ========================================================================
+    // NEW IN v0.0.12: CAPYBARA GO! ROGUELIKE PATH ATTACK ENGINE (2 PAGES)
+    // - Page 1: 🧬 Sample Search (Diff 1-10: 1-3 Common 🟢, 4-6 Rare 🟠, 7-10 Super Rare 🟣)
+    // - Page 2: 🚩 Planet Capture (Select adjacent planet on Space Map, 10 Waves,
+    //           Retreat after each wave, True Permadeath on Hero Death, 3 Active + 1 Spare!)
+    // ========================================================================
+    buildCapybaraRunSquad() {
+      this.initHelldiverRoster();
+      // Auto-populate any missing lineup slots from available roster
+      for (let s = 0; s < 4; s++) {
+        if (!this.capybaraLineup[s] || !this.helldiverRoster.some((h) => h.id === this.capybaraLineup[s])) {
+          const unused = this.helldiverRoster.find((h) => !this.capybaraLineup.includes(h.id));
+          this.capybaraLineup[s] = unused ? unused.id : null;
+        }
+      }
+
+      const shopMult = this.getShopWarPowerMult();
+      const makeCombatant = (heroId, slotIndex) => {
+        const h = this.helldiverRoster.find((x) => x.id === heroId);
+        if (!h) return null;
+        this.recalcHeroStats(h);
+        const cls = (CFG.HELLDIVER_CLASSES || []).find((c) => c.id === h.classId) || CFG.HELLDIVER_CLASSES[0];
+        const maxHp = Math.round(h.maxHp * shopMult);
+        return {
+          ...h,
+          slotIndex,
+          maxHp,
+          hp: maxHp,
+          atk: Math.round(h.atk * shopMult),
+          shield: h.classId === 'cls_bulwark' ? Math.round(maxHp * 0.25) : 0,
+          miracleReady: h.classId === 'cls_medic' && h.level >= 60,
+          dead: false,
+          fireCooldown: 0.2,
+          skillTimers: [1.5, 3.0, 5.0],
+          skills: cls.skills || [],
+          x: -560 + (slotIndex === 0 ? 110 : 0),
+          z: -900 + (slotIndex === 1 ? -140 : (slotIndex === 2 ? 140 : 0))
+        };
+      };
+
+      const activeHeroes = [0, 1, 2].map((idx) => makeCombatant(this.capybaraLineup[idx], idx)).filter(Boolean);
+      const spareHero = makeCombatant(this.capybaraLineup[3], 3);
+      return { activeHeroes, spareHero };
+    }
+
+    startSampleSearchRun(diff = null) {
+      const chosenDiff = Math.max(1, Math.min(10, parseInt(diff || this.sampleSearchDiff || 1, 10)));
+      this.sampleSearchDiff = chosenDiff;
+      this.warSubPage = 'sample';
+
+      const { activeHeroes, spareHero } = this.buildCapybaraRunSquad();
+      if (activeHeroes.length === 0) {
+        this.spawnFloatingText(this.player.x, this.player.z - 45, '⚠️ NO HELLDIVERS IN SQUAD! HIRE HEROES IN TRAINING ROOM FIRST!', '#ef4444');
+        this.renderTrainingRoomModal();
+        document.getElementById('modal-training-room')?.classList.add('open');
+        return;
+      }
+
+      const faction = chosenDiff % 2 === 1 ? 'bugs' : 'autobots';
+      this.capybaraRun = {
+        active: true,
+        mode: 'sample',
+        difficulty: chosenDiff,
+        faction,
+        planetId: null,
+        planetName: `Sample Sector Diff-${chosenDiff}`,
+        wave: 1,
+        maxWaves: 5,
+        phase: 'combat',
+        activeHeroes,
+        spareHero,
+        spareUsed: false,
+        sentries: [],
+        lootBag: { cash: 0, common: 0, rare: 0, superRare: 0 }
+      };
+
+      const retreatBar = document.getElementById('capybara-wave-retreat-bar');
+      if (retreatBar) retreatBar.style.display = 'none';
+      if (this.viewMode !== 'war') this.setViewMode('war', 'sample');
+      this.spawnCapybaraWaveEnemies();
+      this.updateHUD();
+    }
+
+    startPlanetCaptureRun(planetId = null) {
+      this.initSpaceMapState();
+      let targetId = planetId || this.targetCapturePlanetId;
+      let pCfg = (CFG.SPACE_MAP_PLANETS || []).find((p) => p.id === targetId && !p.isHome && !this.spacePlanets[p.id]?.owned);
+      if (!pCfg || !this.isPlanetAdjacentToOwned(pCfg.id)) {
+        // Pick first available adjacent enemy planet
+        pCfg = (CFG.SPACE_MAP_PLANETS || []).find((p) => !p.isHome && !this.spacePlanets[p.id]?.owned && this.isPlanetAdjacentToOwned(p.id));
+      }
+      if (!pCfg) {
+        this.spawnFloatingText(this.player.x, this.player.z - 45, '🎉 ALL ADJACENT PLANETS CAPTURED! CHECK SPACE MAP!', '#4ade80');
+        this.renderSpaceMapModal();
+        document.getElementById('modal-space-map')?.classList.add('open');
+        return;
+      }
+
+      this.targetCapturePlanetId = pCfg.id;
+      this.warSubPage = 'capture';
+
+      const { activeHeroes, spareHero } = this.buildCapybaraRunSquad();
+      if (activeHeroes.length === 0) {
+        this.spawnFloatingText(this.player.x, this.player.z - 45, '⚠️ NO HELLDIVERS IN SQUAD! HIRE HEROES IN TRAINING ROOM FIRST!', '#ef4444');
+        this.renderTrainingRoomModal();
+        document.getElementById('modal-training-room')?.classList.add('open');
+        return;
+      }
+
+      this.capybaraRun = {
+        active: true,
+        mode: 'capture',
+        difficulty: pCfg.difficulty,
+        faction: pCfg.faction, // Strictly 'bugs' OR 'autobots'
+        planetId: pCfg.id,
+        planetName: pCfg.name,
+        wave: 1,
+        maxWaves: 10, // At least 10 Waves required for Planet Capture!
+        phase: 'combat',
+        activeHeroes,
+        spareHero,
+        spareUsed: false,
+        sentries: [],
+        lootBag: { cash: 0, common: 0, rare: 0, superRare: 0 }
+      };
+
+      const retreatBar = document.getElementById('capybara-wave-retreat-bar');
+      if (retreatBar) retreatBar.style.display = 'none';
+      if (this.viewMode !== 'war') this.setViewMode('war', 'capture');
+      this.spawnCapybaraWaveEnemies();
+      this.updateHUD();
+    }
+
+    spawnCapybaraWaveEnemies() {
+      const run = this.capybaraRun;
+      if (!run) return;
+      this.enemies = [];
+      const diff = run.difficulty || 1;
+      const wave = run.wave || 1;
+      const isBugs = run.faction === 'bugs';
+
+      // Harder difficulty scaling as requested by user!
+      const count = 6 + wave * 2 + Math.floor(diff * 1.4);
+      const hpScale = (1 + (diff - 1) * 0.85) * (1 + (wave - 1) * 0.32);
+      const dmgScale = (1 + (diff - 1) * 0.55) * (1 + (wave - 1) * 0.22);
+
+      const bugTypes = ['hunter', 'bug', 'spewer', 'titan'];
+      const botTypes = ['trooper', 'devastator', 'hulk', 'strider'];
+      const pool = isBugs ? bugTypes : botTypes;
+
+      for (let i = 0; i < count; i++) {
+        let typeIdx = 0;
+        if (i === count - 1 && (wave % 3 === 0 || wave === run.maxWaves || diff >= 6)) {
+          typeIdx = 3; // Apex Boss (Bile Titan or Factory Strider)
+        } else if (i % 4 === 0 && (wave >= 2 || diff >= 3)) {
+          typeIdx = 2; // Elite (Bile Spewer or Hulk)
+        } else if (i % 2 === 1) {
+          typeIdx = 1;
+        }
+        const eType = pool[typeIdx];
+        const baseHp = typeIdx === 3 ? 620 : (typeIdx === 2 ? 310 : (typeIdx === 1 ? 175 : 115));
+        const baseDmg = typeIdx === 3 ? 48 : (typeIdx === 2 ? 28 : (typeIdx === 1 ? 19 : 13));
+        const hp = Math.round(baseHp * hpScale);
+
+        this.enemies.push({
+          id: Math.random(),
+          type: eType,
+          x: 240 + i * 95 + (Math.random() - 0.5) * 40,
+          z: -900 + ((i % 3) - 1) * 130 + (Math.random() - 0.5) * 30,
+          hp,
+          maxHp: hp,
+          dmg: Math.round(baseDmg * dmgScale),
+          speed: typeIdx === 0 ? 145 : (typeIdx === 3 ? 88 : 112),
+          attackCooldown: 0.5
+        });
+      }
+    }
+
+    updateCapybaraRoguelikeWar(dt) {
+      const run = this.capybaraRun;
+      if (!run || !run.active) return;
+
+      if (run.phase === 'decision') {
+        // Waiting for player to click Continue Next Wave or Retreat after wave
+        return;
+      }
+
+      const aliveHeroes = (run.activeHeroes || []).filter((h) => h && !h.dead && h.hp > 0);
+      if (aliveHeroes.length === 0) {
+        this.handleCapybaraSquadWipeout();
+        return;
+      }
+
+      // 1. Update Active Helldiver Heroes (Basic Attacks + Unlocked Lv.1/25/60 Class Skills!)
+      const arcStacks = this.roguelikePerks?.rk_arc_chain || 0;
+      const stimStacks = this.roguelikePerks?.rk_viper_stims || 0;
+
+      for (const h of aliveHeroes) {
+        h.fireCooldown = Math.max(0, (h.fireCooldown || 0) - dt * (1 + stimStacks * 0.20));
+
+        // Find closest enemy on the path
+        let target = null;
+        let bestDist = 9999;
+        for (const e of this.enemies) {
+          if (e.hp <= 0) continue;
+          const d = Math.hypot(e.x - h.x, e.z - h.z);
+          if (d < bestDist) {
+            bestDist = d;
+            target = e;
+          }
+        }
+
+        if (target && h.fireCooldown <= 0) {
+          h.fireCooldown = h.fireRate || 0.30;
+          const isCrit = Math.random() < (0.12 + (h.stats100?.agility || 50) * 0.0035);
+          const dmg = Math.round(h.atk * (isCrit ? 2.1 : 1.0));
+          target.hp -= dmg;
+          this.tracers.push({
+            sx: h.x + 18,
+            sz: h.z - 10,
+            tx: target.x,
+            tz: target.z,
+            color: isCrit ? '#facc15' : (h.color || '#38bdf8'),
+            width: isCrit ? 5 : 3,
+            t: 0,
+            duration: 0.09
+          });
+          this.audio.playLaser();
+
+          // Arc Chain Perk
+          if (arcStacks > 0 && this.enemies.length > 1) {
+            for (let c = 0; c < Math.min(2, this.enemies.length); c++) {
+              const other = this.enemies[c];
+              if (other !== target && other.hp > 0) {
+                other.hp -= Math.round(dmg * 0.45 * arcStacks);
+              }
+            }
+          }
+        }
+
+        // Cast Unlocked Class Skills (Lv.1, Lv.25, Lv.60)
+        for (let sIdx = 0; sIdx < (h.skills || []).length; sIdx++) {
+          const sk = h.skills[sIdx];
+          if (h.level < sk.reqLvl || sk.cd <= 0) continue;
+          h.skillTimers[sIdx] = (h.skillTimers[sIdx] || sk.cd) - dt;
+          if (h.skillTimers[sIdx] <= 0 && this.enemies.length > 0) {
+            h.skillTimers[sIdx] = Math.max(2.2, sk.cd * (1 - (h.stats100?.tactics || 50) * 0.0035));
+            this.triggerHeroClassSkill(h, sk);
+          }
+        }
+      }
+
+      // 2. Update Deployed Engineer Sentries
+      for (const s of (run.sentries || [])) {
+        s.cd = (s.cd || 0) - dt;
+        if (s.cd <= 0 && this.enemies.length > 0) {
+          s.cd = 0.28;
+          const t = this.enemies[0];
+          t.hp -= s.dmg;
+          this.tracers.push({ sx: s.x, sz: s.z - 10, tx: t.x, tz: t.z, color: '#a855f7', width: 3, t: 0, duration: 0.08 });
+        }
+      }
+
+      // Clean up killed enemies & add wave loot
+      for (let i = this.enemies.length - 1; i >= 0; i--) {
+        if (this.enemies[i].hp <= 0) {
+          const deadE = this.enemies[i];
+          this.enemies.splice(i, 1);
+          this.totalKills++;
+          this.lifetimeKills++;
+          run.lootBag.cash += Math.round(18 + run.difficulty * 8);
+          this.explosions.push({ x: deadE.x, z: deadE.z, maxR: 36, t: 0, duration: 0.22 });
+        }
+      }
+
+      // 3. Advance Enemies Leftward toward the 3 Active Helldivers!
+      for (const e of this.enemies) {
+        // Pick closest living active hero
+        let closestHero = aliveHeroes[0];
+        let minD = 9999;
+        for (const h of aliveHeroes) {
+          const d = Math.hypot(e.x - h.x, e.z - h.z);
+          if (d < minD) {
+            minD = d;
+            closestHero = h;
+          }
+        }
+        if (!closestHero) continue;
+
+        if (minD > 58) {
+          const dx = closestHero.x - e.x;
+          const dz = closestHero.z - e.z;
+          e.x += (dx / minD) * e.speed * dt;
+          e.z += (dz / minD) * e.speed * dt;
+        } else {
+          e.attackCooldown = (e.attackCooldown || 0) - dt;
+          if (e.attackCooldown <= 0) {
+            e.attackCooldown = 0.95;
+            // Check Dodge & Bulwark Riot Shield
+            if (closestHero.classId === 'cls_sniper' && closestHero.level >= 25 && Math.random() < 0.30) {
+              this.spawnFloatingText(closestHero.x, closestHero.z - 40, '💨 DODGED!', '#38bdf8');
+              continue;
+            }
+            let incomingDmg = e.dmg;
+            if (closestHero.classId === 'cls_bulwark') incomingDmg = Math.round(incomingDmg * 0.65);
+
+            if ((closestHero.shield || 0) > 0) {
+              const abs = Math.min(closestHero.shield, incomingDmg);
+              closestHero.shield -= abs;
+              incomingDmg -= abs;
+            }
+            closestHero.hp -= incomingDmg;
+            this.spawnFloatingText(closestHero.x, closestHero.z - 34, `-${incomingDmg} 💥`, '#ef4444');
+
+            // Check Hero Death & True Permadeath + Slot #4 Spare Reinforcement!
+            if (closestHero.hp <= 0) {
+              this.handleCapybaraHeroDeath(closestHero);
+            }
+          }
+        }
+      }
+
+      // 4. Check if Current Wave is Cleared!
+      if (this.enemies.length === 0) {
+        this.completeCapybaraWave();
+      }
+    }
+
+    triggerHeroClassSkill(hero, sk) {
+      const run = this.capybaraRun;
+      if (!run) return;
+      this.spawnFloatingText(hero.x, hero.z - 58, `${sk.icon} ${sk.name.split('(')[0].trim()}!`, hero.color || '#facc15');
+
+      if (sk.id === 'sk_stim' || sk.id === 'sk_infusion' || sk.id === 'sk_rally') {
+        for (const h of (run.activeHeroes || [])) {
+          if (h && !h.dead) {
+            const heal = Math.round(h.maxHp * (sk.id === 'sk_stim' ? 0.24 : 0.18));
+            h.hp = Math.min(h.maxHp, h.hp + heal);
+          }
+        }
+        return;
+      }
+      if (sk.id === 'sk_dome') {
+        for (const h of (run.activeHeroes || [])) {
+          if (h && !h.dead) h.shield = (h.shield || 0) + Math.round(h.maxHp * 0.30);
+        }
+        return;
+      }
+      if (sk.id === 'sk_sentry') {
+        if ((run.sentries || []).length < 3) {
+          run.sentries.push({ x: hero.x + 85, z: hero.z + (Math.random() - 0.5) * 90, dmg: Math.round(hero.atk * 0.65), cd: 0.2 });
+        }
+        return;
+      }
+
+      // Offensive AoE / Single-Target Skills
+      const mult = (sk.id === 'sk_500kg' || sk.id === 'sk_railcannon' || sk.id === 'sk_hellbomb' || sk.id === 'sk_emancipator') ? 4.8 : 2.4;
+      const skillDmg = Math.round(hero.atk * mult);
+      for (const e of this.enemies) {
+        e.hp -= skillDmg;
+        this.explosions.push({ x: e.x, z: e.z, maxR: 52, t: 0, duration: 0.26 });
+      }
+      this.audio.playStratagem();
+    }
+
+    handleCapybaraHeroDeath(fallenHero) {
+      const run = this.capybaraRun;
+      if (!run) return;
+
+      // Check if Bio-Medic's Lv.60 Miracle Shield can save them once!
+      const medic = (run.activeHeroes || []).find((h) => h && !h.dead && h.miracleReady);
+      if (medic) {
+        medic.miracleReady = false;
+        fallenHero.hp = Math.round(fallenHero.maxHp * 0.50);
+        this.spawnFloatingText(fallenHero.x, fallenHero.z - 60, `✨ MIRACLE DEFIBRILLATOR SAVED ${fallenHero.name.toUpperCase()}!`, '#4ade80');
+        return;
+      }
+
+      // TRUE PERMADEATH: Remove fallen Helldiver permanently from helldiverRoster & capybaraLineup!
+      fallenHero.dead = true;
+      fallenHero.hp = 0;
+      this.helldiverRoster = (this.helldiverRoster || []).filter((h) => h.id !== fallenHero.id);
+      this.capybaraLineup = (this.capybaraLineup || []).map((id) => (id === fallenHero.id ? null : id));
+
+      this.world.triggerCameraShake(14, 0.4);
+      this.spawnFloatingText(
+        fallenHero.x,
+        fallenHero.z - 65,
+        `💀 ${fallenHero.name.toUpperCase()} KIA (PERMADEATH — HIRE NEW IN TRAINING ROOM)!`,
+        '#ef4444'
+      );
+
+      // Immediately check Slot #4 Orbital Spare Reinforcement!
+      if (run.spareHero && !run.spareHero.dead && !run.spareUsed) {
+        run.spareUsed = true;
+        const sp = run.spareHero;
+        sp.x = fallenHero.x;
+        sp.z = fallenHero.z;
+        const idx = run.activeHeroes.indexOf(fallenHero);
+        if (idx !== -1) {
+          run.activeHeroes[idx] = sp;
+        } else {
+          run.activeHeroes.push(sp);
+        }
+        run.spareHero = null;
+
+        // Hellpod kinetic slam damage on drop
+        for (const e of this.enemies) {
+          e.hp -= 380;
+          this.explosions.push({ x: e.x, z: e.z, maxR: 65, t: 0, duration: 0.35 });
+        }
+        this.audio.playStratagem();
+        this.spawnFloatingText(sp.x, sp.z - 85, `🚀 SPARE REINFORCEMENT DROPPED: ${sp.name.toUpperCase()} (Lv.${sp.level})!`, '#facc15');
+      }
+      this.saveGame();
+      this.updateHUD();
+    }
+
+    completeCapybaraWave() {
+      const run = this.capybaraRun;
+      if (!run) return;
+
+      const diff = run.difficulty || 1;
+      const diffCfg = (CFG.SAMPLE_DIFFICULTIES || []).find((d) => d.diff === diff) || CFG.SAMPLE_DIFFICULTIES[0];
+
+      // Add Wave Sample & Cash Rewards into run.lootBag
+      // Diff 1-3: Normal (🟢) only | Diff 4-6: Normal + Rare (🟠) | Diff 7-10: Normal + Rare + Super Rare (🟣)!
+      const addCommon = Math.max(1, Math.round((diffCfg.common[0] + diffCfg.common[1]) * 0.25));
+      const addRare = diff >= 4 ? Math.max(1, Math.round((diffCfg.rare[0] + diffCfg.rare[1]) * 0.25)) : 0;
+      const addSuper = diff >= 7 ? Math.max(1, Math.round((diffCfg.superRare[0] + diffCfg.superRare[1]) * 0.30)) : 0;
+
+      run.lootBag.common += addCommon;
+      run.lootBag.rare += addRare;
+      run.lootBag.superRare += addSuper;
+      run.lootBag.cash += Math.round(diffCfg.cashReward * 0.28);
+
+      // Check if Final Wave (Wave 10/10 for Capture, Wave 5/5 for Sample Search) is cleared!
+      if (run.wave >= run.maxWaves) {
+        this.finishCapybaraExpeditionVictory();
+        return;
+      }
+
+      // Pause after wave for the Post-Wave Retreat vs. Continue Decision!
+      run.phase = 'decision';
+      const retreatBar = document.getElementById('capybara-wave-retreat-bar');
+      const titleEl = document.getElementById('retreat-bar-title');
+      const descEl = document.getElementById('retreat-bar-desc');
+      const aliveCount = (run.activeHeroes || []).filter((h) => h && !h.dead).length;
+      const hasSpare = run.spareHero && !run.spareHero.dead && !run.spareUsed;
+
+      if (titleEl) {
+        titleEl.textContent = `🚁 WAVE ${run.wave}/${run.maxWaves} CLEARED — CONTINUE TO WAVE ${run.wave + 1} OR RETREAT?`;
+      }
+      if (descEl) {
+        descEl.innerHTML = `
+          Surviving Squad: <strong>${aliveCount}/3 Active Helldivers + ${hasSpare ? '1 Spare Ready' : '0 Spare'}</strong> ·
+          Current Loot Bag: <strong>💵 $${run.lootBag.cash} · 🟢 ${run.lootBag.common} · 🟠 ${run.lootBag.rare} · 🟣 ${run.lootBag.superRare}</strong>.<br/>
+          If you <strong>🚁 Retreat Now</strong>, all surviving Helldivers return safely with <strong>65% of collected resources</strong>. If you continue and a Helldiver dies, they <strong>die permanently</strong>!
+        `;
+      }
+      if (retreatBar) retreatBar.style.display = 'block';
+      this.audio.playUnlock();
+      this.updateHUD();
+    }
+
+    continueNextCapybaraWave() {
+      const run = this.capybaraRun;
+      if (!run || !run.active) return;
+      const retreatBar = document.getElementById('capybara-wave-retreat-bar');
+      if (retreatBar) retreatBar.style.display = 'none';
+
+      run.wave++;
+      run.phase = 'combat';
+      this.triggerRoguelikePerkDraft();
+      this.spawnCapybaraWaveEnemies();
+      this.audio.playStratagem();
+      this.updateHUD();
+    }
+
+    retreatFromCapybaraRun() {
+      const run = this.capybaraRun;
+      if (!run || !run.active) return;
+      const retreatBar = document.getElementById('capybara-wave-retreat-bar');
+      if (retreatBar) retreatBar.style.display = 'none';
+
+      // Retreat keeps 65% of collected resources & saves all surviving Helldivers!
+      const keepRatio = 0.65;
+      const gotCash = Math.round((run.lootBag.cash || 0) * keepRatio);
+      const gotCommon = Math.floor((run.lootBag.common || 0) * keepRatio);
+      const gotRare = Math.floor((run.lootBag.rare || 0) * keepRatio);
+      const gotSuper = Math.floor((run.lootBag.superRare || 0) * keepRatio);
+
+      this.cash += gotCash;
+      this.samples.common = (this.samples.common || 0) + gotCommon;
+      this.samples.rare = (this.samples.rare || 0) + gotRare;
+      this.samples.superRare = (this.samples.superRare || 0) + gotSuper;
+      this.superSamples = this.samples.superRare;
+
+      run.active = false;
+      this.enemies = [];
+      this.setViewMode('shop');
+      this.audio.playPickup();
+      this.spawnFloatingText(
+        this.player.x,
+        this.player.z - 55,
+        `🚁 RETREATED SAFELY! KEPT +$${gotCash} · +🟢${gotCommon} +🟠${gotRare} +🟣${gotSuper}!`,
+        '#fde047'
+      );
+      this.saveGame();
+      this.updateHUD();
+    }
+
+    finishCapybaraExpeditionVictory() {
+      const run = this.capybaraRun;
+      if (!run) return;
+      const retreatBar = document.getElementById('capybara-wave-retreat-bar');
+      if (retreatBar) retreatBar.style.display = 'none';
+
+      const gotCash = run.lootBag.cash || 0;
+      const gotCommon = run.lootBag.common || 0;
+      const gotRare = run.lootBag.rare || 0;
+      const gotSuper = run.lootBag.superRare || 0;
+
+      this.cash += gotCash;
+      this.medals += Math.max(2, Math.ceil(run.difficulty * 0.8));
+      this.samples.common = (this.samples.common || 0) + gotCommon;
+      this.samples.rare = (this.samples.rare || 0) + gotRare;
+      this.samples.superRare = (this.samples.superRare || 0) + gotSuper;
+      this.superSamples = this.samples.superRare;
+
+      if (run.mode === 'capture' && run.planetId && this.spacePlanets[run.planetId]) {
+        const ps = this.spacePlanets[run.planetId];
+        ps.owned = true;
+        ps.mineLvl = Math.max(1, ps.mineLvl || 1);
+        ps.storageLvl = Math.max(1, ps.storageLvl || 1);
+        ps.storedOil = 10;
+        ps.storedIron = 10;
+        ps.buildings = { def_wall: 1, def_flak: 1, def_rail: 0 };
+        ps.garrison = { g_seaf_militia: 3, g_seaf_heavy: 1, g_helldiver_vet: 1, g_patriot_mech: 0 };
+        this.travianBattleLogs.unshift(`🚩 [VICTORY] Liberated ${run.planetName} after clearing all 10 Waves! Transport Ships are now hauling its ore to HallTown!`);
+      }
+
+      run.active = false;
+      this.enemies = [];
+      this.setViewMode('shop');
+      this.audio.playUnlock();
+      this.spawnFloatingText(
+        this.player.x,
+        this.player.z - 65,
+        run.mode === 'capture'
+          ? `🚩 PLANET CAPTURED: ${run.planetName.toUpperCase()}! +$${gotCash} · +🟢${gotCommon} 🟠${gotRare} 🟣${gotSuper}!`
+          : `🧬 SAMPLE SEARCH COMPLETE! +$${gotCash} · +🟢${gotCommon} 🟠${gotRare} 🟣${gotSuper}!`,
+        '#4ade80'
+      );
+      this.saveGame();
+      this.updateHUD();
+    }
+
+    handleCapybaraSquadWipeout() {
+      const run = this.capybaraRun;
+      if (!run) return;
+      const retreatBar = document.getElementById('capybara-wave-retreat-bar');
+      if (retreatBar) retreatBar.style.display = 'none';
+
+      run.active = false;
+      this.enemies = [];
+      this.setViewMode('shop');
+      this.spawnFloatingText(
+        this.player.x,
+        this.player.z - 65,
+        `💀 SQUAD WIPED OUT ON WAVE ${run.wave}! HIRE NEW HELLDIVERS IN THE TRAINING ROOM!`,
+        '#ef4444'
+      );
+      this.saveGame();
+      this.renderTrainingRoomModal();
+      document.getElementById('modal-training-room')?.classList.add('open');
+      this.updateHUD();
+    }
+
     serializeState() {
       return {
         version: CFG.VERSION,
@@ -5237,6 +7053,14 @@
         missionStage: this.missionStage,
         roguelikePerks: this.roguelikePerks,
         superSamples: this.superSamples,
+        samples: this.samples,
+        portLogistics: this.portLogistics,
+        spacePlanets: this.spacePlanets,
+        travianBattleLogs: this.travianBattleLogs,
+        helldiverRoster: this.helldiverRoster,
+        capybaraLineup: this.capybaraLineup,
+        sampleSearchDiff: this.sampleSearchDiff,
+        targetCapturePlanetId: this.targetCapturePlanetId,
         watchtowers: this.watchtowers,
         strongholds: this.strongholds,
         warSquads: this.warSquads,
@@ -5302,6 +7126,17 @@
         if (typeof data.missionStage === 'number') this.missionStage = data.missionStage;
         if (data.roguelikePerks) Object.assign(this.roguelikePerks, data.roguelikePerks);
         if (typeof data.superSamples === 'number') this.superSamples = data.superSamples;
+        if (data.samples) Object.assign(this.samples, data.samples);
+        if (data.portLogistics) Object.assign(this.portLogistics, data.portLogistics);
+        if (data.spacePlanets) Object.assign(this.spacePlanets, data.spacePlanets);
+        if (Array.isArray(data.travianBattleLogs)) this.travianBattleLogs = data.travianBattleLogs;
+        if (Array.isArray(data.helldiverRoster) && data.helldiverRoster.length > 0) this.helldiverRoster = data.helldiverRoster;
+        if (Array.isArray(data.capybaraLineup)) this.capybaraLineup = data.capybaraLineup;
+        if (typeof data.sampleSearchDiff === 'number') this.sampleSearchDiff = data.sampleSearchDiff;
+        if (typeof data.targetCapturePlanetId === 'string') this.targetCapturePlanetId = data.targetCapturePlanetId;
+        this.initTransportShips();
+        this.initSpaceMapState();
+        this.initHelldiverRoster();
         if (data.watchtowers) Object.assign(this.watchtowers, data.watchtowers);
         if (data.strongholds) Object.assign(this.strongholds, data.strongholds);
         if (data.warSquads) Object.assign(this.warSquads, data.warSquads);
@@ -5555,10 +7390,10 @@
         this.updateHUD();
       });
       document.getElementById('btn-war-start-match')?.addEventListener('click', () => {
-        if (this.waveState === 'rest') {
-          this.startNextWave(true);
+        if (this.warSubPage === 'capture') {
+          this.startPlanetCaptureRun(this.targetCapturePlanetId);
         } else {
-          this.startNewWarGame(this.missionType || 'defense');
+          this.startSampleSearchRun(this.sampleSearchDiff || 1);
         }
       });
       document.getElementById('btn-war-autopilot')?.addEventListener('click', () => {
@@ -5780,6 +7615,80 @@
       document.getElementById('btn-reset-save')?.addEventListener('click', () => {
         this.redeployAfterDefeat();
         document.getElementById('modal-save')?.classList.remove('open');
+      });
+
+      // v0.0.12 Event Bindings: Left-Hand Port, Training Room, Space Map, Sample Search (1-10) & 10-Wave Capture
+      document.getElementById('btn-open-port-top')?.addEventListener('click', () => {
+        this.renderPortLogisticsModal();
+        document.getElementById('modal-port-logistics')?.classList.add('open');
+      });
+      document.getElementById('btn-close-port-logistics')?.addEventListener('click', () => {
+        document.getElementById('modal-port-logistics')?.classList.remove('open');
+      });
+
+      document.getElementById('btn-open-training-top')?.addEventListener('click', () => {
+        this.renderTrainingRoomModal();
+        document.getElementById('modal-training-room')?.classList.add('open');
+      });
+      document.getElementById('btn-close-training-room')?.addEventListener('click', () => {
+        document.getElementById('modal-training-room')?.classList.remove('open');
+      });
+
+      document.getElementById('btn-open-space-map')?.addEventListener('click', () => {
+        this.renderSpaceMapModal();
+        document.getElementById('modal-space-map')?.classList.add('open');
+      });
+      document.getElementById('btn-close-space-map')?.addEventListener('click', () => {
+        document.getElementById('modal-space-map')?.classList.remove('open');
+      });
+
+      const spaceCanvas = document.getElementById('space-map-canvas');
+      spaceCanvas?.addEventListener('pointerdown', (e) => {
+        const rect = spaceCanvas.getBoundingClientRect();
+        const nx = (e.clientX - rect.left) / Math.max(1, rect.width);
+        const ny = (e.clientY - rect.top) / Math.max(1, rect.height);
+        let bestP = null;
+        let bestD = 0.12;
+        for (const p of (CFG.SPACE_MAP_PLANETS || [])) {
+          const d = Math.hypot(nx - p.nx, ny - p.ny);
+          if (d < bestD) {
+            bestD = d;
+            bestP = p;
+          }
+        }
+        if (bestP) {
+          this.selectedSpacePlanetId = bestP.id;
+          this.audio.playPickup();
+          this.renderSpaceMapModal();
+        }
+      });
+
+      document.getElementById('btn-mode-sample')?.addEventListener('click', () => {
+        const diffSel = document.getElementById('sample-diff-select');
+        const diff = diffSel ? parseInt(diffSel.value, 10) : (this.sampleSearchDiff || 1);
+        this.startSampleSearchRun(diff);
+      });
+      document.getElementById('sample-diff-select')?.addEventListener('change', (e) => {
+        const diff = parseInt(e.target.value, 10) || 1;
+        this.sampleSearchDiff = diff;
+        if (this.viewMode === 'war' && this.warSubPage === 'sample') {
+          this.startSampleSearchRun(diff);
+        }
+      });
+
+      document.getElementById('btn-mode-capture')?.addEventListener('click', () => {
+        this.renderSpaceMapModal();
+        document.getElementById('modal-space-map')?.classList.add('open');
+      });
+
+      document.getElementById('btn-wave-continue')?.addEventListener('click', () => {
+        this.continueNextCapybaraWave();
+      });
+      document.getElementById('btn-wave-retreat')?.addEventListener('click', () => {
+        this.retreatFromCapybaraRun();
+      });
+      document.getElementById('btn-war-retreat-now')?.addEventListener('click', () => {
+        this.retreatFromCapybaraRun();
       });
 
       document.getElementById('btn-open-github')?.addEventListener('click', () => {

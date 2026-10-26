@@ -5,8 +5,8 @@
 // ============================================================================
 
 window.GameConfig = {
-  VERSION: 'v0.0.11',
-  STORAGE_KEY: 'helldivers_please_save_v0011',
+  VERSION: 'v0.0.12',
+  STORAGE_KEY: 'helldivers_please_save_v0012',
   MAX_LEVEL: 10,
 
   // Expanded 4600 x 4000 2D Factorio + Carbot World for 7 Full Horizontal Lanes
@@ -2228,6 +2228,542 @@ window.GameConfig = {
       bridgePostPos: { x: 80, z: -980 },
       desc: 'Heavy armored walker formation (up to 8 Patriot Mechs). Crushes Enemy Strongholds (據點) when ordered to Sally Out!'
     }
+  ],
+
+  // --------------------------------------------------------------------------
+  // NEW IN v0.0.12: LEFT-HAND TRANSPORT SHIP & PORT LOGISTICS (左舷運輸艦與港口系統)
+  // - At start, raw providing speed is fixed at 1 per Oil (🛢️) and 1 per Iron (⛏️).
+  // - Raw ore is dropped off by Transport Ships on the left-hand side of HallTown!
+  // - Buy more Transport Ships (1->10), add more Docking Ports (1->4), and upgrade
+  //   Port Unloading Speed (Lv.1-10), Port Storage Limit (Lv.1-10), & Ship Cargo!
+  // --------------------------------------------------------------------------
+  PORT_LOGISTICS: {
+    fixedStartOilPerSec: 1.0,
+    fixedStartIronPerSec: 1.0,
+    maxPorts: 4,
+    maxShips: 10,
+    maxUpgradeLevel: 10,
+    baseBuyShipCost: 160,
+    buyShipCostScale: 1.48,
+    baseAddPortCost: 280,
+    addPortCostScale: 1.85,
+    baseUnloadSpeedCost: 130,
+    unloadSpeedCostScale: 1.42,
+    baseStorageLimitCost: 140,
+    storageLimitCostScale: 1.42,
+    baseShipCargoCost: 150,
+    shipCargoCostScale: 1.44,
+    portPositions: [
+      { id: 'port_1', index: 1, x: -1820, z: 210, label: 'PORT #1 (North Oil/Ore Dock)' },
+      { id: 'port_2', index: 2, x: -1820, z: 490, label: 'PORT #2 (Central Cargo Dock)' },
+      { id: 'port_3', index: 3, x: -1820, z: 770, label: 'PORT #3 (South Heavy Dock)' },
+      { id: 'port_4', index: 4, x: -1820, z: 1050, label: 'PORT #4 (Deep-Space Mega Dock)' }
+    ]
+  },
+
+  // --------------------------------------------------------------------------
+  // NEW IN v0.0.12: GALACTIC SPACE MAP (🪐 星際戰略星圖 — BUGS OR AUTOBOTS, 1 FACTION/PLANET)
+  // - Each planet has ONE enemy faction ('bugs' OR 'autobots') and specific Ore!
+  // - Captured planets must upgrade Mine Level & Storage Limit; Transport Ships fly
+  //   from HallTown to pick up stored ore and unload at the Left-Hand Port!
+  // - Enemy planets accumulate Army based on Difficulty (1-10); once Enemy Army
+  //   reaches Attack Threshold, it launches a Travian-style auto-calculated war on
+  //   our closest linked planet!
+  // --------------------------------------------------------------------------
+  SPACE_MAP_PLANETS: [
+    {
+      id: 'planet_halltown',
+      name: 'SES HallTown Mother Ship (母艦基地)',
+      zhName: 'HallTown 戰艦母港 (固定起始 +1🛢️/+1⛏️)',
+      isHome: true,
+      ownedAtStart: true,
+      difficulty: 0,
+      faction: 'super_earth',
+      factionLabel: '🦅 SUPER EARTH HQ',
+      oreName: 'Starter Orbital Supply (1🛢️ Oil + 1⛏️ Iron/s)',
+      oreIcon: '🛸',
+      oilRatio: 0.5,
+      ironRatio: 0.5,
+      bonusOreType: 'titanium',
+      baseMineRate: 2.0,
+      nx: 0.50,
+      ny: 0.52,
+      color: '#facc15',
+      links: ['sp_heeth', 'sp_angels', 'sp_fenrir', 'sp_tienkwan'],
+      desc: 'Your Super Destroyer Orbital Hub! Produces a fixed 1 Oil + 1 Iron per cycle at start and dispatches Transport Ships to all captured planets.'
+    },
+    {
+      id: 'sp_heeth',
+      name: 'Heeth E-710 Bio-Refinery',
+      zhName: '希斯星 (Lv.1 蟲族 · 高純度石油礦)',
+      isHome: false,
+      ownedAtStart: true,
+      difficulty: 1,
+      faction: 'bugs',
+      factionLabel: '🐛 TERMINID BUGS ONLY',
+      oreName: 'Pure E-710 Bio-Oil (80%🛢️ Oil · 20%⛏️ Iron)',
+      oreIcon: '🛢️',
+      oilRatio: 0.80,
+      ironRatio: 0.20,
+      bonusOreType: '바이오_oil',
+      baseMineRate: 1.4,
+      nx: 0.28,
+      ny: 0.36,
+      color: '#a855f7',
+      links: ['planet_halltown', 'sp_fenrir', 'sp_turing'],
+      desc: 'Captured Terminid Frontier (Diff 1). Rich in E-710 Crude Oil. Keep garrison troops & walls ready against Fenrir & Turing bug swarms!'
+    },
+    {
+      id: 'sp_angels',
+      name: 'Angels Venture Iron Crater',
+      zhName: '安傑爾星 (Lv.1 機器人 · 高純度鐵礦)',
+      isHome: false,
+      ownedAtStart: false,
+      difficulty: 1,
+      faction: 'autobots',
+      factionLabel: '🤖 AUTOMATON BOTS ONLY',
+      oreName: 'Super Iron Vein (20%🛢️ Oil · 80%⛏️ Iron)',
+      oreIcon: '⛏️',
+      oilRatio: 0.20,
+      ironRatio: 0.80,
+      bonusOreType: 'ferro_ore',
+      baseMineRate: 1.6,
+      nx: 0.72,
+      ny: 0.36,
+      color: '#38bdf8',
+      links: ['planet_halltown', 'sp_tienkwan', 'sp_malevelon'],
+      desc: 'Automaton Mining Outpost (Diff 1). Rich in Super Iron Ore. Adjacent to HallTown — ideal first planet to capture!'
+    },
+    {
+      id: 'sp_fenrir',
+      name: 'Fenrir III Spore Badlands',
+      zhName: '芬里爾三號 (Lv.2 蟲族 · 雙倍生物油礦)',
+      isHome: false,
+      ownedAtStart: false,
+      difficulty: 2,
+      faction: 'bugs',
+      factionLabel: '🐛 TERMINID BUGS ONLY',
+      oreName: 'Volatile Spore Oil (85%🛢️ Oil · 15%⛏️ Iron)',
+      oreIcon: '🧪',
+      oilRatio: 0.85,
+      ironRatio: 0.15,
+      bonusOreType: 'spore_oil',
+      baseMineRate: 2.2,
+      nx: 0.24,
+      ny: 0.68,
+      color: '#22c55e',
+      links: ['planet_halltown', 'sp_heeth', 'sp_estanu'],
+      desc: 'Terminid Breeding Grounds (Diff 2). High-pressure E-710 geysers. Frequently builds bug armies to attack Heeth and HallTown!'
+    },
+    {
+      id: 'sp_tienkwan',
+      name: 'Tien Kwan Mech Forge',
+      zhName: '天關工業星 (Lv.3 機器人 · 鈦合金重鐵礦)',
+      isHome: false,
+      ownedAtStart: false,
+      difficulty: 3,
+      faction: 'autobots',
+      factionLabel: '🤖 AUTOMATON BOTS ONLY',
+      oreName: 'Titanium-Iron Alloy (15%🛢️ Oil · 85%⛏️ Iron)',
+      oreIcon: '🔩',
+      oilRatio: 0.15,
+      ironRatio: 0.85,
+      bonusOreType: 'titanium',
+      baseMineRate: 2.8,
+      nx: 0.76,
+      ny: 0.68,
+      color: '#60a5fa',
+      links: ['planet_halltown', 'sp_angels', 'sp_vandalon'],
+      desc: 'Automaton Heavy Foundry (Diff 3). Produces massive Titanium-Iron shipments for Guns, Vehicles, and Patriot Mechs.'
+    },
+    {
+      id: 'sp_turing',
+      name: 'Turing Xeno-Jungle',
+      zhName: '圖靈叢林星 (Lv.4 蟲族 · 濃縮蟲油與稀有晶礦)',
+      isHome: false,
+      ownedAtStart: false,
+      difficulty: 4,
+      faction: 'bugs',
+      factionLabel: '🐛 TERMINID BUGS ONLY',
+      oreName: 'Xeno-Crystal Oil (75%🛢️ Oil · 25%⛏️ Iron)',
+      oreIcon: '🟠',
+      oilRatio: 0.75,
+      ironRatio: 0.25,
+      bonusOreType: 'xeno_crystal',
+      baseMineRate: 3.5,
+      nx: 0.11,
+      ny: 0.22,
+      color: '#f59e0b',
+      links: ['sp_heeth', 'sp_estanu', 'sp_meridia'],
+      desc: 'Dense Terminid Jungle (Diff 4). High E-710 extraction rate + passive Rare Sample crystal resonance.'
+    },
+    {
+      id: 'sp_malevelon',
+      name: 'Malevelon Creek',
+      zhName: '瑪萊弗隆溪谷 (Lv.5 機器人 · 雙料軍工礦脈)',
+      isHome: false,
+      ownedAtStart: false,
+      difficulty: 5,
+      faction: 'autobots',
+      factionLabel: '🤖 AUTOMATON BOTS ONLY',
+      oreName: 'Creek Chromium & Fuel (45%🛢️ Oil · 55%⛏️ Iron)',
+      oreIcon: '⚙️',
+      oilRatio: 0.45,
+      ironRatio: 0.55,
+      bonusOreType: 'chromium',
+      baseMineRate: 4.4,
+      nx: 0.89,
+      ny: 0.22,
+      color: '#ef4444',
+      links: ['sp_angels', 'sp_vandalon', 'sp_cyberstan'],
+      desc: 'Infamous Automaton Fortress World (Diff 5). Balanced high-output Chromium Iron & Synthetic Fuel veins.'
+    },
+    {
+      id: 'sp_estanu',
+      name: 'Estanu Hive Core',
+      zhName: '埃斯塔努蟲巢星 (Lv.6 蟲族 · 深層超純度石油)',
+      isHome: false,
+      ownedAtStart: false,
+      difficulty: 6,
+      faction: 'bugs',
+      factionLabel: '🐛 TERMINID BUGS ONLY',
+      oreName: 'Deep-Mantle E-710 (90%🛢️ Oil · 10%⛏️ Iron)',
+      oreIcon: '🛢️',
+      oilRatio: 0.90,
+      ironRatio: 0.10,
+      bonusOreType: 'deep_e710',
+      baseMineRate: 5.5,
+      nx: 0.12,
+      ny: 0.84,
+      color: '#10b981',
+      links: ['sp_fenrir', 'sp_turing', 'sp_meridia'],
+      desc: 'Subterranean Terminid Mega-Nest (Diff 6). Massive E-710 output to power Jump Packs, Mechs, and Super Destroyers.'
+    },
+    {
+      id: 'sp_vandalon',
+      name: 'Vandalon IV Cyber-Mines',
+      zhName: '范達隆四號 (Lv.7 機器人 · 超重型鋼鐵母礦)',
+      isHome: false,
+      ownedAtStart: false,
+      difficulty: 7,
+      faction: 'autobots',
+      factionLabel: '🤖 AUTOMATON BOTS ONLY',
+      oreName: 'Heavy Durasteel Ore (15%🛢️ Oil · 85%⛏️ Iron)',
+      oreIcon: '⛏️',
+      oilRatio: 0.15,
+      ironRatio: 0.85,
+      bonusOreType: 'durasteel',
+      baseMineRate: 6.8,
+      nx: 0.88,
+      ny: 0.84,
+      color: '#3b82f6',
+      links: ['sp_tienkwan', 'sp_malevelon', 'sp_cyberstan'],
+      desc: 'Glacial Automaton Strip-Mine (Diff 7). Huge Super Iron output; heavily guarded by Hulks and Rocket Devastators.'
+    },
+    {
+      id: 'sp_meridia',
+      name: 'Meridia Supercolony',
+      zhName: '梅里迪亞超級蟲巢 (Lv.9 蟲族 · 暗物質黑油礦)',
+      isHome: false,
+      ownedAtStart: false,
+      difficulty: 9,
+      faction: 'bugs',
+      factionLabel: '🐛 TERMINID BUGS ONLY',
+      oreName: 'Dark-Fluid Hyper Oil (65%🛢️ Oil · 35%⛏️ Iron)',
+      oreIcon: '🟣',
+      oilRatio: 0.65,
+      ironRatio: 0.35,
+      bonusOreType: 'dark_fluid',
+      baseMineRate: 9.0,
+      nx: 0.32,
+      ny: 0.12,
+      color: '#c084fc',
+      links: ['sp_turing', 'sp_estanu', 'sp_cyberstan'],
+      desc: 'Apex Terminid Supercolony (Diff 9). Produces massive Dark-Fluid E-710 & Iron, but swarms with Bile Titans!'
+    },
+    {
+      id: 'sp_cyberstan',
+      name: 'Cyberstan Iron Citadel',
+      zhName: '生化斯坦機械母星 (Lv.10 機器人 · 終極星際母礦)',
+      isHome: false,
+      ownedAtStart: false,
+      difficulty: 10,
+      faction: 'autobots',
+      factionLabel: '🤖 AUTOMATON BOTS ONLY',
+      oreName: 'Cyberstan Supreme Core (50%🛢️ Oil · 50%⛏️ Iron)',
+      oreIcon: '👑',
+      oilRatio: 0.50,
+      ironRatio: 0.50,
+      bonusOreType: 'cyber_core',
+      baseMineRate: 12.5,
+      nx: 0.68,
+      ny: 0.12,
+      color: '#f43f5e',
+      links: ['sp_malevelon', 'sp_vandalon', 'sp_meridia'],
+      desc: 'Difficulty 10 Automaton Homeworld! Maximum mining yield across all ores, guarded by Factory Strider armadas.'
+    }
+  ],
+
+  // --------------------------------------------------------------------------
+  // NEW IN v0.0.12: CAPTURED PLANET GARRISON UNITS & TRAVIAN DEFENSE BUILDINGS
+  // - Hire SEAF or Helldivers (including Patriot Mechs) with daily wage & combat value!
+  // - Defensive buildings are expensive to build, cheap to maintain, hard to destroy,
+  //   and enemy invasions MUST break the Planetary Wall first!
+  // --------------------------------------------------------------------------
+  PLANET_GARRISON_UNITS: [
+    {
+      id: 'g_seaf_militia',
+      name: 'SEAF Planetary Militia',
+      zhName: 'SEAF 行星民兵班',
+      icon: '👷',
+      hireCost: 45,
+      dailyWage: 6,
+      defValue: 28,
+      atkValue: 22,
+      color: '#38bdf8',
+      desc: 'Low daily wage ($6/day). Good basic garrison infantry to absorb attrition.'
+    },
+    {
+      id: 'g_seaf_heavy',
+      name: 'SEAF Heavy Autocannon Squad',
+      zhName: 'SEAF 重裝機砲班',
+      icon: '🪖',
+      hireCost: 95,
+      dailyWage: 15,
+      defValue: 68,
+      atkValue: 55,
+      color: '#22c55e',
+      desc: 'Moderate wage ($15/day). High defense value & strong pre-emptive raid firepower.'
+    },
+    {
+      id: 'g_helldiver_vet',
+      name: 'Stationed Helldiver Veteran',
+      zhName: '駐守精銳絕地戰兵',
+      icon: '🫡',
+      hireCost: 190,
+      dailyWage: 32,
+      defValue: 155,
+      atkValue: 140,
+      color: '#facc15',
+      desc: 'Elite orbital garrison ($32/day). Crushes enemy invasion waves and leads attrition strikes.'
+    },
+    {
+      id: 'g_patriot_mech',
+      name: 'Garrison EXO-45 Patriot Mech',
+      zhName: '駐守愛國者重型機甲',
+      icon: '🤖',
+      hireCost: 420,
+      itemCostId: 'mech',
+      dailyWage: 68,
+      defValue: 380,
+      atkValue: 340,
+      color: '#f97316',
+      desc: 'Heavy armored walker ($68/day, or use 1x Shop 🤖 Mech). Massive 380 Defense & 340 Raid Power!'
+    }
+  ],
+
+  PLANET_DEFENSE_BUILDINGS: [
+    {
+      id: 'def_wall',
+      name: 'Planetary Ferrocrete Wall',
+      zhName: '行星鋼筋裝甲城牆 (優先承受傷害)',
+      icon: '🧱',
+      baseBuildCost: 260,
+      costScale: 1.48,
+      maxLevel: 10,
+      dailyMaintPerLvl: 3,
+      wallShieldPerLvl: 480,
+      defBonusPctPerLvl: 15,
+      defPowerPerLvl: 65,
+      breaksFirst: true,
+      color: '#facc15',
+      desc: 'Expensive to build ($260+), tiny upkeep ($3/day). Grants +480 Structural Shield & +15% Total Planet DEF/lvl. Enemy attacks MUST break the Wall first before damaging turrets or mines!'
+    },
+    {
+      id: 'def_flak',
+      name: 'Orbital Flak & Gatling Bastion',
+      zhName: '防空機砲防禦堡壘 (城牆保護)',
+      icon: '🗼',
+      baseBuildCost: 350,
+      costScale: 1.50,
+      maxLevel: 10,
+      dailyMaintPerLvl: 5,
+      wallShieldPerLvl: 180,
+      defBonusPctPerLvl: 5,
+      defPowerPerLvl: 210,
+      breaksFirst: false,
+      color: '#38bdf8',
+      desc: 'Heavy automated turret network ($350+ build, only $5/day maintenance). Adds +210 Defense Firepower/lvl and cannot be leveled down while the Wall stands!'
+    },
+    {
+      id: 'def_rail',
+      name: 'Foreshadow Railgun Citadel',
+      zhName: '電磁軌道巨砲要塞 (極難摧毀)',
+      icon: '⚡',
+      baseBuildCost: 540,
+      costScale: 1.55,
+      maxLevel: 10,
+      dailyMaintPerLvl: 9,
+      wallShieldPerLvl: 320,
+      defBonusPctPerLvl: 10,
+      defPowerPerLvl: 450,
+      breaksFirst: false,
+      color: '#a855f7',
+      desc: 'Supreme planetary defense citadel ($540+ build, only $9/day maintenance). Adds +450 Defense Firepower/lvl and +10% DEF bonus. Protected behind the Planetary Wall!'
+    }
+  ],
+
+  // --------------------------------------------------------------------------
+  // NEW IN v0.0.12: SHOP TRAINING & RECRUITMENT ROOM — 6 HELLDIVER CLASSES (MAX Lv.100 & SKILLS)
+  // - Max Level 100 (`maxLevel: 100`), 4 Core Ability Stats scaled up to 100 (`firepower`, `vitality`, `agility`, `tactics`)
+  // - 3 Class Skills per Helldiver (`Lv.1`, `Lv.25`, `Lv.60` + `Lv.100 Apex Passive`)
+  // - Used in the 3-Active + 1-Spare Capybara Go! Roguelike Squad (with true Permadeath!)
+  // --------------------------------------------------------------------------
+  HELLDIVER_CLASSES: [
+    {
+      id: 'cls_vanguard',
+      name: 'Assault Vanguard',
+      zhName: '突擊先鋒戰兵',
+      icon: '🦅',
+      color: '#facc15',
+      hireCost: 140,
+      baseHp: 420,
+      baseAtk: 38,
+      baseFireRate: 0.32,
+      baseStats100: { firepower: 86, vitality: 80, agility: 78, tactics: 76 },
+      bodyColor: '#1e293b',
+      capeColor: '#eab308',
+      trimColor: '#facc15',
+      skills: [
+        { reqLvl: 1, id: 'sk_frag', icon: '💥', name: 'G-12 Frag Barrage (破片手雷彈幕)', cd: 4.5, desc: 'Throws an explosive frag every 4.5s dealing 220% AoE damage to enemy packs.' },
+        { reqLvl: 25, id: 'sk_rally', icon: '📣', name: 'For Super Earth! (民主戰吼激勵)', cd: 8.0, desc: 'Boosts all 3 active Helldivers ATK by +30% for 4s and heals 12% Max HP.' },
+        { reqLvl: 60, id: 'sk_500kg', icon: '🦅', name: 'Eagle 500KG Call-In (500KG飛鷹轟炸)', cd: 12.0, desc: 'Calls an Eagle-1 500KG bomb onto the enemy wave for 650% massive AoE damage!' }
+      ],
+      desc: 'Balanced frontline leader (Max Lv.100). Combines rapid rifle fire, squad morale healing, and 500KG air-strikes.'
+    },
+    {
+      id: 'cls_bulwark',
+      name: 'Heavy Bulwark Tank',
+      zhName: '重裝防暴壁壘',
+      icon: '🛡️',
+      color: '#38bdf8',
+      hireCost: 165,
+      baseHp: 640,
+      baseAtk: 30,
+      baseFireRate: 0.36,
+      baseStats100: { firepower: 70, vitality: 100, agility: 62, tactics: 82 },
+      bodyColor: '#0f172a',
+      capeColor: '#0284c7',
+      trimColor: '#38bdf8',
+      skills: [
+        { reqLvl: 1, id: 'sk_shield', icon: '🛡️', name: 'SH-20 Riot Shield (動能防暴盾)', cd: 0, desc: 'Passive: Reduces incoming damage by 35% and intercepts frontline projectiles.' },
+        { reqLvl: 25, id: 'sk_dome', icon: '🔵', name: 'FX-12 Squad Barrier (全隊護盾力場)', cd: 7.5, desc: 'Grants a 30% Max HP absorption shield to all 3 active Helldivers.' },
+        { reqLvl: 60, id: 'sk_hmg', icon: '🔥', name: 'HMG Bastion Overdrive (重機槍傾瀉)', cd: 10.5, desc: 'Fires an armor-shredding HMG storm dealing 500% damage and knocking enemies back.' }
+      ],
+      desc: 'Unbreakable frontline tank (Max Lv.100, 100 Vitality). Keeps your squad alive during Diff 7–10 Captures so nobody permadies!'
+    },
+    {
+      id: 'cls_sniper',
+      name: 'Viper Recon Sniper',
+      zhName: '毒蛇反器材狙擊手',
+      icon: '🎯',
+      color: '#ef4444',
+      hireCost: 180,
+      baseHp: 350,
+      baseAtk: 56,
+      baseFireRate: 0.42,
+      baseStats100: { firepower: 98, vitality: 64, agility: 100, tactics: 78 },
+      bodyColor: '#14532d',
+      capeColor: '#dc2626',
+      trimColor: '#fca5a5',
+      skills: [
+        { reqLvl: 1, id: 'sk_amr', icon: '🎯', name: 'APW-1 Weakpoint Crit (反器材弱點狙擊)', cd: 4.0, desc: '+35% Crit Chance; fires a high-caliber round dealing 280% single-target crit damage.' },
+        { reqLvl: 25, id: 'sk_cloak', icon: '💨', name: 'Scout Smoke Evasion (煙霧閃避披風)', cd: 0, desc: 'Passive: +30% Dodge Chance and +40% bonus damage against Elite/Boss armor.' },
+        { reqLvl: 60, id: 'sk_railcannon', icon: '⚡', name: 'Orbital Railcannon (軌道電磁砲秒殺)', cd: 11.0, desc: 'Orbital laser locks onto the strongest Boss/Elite for 880% armor-piercing damage!' }
+      ],
+      desc: 'Deadly Boss & Hulk executioner (Max Lv.100, 98 Firepower / 100 Agility). Deletes Chargers, Hulks, and Bile Titans.'
+    },
+    {
+      id: 'cls_medic',
+      name: 'Bio-Medic Officer',
+      zhName: '戰地醫療救援官',
+      icon: '💉',
+      color: '#22c55e',
+      hireCost: 175,
+      baseHp: 460,
+      baseAtk: 28,
+      baseFireRate: 0.34,
+      baseStats100: { firepower: 65, vitality: 88, agility: 80, tactics: 100 },
+      bodyColor: '#064e3b',
+      capeColor: '#22c55e',
+      trimColor: '#bbf7d0',
+      skills: [
+        { reqLvl: 1, id: 'sk_stim', icon: '💚', name: 'P-11 Stim Pistol (醫療針劑手槍)', cd: 3.8, desc: 'Heals the most injured active Helldiver for 24% Max HP every 3.8 seconds.' },
+        { reqLvl: 25, id: 'sk_infusion', icon: '🧪', name: 'Experimental Infusion (實驗性全隊回血)', cd: 7.0, desc: 'Heals all 3 active Helldivers for 18% HP and grants +25% Damage Reduction.' },
+        { reqLvl: 60, id: 'sk_miracle', icon: '✨', name: 'Democracy Protects (奇蹟免死護盾)', cd: 15.0, desc: 'Prevents fatal permadeath once per battle on an ally, restoring 50% HP immediately!' }
+      ],
+      desc: 'Essential squad survival specialist (Max Lv.100, 100 Tactics). Prevents costly Helldiver Permadeath in high-difficulty runs!'
+    },
+    {
+      id: 'cls_engineer',
+      name: 'Arc & Demo Engineer',
+      zhName: '電弧與哨戒塔工程師',
+      icon: '⚡',
+      color: '#a855f7',
+      hireCost: 195,
+      baseHp: 410,
+      baseAtk: 44,
+      baseFireRate: 0.33,
+      baseStats100: { firepower: 92, vitality: 74, agility: 82, tactics: 96 },
+      bodyColor: '#3b0764',
+      capeColor: '#a855f7',
+      trimColor: '#e9d5ff',
+      skills: [
+        { reqLvl: 1, id: 'sk_arc', icon: '⚡', name: 'ARC-12 Blitzer Chain (電弧閃電鏈)', cd: 3.5, desc: 'Jolts up to 3 enemies with chain lightning for 190% damage and brief stun.' },
+        { reqLvl: 25, id: 'sk_sentry', icon: '🗼', name: 'A/G-16 Gatling Sentry (部署機槍哨戒塔)', cd: 6.5, desc: 'Deploys an automated sentry turret that fires alongside your 3 Helldivers.' },
+        { reqLvl: 60, id: 'sk_hellbomb', icon: '☢️', name: 'NUX-223 Mini-Hellbomb (戰術地獄火核彈)', cd: 13.0, desc: 'Detonates a tactical Hellbomb across the path for 720% AoE plasma damage!' }
+      ],
+      desc: 'AoE crowd-control & turret master (Max Lv.100). Melts huge bug swarms and bot patrols with chain lightning.'
+    },
+    {
+      id: 'cls_mechpilot',
+      name: 'Exosuit Mech Pilot',
+      zhName: '愛國者機甲王牌駕駛',
+      icon: '🤖',
+      color: '#f97316',
+      hireCost: 260,
+      baseHp: 780,
+      baseAtk: 62,
+      baseFireRate: 0.28,
+      baseStats100: { firepower: 100, vitality: 96, agility: 72, tactics: 88 },
+      bodyColor: '#7c2d12',
+      capeColor: '#f97316',
+      trimColor: '#fde047',
+      skills: [
+        { reqLvl: 1, id: 'sk_rockets', icon: '🚀', name: 'EXO-45 Rocket Pod Salvo (機甲火箭齊射)', cd: 4.5, desc: 'Fires heavy anti-tank missiles dealing 320% splash damage.' },
+        { reqLvl: 25, id: 'sk_hull', icon: '🔩', name: 'Titanium Walker Hull (鈦合金機甲裝甲)', cd: 0, desc: 'Passive: +45% Max HP and reflects 30% damage back at attackers.' },
+        { reqLvl: 60, id: 'sk_emancipator', icon: '🤖', name: 'Quad-Autocannon Salvo (四聯機砲毀滅齊射)', cd: 10.0, desc: 'Unleashes twin-autocannon explosive shells for 780% total devastation!' }
+      ],
+      desc: 'Apex heavy walker pilot (Max Lv.100, 100 Firepower / 96 Vitality). Dominates Difficulty 8–10 Sample & Capture operations!'
+    }
+  ],
+
+  // --------------------------------------------------------------------------
+  // NEW IN v0.0.12: SAMPLE SEARCH DIFFICULTY TABLE (1-10)
+  // - Diff 1-3: Normal (Common 🟢) Sample only
+  // - Diff 4-6: Normal (🟢) + Rare (🟠) Samples
+  // - Diff 7-10: Normal (🟢) + Rare (🟠) + Super Rare (🟣) Samples
+  // --------------------------------------------------------------------------
+  SAMPLE_DIFFICULTIES: [
+    { diff: 1, name: '1 - Trivial (微不足道)', tierText: '🟢 Normal Sample Only', common: [2, 4], rare: [0, 0], superRare: [0, 0], hpMult: 1.0, atkMult: 1.0, cashReward: 120 },
+    { diff: 2, name: '2 - Easy (簡單任務)', tierText: '🟢 Normal Sample Only', common: [4, 7], rare: [0, 0], superRare: [0, 0], hpMult: 1.45, atkMult: 1.30, cashReward: 190 },
+    { diff: 3, name: '3 - Medium (中等作戰)', tierText: '🟢 Normal Sample Only', common: [6, 10], rare: [0, 0], superRare: [0, 0], hpMult: 2.0, atkMult: 1.65, cashReward: 280 },
+    { diff: 4, name: '4 - Challenging (具挑戰性)', tierText: '🟢 Normal + 🟠 Rare Samples', common: [7, 12], rare: [2, 4], superRare: [0, 0], hpMult: 2.8, atkMult: 2.15, cashReward: 420 },
+    { diff: 5, name: '5 - Hard (困難作戰)', tierText: '🟢 Normal + 🟠 Rare Samples', common: [9, 15], rare: [3, 6], superRare: [0, 0], hpMult: 3.8, atkMult: 2.75, cashReward: 600 },
+    { diff: 6, name: '6 - Extreme (極端作戰)', tierText: '🟢 Normal + 🟠 Rare Samples', common: [12, 18], rare: [5, 9], superRare: [0, 0], hpMult: 5.2, atkMult: 3.50, cashReward: 850 },
+    { diff: 7, name: '7 - Suicide Mission (自殺任務)', tierText: '🟢 + 🟠 Rare + 🟣 Super Rare!', common: [14, 22], rare: [6, 11], superRare: [1, 2], hpMult: 7.0, atkMult: 4.40, cashReward: 1200 },
+    { diff: 8, name: '8 - Impossible (不可能任務)', tierText: '🟢 + 🟠 Rare + 🟣 Super Rare!', common: [16, 26], rare: [8, 14], superRare: [2, 3], hpMult: 9.5, atkMult: 5.60, cashReward: 1650 },
+    { diff: 9, name: '9 - Helldive (絕地潛兵)', tierText: '🟢 + 🟠 Rare + 🟣 Super Rare!', common: [20, 32], rare: [10, 18], superRare: [3, 5], hpMult: 12.8, atkMult: 7.20, cashReward: 2300 },
+    { diff: 10, name: '10 - Super Helldive (超級絕地潛兵)', tierText: '🟢 + 🟠 Rare + 🟣 Super Rare!', common: [25, 40], rare: [14, 24], superRare: [5, 8], hpMult: 17.0, atkMult: 9.20, cashReward: 3200 }
   ]
 };
-

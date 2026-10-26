@@ -1,4 +1,4 @@
-# HELLDIVERS PLEASE! — Nightfall: Kingdom Frontier TD Castle Defense, Dedicated Shop Clone Sector & Tactical War Squad Manager (`v0.0.11`)
+# HELLDIVERS PLEASE! — Nightfall: Kingdom Frontier TD Castle Defense, Dedicated Shop Clone Sector & Tactical War Squad Manager (`v0.0.12`)
 
 An arcade factory-automation, Mindustry multi-base logistics, and *Capybara Go!* / Tower-Defense Roguelike War-Front web game inspired by **Burger Please!**, **Whiteout Survival Playable Ads**, **Capybara Go!**, **Factorio**, **Mindustry**, and **CarbotAnimations' Helldivers 2 cartoons** (across **all episodes Ep1–Ep10+**, including [Pro vs Noobs | Helldivers 2 Ep7](http://www.youtube.com/watch?v=bn0GTO_zvAg)), built from the [Modular Game Prompt Library](https://docs.google.com/document/d/1ZoW7Oou5QpTyvwD6vrczKuXv0nW42JgLJC-au62H7Pw/edit?usp=drivesdk&ouid=114024991701964609548).
 
@@ -29,6 +29,23 @@ An arcade factory-automation, Mindustry multi-base logistics, and *Capybara Go!*
 ---
 
 ## 📜 Complete Version History & Changelog (`v0.0.00` – `v0.0.09`)
+
+### `v0.0.12` — Left-Hand Transport Ship & Port Logistics (Fixed 1🛢️/1⛏️ Start), Galactic Space Map (Single-Faction Planet Ores & Travian Auto-Defense), Shop Training Room (Max Lv.100 & Skills) & Two-Part *Capybara Go!* Attack War (Sample Search Diff 1–10 + 10-Wave Planet Capture with Retreat & Permadeath)
+- **Fixed Starter Raw Supply (`1 Oil + 1 Iron/s`) & Left-Hand Transport Ship / Port Logistics (`🛸 港口`)**:
+  - At start, raw providing speed is fixed at **1 per 🛢️ Oil and 1 per ⛏️ Iron**.
+  - Raw materials are delivered by **Transport Ships (`🛸 Cargo Shuttles #1–#10`)** docking on the **Left-Hand Side of HallTown (`⚓ Docking Ports #1–#4`)**.
+  - Buy more Transport Ships (`1 ➔ 10`), add more physical Docking Ports (`1 ➔ 4`), and upgrade **Port Unloading Speed (`Lv.1–10`)**, **Port Storage Limit (`Lv.1–10`)**, and **Ship Cargo Capacity (`Lv.1–10`)**.
+- **Galactic Space Map (`🪐 星圖`), Planet-Specific Ores & Travian-Style Planetary Defense**:
+  - **Single Enemy Faction per Planet**: Every planet is strictly either **🐛 Terminid Bugs (`BUGS`)** OR **🤖 Automaton Bots (`AUTOBOTS`)** (`Difficulty 1–10`) and yields specific ore ratios (`🛢️ E-710 Oil`, `⛏️ Super Iron`, `🔩 Titanium-Iron`, `🟣 Dark-Fluid`).
+  - **Planet Mine & Storage Upgrades**: Upgrade **Mine Level (`Lv.1–10`)** and **Planet Storage Limit (`Lv.1–10`)** on captured planets so your HallTown Transport Ships can fly over and haul the ore back to the shop!
+  - **Enemy Army Accumulation & Travian Auto-Defense Calculation**: Linked enemy planets accumulate armies based on Difficulty (`1–10`); once their army reaches the threshold, they attack our closest linked planet using **instant Travian-style War Calculation** (skipping manual defense war!).
+  - **Stationed Garrison Wages & Travian Wall-First Defense Buildings**: Hire stationed `👷 SEAF Militia`, `🪖 SEAF Heavy`, `🫡 Helldiver Veterans`, and `🤖 Patriot Mechs` (with daily wages `$/day`) and build expensive, low-maintenance `🧱 Planetary Ferrocrete Walls` (**always absorbs damage & breaks first!**), `🗼 Flak Bastions`, and `⚡ Railgun Citadels`. If all troops die and all defense buildings are broken (`Lv.0`), **you lose control of the planet**!
+  - **Pre-Emptive Troop Strikes (`⚔️ Send Troop Strike`)**: Send stationed garrison troops to attack adjacent enemy planets—cannot capture the planet, but **reduces their stored enemy army count** so they cannot attack us!
+- **Two-Part *Capybara Go!* Roguelike Attack War (`3 Active + 1 Spare Helldiver = 4+ Heroes with Gear`)**:
+  - **Page 1 — `🧬 樣本搜尋 (Sample Search)` (`Difficulty 1–10`)**: Fight on Difficulty `1–10` (`1–3`: 🟢 Normal Samples only; `4–6`: 🟢 Normal + 🟠 Rare Samples; `7–10`: 🟢 Normal + 🟠 Rare + 🟣 Super Rare Samples).
+  - **Page 2 — `🚩 星球佔領 (Planet Capture)` (`10 Waves`, Selected on Space Map)**: Select an enemy planet adjacent to our territory (`Diff 1–10`) and fight **10 Waves** along the *Capybara Go!* path. **After every wave (`Wave 1..9`), choose to `⚔️ Continue` or `🚁 Retreat`** (retreating saves all surviving Helldivers with 65% of collected resources). **True Permadeath (`💀`)**: If an active Helldiver dies, they **die permanently** (and your **Slot #4 Spare Helldiver** automatically drops in via Hellpod to replace them!).
+- **New Shop Helldiver Training & Recruitment Room (`🏋️ 訓練室 — Max Lv.100 & Skills`)**:
+  - Dedicated physical room on the Shop deck + modal to hire **6 Helldiver Classes** (`🦅 Assault Vanguard`, `🛡️ Heavy Bulwark`, `🎯 Viper Sniper`, `💉 Bio-Medic`, `⚡ Arc Engineer`, `🤖 Exosuit Mech Pilot`), train them up to **Max Level 100** (4 Core Ability Stats `1–100` + `Lv.1 / Lv.25 / Lv.60` Class Skills), and equip **4-Slot Shop Gear (`🔫🦺🎒🤖`)**.
 
 ### `v0.0.11` — *Nightfall: Kingdom Frontier TD* Castle Defense & Stronghold Counter-Attack (`據點`), Zero War Econ Buildings (100% Shop Funded), Dedicated Shop Clone Sector D & Manageable War Squads
 - **Removed Old 3-Gate Corridor War Setting ➔ Replaced with *Nightfall: Kingdom Frontier TD* Castle & River Bridge Map (`image_97ae56.jpg`)**:
