@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>HELLDIVERS PLEASE! — Super Destroyer Warship &amp; Mindustry War-Zone Tycoon (v0.0.13)</title>
+  <title>HELLDIVERS PLEASE! — Super Destroyer Warship &amp; Mindustry War-Zone Tycoon (v0.0.14)</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
@@ -83,11 +83,8 @@
             <button class="mode-tab-btn" id="btn-open-clone-top" style="border-color:#22c55e;color:#86efac;" title="Open Sector D SEAF Clone Vat Room &amp; 6-Sector Worker Job Assignment">
               🧬 克隆室 (<span id="hud-clone-count">0/6</span>)
             </button>
-            <button class="mode-tab-btn" id="btn-open-squad-top" style="display:none;" title="Legacy Squad Manager">
-              🪖 小隊 (<span id="hud-squad-count">7/24</span>)
-            </button>
-            <button class="mode-tab-btn" id="btn-mode-war" style="display:none;" title="Legacy War Switch">
-              🏰 戰場 Castle War (<span id="hud-war-units-count">7</span>)
+            <button class="mode-tab-btn" id="btn-open-save-top" style="border-color:#38bdf8;color:#bae6fd;" title="Open 3-Slot Save Manager (Switch/Save/Reset Slot 1, 2, or 3)">
+              💾 存檔 (<span id="hud-save-slot-label">Slot 1</span>)
             </button>
           </div>
 
@@ -103,23 +100,22 @@
             <div class="brand-badge">
               <span>🚀</span>
               <span class="brand-title">SES SUPER DESTROYER COMMAND</span>
-              <span class="version-pill" id="hud-version">v0.0.13</span>
+              <span class="version-pill" id="hud-version">v0.0.14</span>
             </div>
 
-            <div class="stat-pill gate-pill" title="Wave &amp; Rest Timer">
-              <span>🌊</span>
+            <div class="stat-pill" style="border-color:#c084fc;" title="Galactic Space Map Liberation Progress">
+              <span>🪐</span>
               <div>
-                <div class="stat-label">Wave Status</div>
-                <div class="stat-val" id="hud-wave-status">W1 in 45s</div>
+                <div class="stat-label">Space Map</div>
+                <div class="stat-val" id="hud-drawer-planets">1 / 21 Planets</div>
               </div>
-              <button class="hud-btn btn-stratagem" id="btn-skip-rest" title="Call Next Wave Early for +25% Bonus Requisition!" style="padding:2px 6px;font-size:0.62rem;">⚔️ Next Wave</button>
             </div>
 
-            <div class="stat-pill gate-pill" title="3 Sequential Gate Layers">
-              <span>🛡️</span>
+            <div class="stat-pill" style="border-color:#38bdf8;" title="Active Save Slot">
+              <span>💾</span>
               <div>
-                <div class="stat-label">3-Layer Gates</div>
-                <div class="stat-val" id="hud-gates-hp">G3:100% G2:100% G1:100%</div>
+                <div class="stat-label">Active Save</div>
+                <div class="stat-val" id="hud-drawer-slot">Slot #1</div>
               </div>
             </div>
 
@@ -185,8 +181,10 @@
               <div style="display:flex;gap:5px;flex-wrap:wrap;">
                 <span class="version-pill" id="inv-badge-raw_iron" title="Port Super Iron Ore (Bot Main)">⛏️ 0</span>
                 <span class="version-pill" id="inv-badge-raw_e710" title="Port E-710 Bio-Oil (Bug Main)">🛢️ 1</span>
-                <span class="version-pill" id="inv-badge-raw_sand" title="Port Chitin Bio-Sand (Bug Unique)">🏜️ 0</span>
-                <span class="version-pill" id="inv-badge-raw_titanium" title="Port Cyber-Titanium (Bot Unique)">🔩 0</span>
+                <span class="version-pill" id="inv-badge-raw_sand" title="Bug Lv.4-6 Unique: Chitin Bio-Sand">🏜️ 0</span>
+                <span class="version-pill" id="inv-badge-raw_bile" title="Bug Lv.7-10 Unique: Bile Crystal">🧪 0</span>
+                <span class="version-pill" id="inv-badge-raw_titanium" title="Bot Lv.4-6 Unique: Cyber-Titanium">🔩 0</span>
+                <span class="version-pill" id="inv-badge-raw_qcore" title="Bot Lv.7-10 Unique: Quantum Core">⚛️ 0</span>
                 <span class="version-pill" id="inv-badge-cloth">🦺 2</span>
                 <span class="version-pill" id="inv-badge-gun">🔫 0</span>
                 <span class="version-pill" id="inv-badge-resource">📦 0</span>
@@ -211,7 +209,7 @@
         <button class="buy-btn medal-btn" id="btn-idle-belt-upgrade">🔗 Belt Lv.0 ($150)</button>
       </div>
 
-      <!-- NEW IN v0.0.13: IDLE GAME FLOATING LITTLE POP-UP WINDOW FOR MULTI-ABILITY UPGRADES -->
+      <!-- NEW IN v0.0.14: IDLE GAME FLOATING LITTLE POP-UP WINDOW FOR MULTI-ABILITY UPGRADES -->
       <div id="building-upgrade-popover" class="building-popover">
         <div class="popover-header">
           <div>
@@ -223,22 +221,25 @@
         <div class="popover-abilities-list" id="popover-abilities-list"></div>
       </div>
 
-      <!-- NEW IN v0.0.13: GAME-BY-GAME ROGUELIKE WAR OPERATIONS BAR (ATTACK VS DEFENSE, SHOP POWER, CLIENT HIRE & HERO) -->
+      <!-- CLEAN CAPYBARA GO! 2-PAGE EXPEDITION HEADER BAR (SAMPLE SEARCH PAGE vs. 10-WAVE PLANET CAPTURE PAGE) -->
       <div id="war-game-panel">
         <div class="war-panel-top">
           <div class="war-mode-tabs">
-            <button class="war-sec-btn active-sec" id="btn-war-sec-defense" title="Nightfall: Kingdom Frontier TD Mode — Garrison Castle Walls, 6 Watchtowers &amp; Stone Bridge (100% Funded by Shop!)">
-              🏰 固守王國城堡 (Nightfall Castle TD)
+            <button class="war-sec-btn active-sec" id="btn-war-page-sample" title="Page 1: Capybara Go! Sample Search (Diff 1–3: 🟢 Normal, Diff 4–6: 🟠 Rare, Diff 7–10: 🟣 Super Rare)">
+              🧬 Page 1: 樣本搜尋 (Sample Search)
             </button>
-            <button class="war-sec-btn" id="btn-war-sec-attack" title="Sally Out Counter-Attack: Send Hero &amp; Managed War Squads across the River Bridge to raze the 3 Enemy Strongholds (據點)!">
-              ⚔️ 出擊攻打據點 (Sally Out &amp; Raze 據點)
+            <button class="war-sec-btn" id="btn-war-page-capture" title="Page 2: Capybara Go! 10-Wave Planet Capture (Select Linked Planet on Space Map)">
+              🚩 Page 2: 星球佔領 (10-Wave Capture)
+            </button>
+            <button class="hud-btn" id="btn-war-back-shop" style="border-color:#4ade80;color:#86efac;" title="Return to Super Destroyer Shop Deck">
+              🏪 返回工廠 (Back to Shop)
             </button>
           </div>
-          <div class="war-shop-synergy" id="war-shop-synergy-badge" title="Zero Econ Buildings in War Zone — 100% of $REQ, 🧱 Ammo &amp; Gear come from your Shop!">
-            🏪 Shop Supply: <strong>+25% ATK/HP · 🧱 Ammo: <span id="war-hud-ammo-stock">9</span></strong>
+          <div class="war-shop-synergy" id="war-shop-synergy-badge" title="Shop Equipment &amp; Upgrades boost your 3+1 Helldiver Squad!">
+            🏪 Shop Boost: <strong>+25% ATK/HP</strong>
           </div>
           <div class="war-match-controls">
-            <label style="font-family:var(--font-display);font-size:0.72rem;color:#fde047;display:flex;align-items:center;gap:4px;">
+            <label id="war-sample-diff-wrap" style="font-family:var(--font-display);font-size:0.72rem;color:#fde047;display:flex;align-items:center;gap:4px;">
               🧬 Diff (1-10):
               <select id="sample-diff-select" style="background:#0f172a;color:#fde047;border:1px solid #facc15;border-radius:6px;padding:3px 6px;font-family:var(--font-display);font-size:0.72rem;font-weight:800;">
                 <option value="1">Lv.1 Trivial (🟢 Only)</option>
@@ -253,15 +254,14 @@
                 <option value="10">Lv.10 Super Helldive (🟣 MAX!)</option>
               </select>
             </label>
-            <button class="buy-btn" id="btn-war-start-match" title="Start / Restart Current Capybara Go! Operation">
-              🌙 Call Nightfall Wave #<span id="war-match-num">1</span>
+            <button class="buy-btn" id="btn-war-start-match" title="Restart / Launch Current Capybara Go! Expedition">
+              🚀 Re-Launch Wave #<span id="war-match-num">1</span>
             </button>
-            <button class="hud-btn" id="btn-war-retreat-now" style="border-color:#ef4444;color:#fca5a5;" title="Emergency Retreat: Save Surviving Helldivers &amp; Take 65% Collected Loot!">
-              🚁 撤退 Retreat
+            <button class="hud-btn" id="btn-war-retreat-now" style="border-color:#ef4444;color:#fca5a5;" title="Emergency Retreat: Save Surviving Helldivers &amp; Keep 65% Collected Loot!">
+              🚁 撤退 Retreat (Keep 65%)
             </button>
-            <button class="hud-btn" id="btn-war-continuous" style="display:none;">🔥 Continuous Siege: OFF</button>
-            <button class="hud-btn" id="btn-war-autopilot" style="border-color:#4ade80;color:#4ade80;" title="Capybara Go! Auto-Combat &amp; Auto-Skill Casting">
-              🤖 Auto-Pilot: ON
+            <button class="hud-btn" id="btn-war-open-training" style="border-color:#facc15;color:#fde047;" title="Open Helldiver Training Room (3 Active + 1 Spare)">
+              🏋️ 訓練室 Heroes
             </button>
           </div>
         </div>
@@ -269,23 +269,12 @@
           <div class="war-xp-wrap">
             <span id="war-roguelike-lvl">🎲 Perk Lv.1</span>
             <div class="war-xp-bar"><div class="war-xp-fill" id="war-xp-fill" style="width:20%;"></div></div>
-            <span id="war-stage-progress-text">🏰 Castle 100% · 🏴‍☠️ Strongholds: 3/3 Active</span>
-          </div>
-          <div class="war-hero-client-bar">
-            <button class="hud-btn" id="btn-war-open-squad" style="border-color:#22c55e;color:#86efac;" title="Open Tactical War Squad Formation Manager (Alpha/Bravo/Charlie Squads)">
-              🪖 Manage Squads (<span id="war-panel-squad-count">7/24</span>)
-            </button>
-            <button class="hud-btn" id="btn-war-hire-client" style="border-color:#38bdf8;color:#7dd3fc;" title="Recruit a Geared Shop Client into your War Squad ($60)">
-              🫡 Hire Client (<span id="war-client-pool-count">2</span> Ready · $60)
-            </button>
-            <button class="hud-btn" id="btn-war-hero-action" style="border-color:#facc15;color:#fde047;" title="Recruit, Switch, or Clone-Revive your Named War Hero">
-              🦅 Hero: <span id="war-hero-status-text">General Brasch (Gen-1)</span>
-            </button>
+            <span id="war-stage-progress-text">⚔️ Wave 1/5 · 3/3 Active + 1 Spare Ready</span>
           </div>
         </div>
       </div>
 
-      <!-- NEW IN v0.0.13: CAPYBARA GO! POST-WAVE RETREAT OR CONTINUE DECISION BAR -->
+      <!-- NEW IN v0.0.14: CAPYBARA GO! POST-WAVE RETREAT OR CONTINUE DECISION BAR -->
       <div id="capybara-wave-retreat-bar" style="display:none;position:fixed;top:118px;left:50%;transform:translateX(-50%);z-index:85;width:min(760px,95vw);background:rgba(9,13,24,0.97);border:2.5px solid #facc15;border-radius:16px;padding:14px 18px;box-shadow:0 16px 45px rgba(0,0,0,0.88);pointer-events:auto;">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
           <div style="font-family:var(--font-display);font-weight:900;font-size:1rem;color:#fde047;" id="retreat-bar-title">
@@ -306,41 +295,13 @@
         </div>
       </div>
 
-      <!-- NEW IN v0.0.13: CAPYBARA GO! × ROGUELIKE 3-CARD PERK DRAFT & MISSION VICTORY CHEST OVERLAY -->
+      <!-- NEW IN v0.0.14: CAPYBARA GO! × ROGUELIKE 3-CARD PERK DRAFT & MISSION VICTORY CHEST OVERLAY -->
       <div id="roguelike-draft-bar">
         <div class="rk-header">
           <span id="rk-draft-title">🎲 ROGUELIKE TACTICAL PERK DRAFT — CHOOSE 1 OF 3 UPGRADES!</span>
           <span id="rk-mission-progress">⚔️ ATTACK MISSION STAGE 1/5</span>
         </div>
         <div id="rk-cards-container"></div>
-      </div>
-
-      <!-- DEDICATED WAR-FRONT COMMAND DEPLOYMENT DOCK (Visible ONLY in ⚔️ War Front Mode) -->
-      <div id="war-command-dock">
-        <button class="war-deploy-btn" id="btn-toggle-mission-type" style="border-color:#38bdf8;" title="Toggle Squad Order: Hold Castle Perimeter vs. Sally Out &amp; Attack Enemy Strongholds (據點)!">
-          <span id="label-mission-type">🏰 固守城堡 Hold</span>
-          <span class="sub-cost" id="sub-mission-stage">Tap to Sally Out ⚔️</span>
-        </button>
-        <button class="war-deploy-btn" id="btn-deploy-squad" title="Recruit +1 Helldiver to Alpha Rifle Squad (Uses 1x 🔫 Gun or $65)">
-          <span>🪖 +Alpha Squad</span>
-          <span class="sub-cost" id="cost-deploy-squad">1x🔫 or $65</span>
-        </button>
-        <button class="war-deploy-btn" id="btn-deploy-buggy" title="Recruit +1 Heavy/Buggy Unit to Bravo Squad (Uses 1x 🚙 Vehicle or $115)">
-          <span>🚀 +Bravo Squad</span>
-          <span class="sub-cost" id="cost-deploy-buggy">1x🚙 or $115</span>
-        </button>
-        <button class="war-deploy-btn" id="btn-deploy-mech" title="Recruit +1 Patriot Mech to Charlie Squad (Uses 1x 🤖 Mech or $220)">
-          <span>🤖 +Charlie Mech</span>
-          <span class="sub-cost" id="cost-deploy-mech">1x🤖 or $220</span>
-        </button>
-        <button class="war-deploy-btn" id="btn-upgrade-watchtower" style="border-color:#facc15;" title="Build or Upgrade Next Frontier Watchtower (Powered by Shop 🧱 Ammo!)">
-          <span>🗼 +Watchtower</span>
-          <span class="sub-cost" id="cost-upgrade-watchtower">Upgrade ($110)</span>
-        </button>
-        <button class="war-deploy-btn" id="btn-build-mender" style="border-color:#4ade80;" title="Upgrade Castle Walls &amp; Mindustry Mend Projector">
-          <span>🏰 Castle &amp; Mend</span>
-          <span class="sub-cost" id="cost-build-mender">Lv.0 ($160)</span>
-        </button>
       </div>
 
       <!-- ULTRA-CLEAN 2-BUTTON ZOOM PILL (Right Edge) -->
@@ -420,14 +381,14 @@
         </div>
         <div class="modal-body">
           <p style="font-size:0.82rem; color:#cbd5e1; line-height:1.4;">
-            Live 60FPS animated preview of all <strong>17 CarbotAnimations Helldivers 2 (Ep1–Ep10+) 2D vector characters, Smart SEAF Staff, Terminids (Scavenger Hunter, Charger, Bile Spewer, Bile Titan), Automatons (Trooper, Rocket Devastator, Flame-Saw Hulk, Factory Strider), Vehicles, Mechs, and Sentries</strong> in <code>v0.0.13</code>.
+            Live 60FPS animated preview of all <strong>17 CarbotAnimations Helldivers 2 (Ep1–Ep10+) 2D vector characters, Smart SEAF Staff, Terminids (Scavenger Hunter, Charger, Bile Spewer, Bile Titan), Automatons (Trooper, Rocket Devastator, Flame-Saw Hulk, Factory Strider), Vehicles, Mechs, and Sentries</strong> in <code>v0.0.14</code>.
           </p>
           <div class="char-showcase-grid" id="char-showcase-grid"></div>
         </div>
       </div>
     </div>
 
-    <!-- NEW IN v0.0.13: SEAF CLONE VAT ROOM & 6-SECTOR JOB ASSIGNMENT MODAL (🧬 克隆室與工作分配) -->
+    <!-- NEW IN v0.0.14: SEAF CLONE VAT ROOM & 6-SECTOR JOB ASSIGNMENT MODAL (🧬 克隆室與工作分配) -->
     <div class="modal-backdrop" id="modal-clone-room">
       <div class="modal-card modal-wide">
         <div class="modal-header">
@@ -464,48 +425,8 @@
       </div>
     </div>
 
-    <!-- NEW IN v0.0.13: TACTICAL WAR SQUAD & FORMATION MANAGER MODAL (🪖 戰術小隊編制與據點出擊管理) -->
-    <div class="modal-backdrop" id="modal-squad">
-      <div class="modal-card modal-wide">
-        <div class="modal-header">
-          <div class="modal-title">🪖 TACTICAL WAR SQUAD &amp; NIGHTFALL CASTLE FORMATION MANAGER (戰術小隊管理與出擊據點指揮部)</div>
-          <button class="modal-close-btn modal-close" id="btn-close-squad">✕</button>
-        </div>
-        <div class="modal-body">
-          <div id="squad-modal-summary" style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;background:rgba(56,189,248,0.12);border:1.5px solid #38bdf8;padding:10px 14px;border-radius:10px;">
-            <div>
-              <div style="font-family:var(--font-display);font-weight:900;color:#fde047;font-size:0.92rem;" id="squad-summary-title">
-                🪖 ACTIVE WAR SQUAD FORMATIONS: 7 / 24 TROOPS · 100% FUNDED &amp; ARMED BY YOUR SHOP!
-              </div>
-              <div style="font-size:0.76rem;color:#cbd5e1;" id="squad-summary-sub">
-                Recruit Helldivers using Shop <strong>$REQ</strong>, <strong>🫡 Geared Shop Clients</strong>, or <strong>🔫/🚙/🤖 Shop Inventory</strong>. In War Mode, order them to <strong>🏰 Garrison Castle</strong> or <strong>⚔️ Sally Out &amp; Destroy Enemy Strongholds (據點)</strong>!
-              </div>
-            </div>
-            <div style="display:flex;gap:6px;flex-wrap:wrap;">
-              <button class="buy-btn" id="btn-squad-order-defend" title="Order all 3 Squads to garrison inside the Nightfall Frontier Castle &amp; Stone Bridge">
-                🏰 Order: Hold Castle
-              </button>
-              <button class="buy-btn medal-btn" id="btn-squad-order-sally" title="Order Hero &amp; All 3 Squads to march out across the River Bridge and attack Enemy Strongholds (據點)!">
-                ⚔️ Order: Sally Out &amp; Attack 據點!
-              </button>
-            </div>
-          </div>
-
-          <h4 style="font-family:var(--font-display);color:#38bdf8;font-size:0.84rem;margin-top:4px;">
-            🪖 3 MANAGEABLE HELLDIVER PLATOON SQUADS (2x4 FORMATION GRIDS IN SHOP SECTOR D &amp; CASTLE BARRACKS)
-          </h4>
-          <div class="upgrade-grid" id="war-squads-grid"></div>
-
-          <h4 style="font-family:var(--font-display);color:#fde047;font-size:0.84rem;margin-top:6px;">
-            🏴‍☠️ EASTERN ENEMY STRONGHOLDS (敵方三大據點 — DESTROY FOR MASSIVE $REQ, ⭐ MEDALS &amp; 🧬 SAMPLES!)
-          </h4>
-          <div class="upgrade-grid" id="strongholds-status-grid"></div>
-        </div>
-      </div>
-    </div>
-
     <!-- ======================================================================
-         NEW IN v0.0.13: LEFT-HAND TRANSPORT SHIP & PORT LOGISTICS MODAL (🛸 港口與運輸艦管理)
+         NEW IN v0.0.14: LEFT-HAND TRANSPORT SHIP & PORT LOGISTICS MODAL (🛸 港口與運輸艦管理)
          ====================================================================== -->
     <div class="modal-backdrop" id="modal-port-logistics">
       <div class="modal-card modal-wide">
@@ -528,7 +449,7 @@
     </div>
 
     <!-- ======================================================================
-         NEW IN v0.0.13: GALACTIC SPACE MAP, PLANET MINING & TRAVIAN DEFENSE MODAL (🪐 星際戰略星圖)
+         NEW IN v0.0.14: GALACTIC SPACE MAP, PLANET MINING & TRAVIAN DEFENSE MODAL (🪐 星際戰略星圖)
          ====================================================================== -->
     <div class="modal-backdrop" id="modal-space-map">
       <div class="modal-card modal-wide">
@@ -565,7 +486,7 @@
     </div>
 
     <!-- ======================================================================
-         NEW IN v0.0.13: SHOP HELLDIVER TRAINING & RECRUITMENT ROOM MODAL (🏋️ 戰士訓練與招募室 — MAX Lv.100 & SKILLS)
+         NEW IN v0.0.14: SHOP HELLDIVER TRAINING & RECRUITMENT ROOM MODAL (🏋️ 戰士訓練與招募室 — MAX Lv.100 & SKILLS)
          ====================================================================== -->
     <div class="modal-backdrop" id="modal-training-room">
       <div class="modal-card modal-wide">
@@ -668,22 +589,40 @@
       </div>
     </div>
 
-    <!-- SAVE / LOAD MODAL -->
+    <!-- 3-SLOT SAVE / LOAD MANAGER MODAL (SPLIT INTO PAGES: SLOTS PAGE vs. CODE EXPORT PAGE) -->
     <div class="modal-backdrop" id="modal-save">
-      <div class="modal-card">
+      <div class="modal-card modal-wide">
         <div class="modal-header">
-          <div class="modal-title">💾 SAVE / EXPORT COMMAND PROGRESS (v0.0.13)</div>
+          <div class="modal-title">💾 3-SLOT SAVE MANAGER &amp; CLOUD CODE BACKUP (三存檔槽管理系統 · v0.0.14)</div>
           <button class="modal-close-btn modal-close" id="btn-close-save">✕</button>
         </div>
         <div class="modal-body">
-          <p style="font-size:0.82rem; color:#cbd5e1;">
-            Your 20+ hour campaign progress, <strong>🪐 6 Mindustry Bases</strong>, <strong>🛡️ Loadout Gear</strong>, and <strong>🌟 Mindustry Tech Tree</strong> auto-save to browser storage. Copy or paste a Save Code below:
-          </p>
-          <textarea class="code-textarea" id="save-code-box" placeholder="Save code will appear here..."></textarea>
-          <div style="display:flex; gap:8px; flex-wrap:wrap;">
-            <button class="hud-btn primary-cta btn-primary" id="btn-copy-save">📋 Copy Save Code</button>
-            <button class="hud-btn" id="btn-import-save">📥 Load Save Code</button>
-            <button class="hud-btn" id="btn-reset-save" style="border-color:#ef4444;color:#f87171;">🗑️ Reset Factory</button>
+          <div id="save-modal-nav" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;background:rgba(56,189,248,0.12);border:1.5px solid #38bdf8;padding:10px 14px;border-radius:10px;">
+            <div style="font-family:var(--font-display);font-weight:900;color:#fde047;font-size:0.92rem;" id="save-modal-active-banner">
+              💾 ACTIVE SAVE SLOT: SLOT #1 (Auto-Saving Enabled)
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button class="buy-btn" id="btn-save-tab-slots">🗂️ Page 1: 3 Save Slots (Slot 1 / 2 / 3)</button>
+              <button class="hud-btn" id="btn-save-tab-code" style="border-color:#facc15;color:#fde047;">📋 Page 2: Export / Import Save Code</button>
+            </div>
+          </div>
+
+          <!-- PAGE 1: 3 SAVE SLOTS GRID -->
+          <div id="save-slots-page">
+            <div class="upgrade-grid" id="save-slots-grid" style="grid-template-columns:repeat(auto-fit,minmax(260px,1fr));margin-top:8px;"></div>
+          </div>
+
+          <!-- PAGE 2: SAVE CODE EXPORT / IMPORT -->
+          <div id="save-code-page" style="display:none;margin-top:8px;">
+            <p style="font-size:0.82rem; color:#cbd5e1; margin-bottom:8px;">
+              Copy or paste a Base64 Save Code below to transfer your currently active slot (<strong><span id="save-code-slot-name">Slot #1</span></strong>) across devices:
+            </p>
+            <textarea class="code-textarea" id="save-code-box" placeholder="Save code will appear here..."></textarea>
+            <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
+              <button class="hud-btn primary-cta btn-primary" id="btn-copy-save">📋 Copy Save Code</button>
+              <button class="hud-btn" id="btn-import-save">📥 Load Save Code into Current Slot</button>
+              <button class="hud-btn" id="btn-reset-save" style="border-color:#ef4444;color:#f87171;">🗑️ Reset Current Slot</button>
+            </div>
           </div>
         </div>
       </div>
@@ -693,12 +632,12 @@
     <div class="modal-backdrop" id="modal-github">
       <div class="modal-card">
         <div class="modal-header">
-          <div class="modal-title">📦 GITHUB &amp; GITHUB PAGES REPOSITORY PACKAGER (v0.0.13)</div>
+          <div class="modal-title">📦 GITHUB &amp; GITHUB PAGES REPOSITORY PACKAGER (v0.0.14)</div>
           <button class="modal-close-btn modal-close" id="btn-close-github">✕</button>
         </div>
         <div class="modal-body">
           <p style="font-size:0.84rem; color:#cbd5e1; line-height:1.45;">
-            Download a clean, modular GitHub repository archive ready for <strong>GitHub Pages</strong> deployment. Includes <code>index.html</code>, <code>css/style.css</code>, <code>js/config.js</code>, <code>js/audio.js</code>, <code>js/world.js</code>, <code>js/game.js</code>, and <code>README.md</code> (with full <code>v0.0.00</code>–<code>v0.0.13</code> changelog history).
+            Download a clean, modular GitHub repository archive ready for <strong>GitHub Pages</strong> deployment. Includes <code>index.html</code>, <code>css/style.css</code>, <code>js/config.js</code>, <code>js/audio.js</code>, <code>js/world.js</code>, <code>js/game.js</code>, and <code>README.md</code> (with full <code>v0.0.00</code>–<code>v0.0.14</code> changelog history).
           </p>
           <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:4px;">
             <button class="upg-buy-btn hud-btn btn-primary" id="btn-ingame-dl-full">

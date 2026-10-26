@@ -1,4 +1,4 @@
-# HELLDIVERS PLEASE! — Nightfall: Kingdom Frontier TD Castle Defense, Dedicated Shop Clone Sector & Tactical War Squad Manager (`v0.0.13`)
+# HELLDIVERS PLEASE! — Nightfall: Kingdom Frontier TD Castle Defense, Dedicated Shop Clone Sector & Tactical War Squad Manager (`v0.0.14`)
 
 An arcade factory-automation, Mindustry multi-base logistics, and *Capybara Go!* / Tower-Defense Roguelike War-Front web game inspired by **Burger Please!**, **Whiteout Survival Playable Ads**, **Capybara Go!**, **Factorio**, **Mindustry**, and **CarbotAnimations' Helldivers 2 cartoons** (across **all episodes Ep1–Ep10+**, including [Pro vs Noobs | Helldivers 2 Ep7](http://www.youtube.com/watch?v=bn0GTO_zvAg)), built from the [Modular Game Prompt Library](https://docs.google.com/document/d/1ZoW7Oou5QpTyvwD6vrczKuXv0nW42JgLJC-au62H7Pw/edit?usp=drivesdk&ouid=114024991701964609548).
 
@@ -30,7 +30,7 @@ An arcade factory-automation, Mindustry multi-base logistics, and *Capybara Go!*
 
 ## 📜 Complete Version History & Changelog (`v0.0.00` – `v0.0.09`)
 
-### `v0.0.13` — 100% Port-Only Raw Resource Pickup (Zero Drills on Shop Floor), Pure Shop Deck (Zero War in Shop), 21-Planet Space Map (10 Bug Lv.1–10 & 10 Bot Lv.1–10), Faction Main & Unique Ores (`🏜️ Bio-Sand` / `🔩 Titanium`), and Clean Step-by-Step Multi-Page UI Navigation (`Page ➔ Next Page`)
+### `v0.0.14` — 100% Port-Only Raw Resource Pickup (Zero Drills on Shop Floor), Pure Shop Deck (Zero War in Shop), 21-Planet Space Map (10 Bug Lv.1–10 & 10 Bot Lv.1–10), Faction Main & Unique Ores (`🏜️ Bio-Sand` / `🔩 Titanium`), and Clean Step-by-Step Multi-Page UI Navigation (`Page ➔ Next Page`)
 - **Removed All Manual Drills & Auto-Drills on the Shop Page — 100% Port Pickup (`🛸 港口提貨`)**:
   - Removed all manual quarry harvest circles and spinning auto-drill rigs from the Shop deck.
   - All raw resources now arrive exclusively at the **Left-Hand Orbital Port (`🛸 Port`)** into **4 Port Cargo Silos & Player Pickup Pads (`📤 PICKUP FROM PORT`)**: `🛢️ E-710 Bio-Oil`, `⛏️ Super Iron Ore`, `🏜️ Bug Chitin Bio-Sand`, and `🔩 Bot Cyber-Titanium`.

@@ -744,7 +744,6 @@
 
       // 8. Bridge Galactic War Hologram Table, Clone Vat Room, Mindustry Core & 4 Hellpod Drop Tubes
       this.drawSeafCloneVatRoom(ctx, state);
-      this.drawMindustryCoreAndPortal(ctx, state);
       this.drawBridgeHellpodLaunchBay(ctx, state);
     }
 
@@ -1352,320 +1351,6 @@
       }
     }
 
-    drawPlanetaryWarFrontTerrain(ctx, state) {
-      const W = window.GameConfig.WORLD;
-      const NF = window.GameConfig.NIGHTFALL_CASTLE;
-
-      // 1. Nightfall Frontier Forest & Badlands Backdrop
-      const warGrad = ctx.createLinearGradient(W.minX, -1850, W.maxX, -100);
-      warGrad.addColorStop(0, '#0c1f17');   // Western Kingdom Frontier Forest
-      warGrad.addColorStop(0.48, '#132a24'); // River Valley
-      warGrad.addColorStop(0.75, '#1f1624'); // Eastern Enemy Badlands
-      warGrad.addColorStop(1, '#2d1219');    // Stronghold Caverns
-      ctx.fillStyle = warGrad;
-      ctx.fillRect(W.minX - 350, W.minZ - 350, (W.maxX - W.minX) + 700, (W.wallZ - W.minZ) + 650);
-
-      // Decorative Frontier Pine Trees & Rocks around the perimeter (like image_97ae56.jpg)
-      ctx.save();
-      const treeCoords = [
-        [-1560, -1620], [-1420, -1660], [-1260, -1640], [-1080, -1650], [-880, -1650],
-        [-1580, -1380], [-1590, -1120], [-1560, -840], [-1520, -560],
-        [480, -1660], [720, -1680], [1220, -1640], [1380, -1240], [1360, -760], [1280, -340]
-      ];
-      for (let i = 0; i < treeCoords.length; i++) {
-        const [tx, tz] = treeCoords[i];
-        ctx.fillStyle = i < 9 ? '#064e3b' : '#3b0764';
-        ctx.strokeStyle = '#090d14';
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.arc(tx, tz, 38 + (i % 3) * 8, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-        ctx.fillStyle = i < 9 ? '#10b981' : '#a855f7';
-        ctx.beginPath();
-        ctx.arc(tx - 8, tz - 8, 18, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      ctx.restore();
-
-      // 2. Winding Frontier River Moat (Separates Western Castle from Eastern Strongholds!)
-      ctx.save();
-      ctx.strokeStyle = '#0284c7';
-      ctx.lineWidth = 175;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      ctx.beginPath();
-      ctx.moveTo(40, -1820);
-      ctx.lineTo(-40, -1220);
-      ctx.lineTo(-20, -780);
-      ctx.lineTo(-280, -350);
-      ctx.lineTo(-1250, -310);
-      ctx.stroke();
-
-      ctx.strokeStyle = '#38bdf8';
-      ctx.lineWidth = 135;
-      ctx.stroke();
-
-      // Animated water ripples
-      ctx.strokeStyle = 'rgba(186, 230, 253, 0.35)';
-      ctx.lineWidth = 4;
-      ctx.setLineDash([24, 28]);
-      ctx.lineDashOffset = -this.time * 40;
-      ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.restore();
-
-      // 3. Two River Crossings (Matching image_97ae56.jpg):
-      //    A) Central Land Causeway / Ford in front of East Castle Gate (x: -220..+180, z: -1020)
-      ctx.save();
-      ctx.fillStyle = '#475569';
-      ctx.strokeStyle = '#94a3b8';
-      ctx.lineWidth = 4;
-      ctx.beginPath();
-      ctx.roundRect(-220, -1105, 390, 170, 18);
-      ctx.fill();
-      ctx.stroke();
-      ctx.fillStyle = '#cbd5e1';
-      ctx.font = '900 11px Orbitron, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('🌉 EAST GATE CAUSEWAY', -25, -1015);
-
-      //    B) Southern Stone Arch Bridge in front of South Castle Gate (x: -760..-560, z: -480..-230)
-      ctx.fillStyle = '#64748b';
-      ctx.strokeStyle = '#e2e8f0';
-      ctx.lineWidth = 5;
-      ctx.beginPath();
-      ctx.roundRect(-775, -485, 190, 255, 12);
-      ctx.fill();
-      ctx.stroke();
-      // Stone bridge planks & arch pillars
-      ctx.strokeStyle = '#334155';
-      ctx.lineWidth = 3;
-      for (let bz = -460; bz <= -250; bz += 26) {
-        ctx.beginPath();
-        ctx.moveTo(-765, bz);
-        ctx.lineTo(-595, bz);
-        ctx.stroke();
-      }
-      ctx.fillStyle = '#fde047';
-      ctx.font = '900 11px Orbitron, sans-serif';
-      ctx.fillText('🌉 SOUTH STONE BRIDGE', -680, -355);
-      ctx.restore();
-
-      // 4. Dirt Battle Roads connecting the 3 Eastern Strongholds (據點) to the 2 Castle Crossings
-      ctx.save();
-      ctx.strokeStyle = 'rgba(180, 130, 80, 0.35)';
-      ctx.lineWidth = 64;
-      ctx.lineCap = 'round';
-      ctx.beginPath();
-      // Road from North Stronghold to East Gate Causeway
-      ctx.moveTo(960, -1420);
-      ctx.lineTo(140, -1020);
-      ctx.lineTo(-220, -1020);
-      // Road from Mid Stronghold to East Gate Causeway
-      ctx.moveTo(1080, -980);
-      ctx.lineTo(140, -1020);
-      // Road from South Hive Stronghold across South Stone Bridge
-      ctx.moveTo(920, -520);
-      ctx.lineTo(180, -320);
-      ctx.lineTo(-680, -320);
-      ctx.lineTo(-680, -480);
-      ctx.stroke();
-      ctx.restore();
-
-      // 5. Western Super Earth Frontier Castle Courtyard Floor (x: -1440..-220, z: -1520..-480)
-      ctx.save();
-      ctx.fillStyle = '#1e293b';
-      ctx.strokeStyle = '#facc15';
-      ctx.lineWidth = 8;
-      ctx.beginPath();
-      ctx.roundRect(-1440, -1520, 1220, 1040, 48);
-      ctx.fill();
-      ctx.stroke();
-
-      // Courtyard cobble grid lines
-      ctx.strokeStyle = 'rgba(148, 163, 184, 0.10)';
-      ctx.lineWidth = 2;
-      for (let cx = -1360; cx < -240; cx += 120) {
-        ctx.beginPath();
-        ctx.moveTo(cx, -1500);
-        ctx.lineTo(cx, -500);
-        ctx.stroke();
-      }
-      for (let cz = -1440; cz < -500; cz += 120) {
-        ctx.beginPath();
-        ctx.moveTo(-1420, cz);
-        ctx.lineTo(-240, cz);
-        ctx.stroke();
-      }
-      ctx.restore();
-
-      // 6. Central Super Earth Frontier Citadel Keep (x: -1080, z: -1040)
-      const g1 = state.gates?.gate_1 || { hp: 950, maxHp: 950, defenseLevel: 1 };
-      ctx.save();
-      ctx.translate(-1080, -1040);
-      ctx.fillStyle = '#0f172a';
-      ctx.strokeStyle = '#facc15';
-      ctx.lineWidth = 5;
-      ctx.beginPath();
-      ctx.roundRect(-170, -145, 340, 290, 18);
-      ctx.fill();
-      ctx.stroke();
-
-      ctx.fillStyle = '#1d4ed8';
-      ctx.fillRect(-140, -115, 280, 230);
-      ctx.strokeStyle = '#38bdf8';
-      ctx.lineWidth = 3;
-      ctx.strokeRect(-140, -115, 280, 230);
-
-      ctx.font = '44px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('🏰', 0, -20);
-
-      ctx.fillStyle = '#fde047';
-      ctx.font = '900 13px Orbitron, sans-serif';
-      ctx.fillText(`SUPER EARTH CITADEL KEEP (Lv.${g1.defenseLevel || 1}/10)`, 0, -158);
-      ctx.fillStyle = '#ffffff';
-      ctx.font = '900 11px Orbitron, sans-serif';
-      ctx.fillText(`KEEP HP: ${Math.ceil(g1.hp)}/${g1.maxHp}`, 0, 42);
-
-      // Mindustry Mend Projector Aura on Keep if unlocked
-      const mendLvl = state.mendProjectorLevel || 0;
-      if (mendLvl > 0) {
-        const ringR = 45 + ((this.time * 60) % 160);
-        ctx.strokeStyle = 'rgba(74, 222, 128, 0.45)';
-        ctx.lineWidth = 3.5;
-        ctx.beginPath();
-        ctx.arc(0, 0, ringR, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.fillStyle = '#4ade80';
-        ctx.font = '900 10px Orbitron, sans-serif';
-        ctx.fillText(`💚 MEND DOME Lv.${mendLvl} ACTIVE`, 0, 68);
-      }
-      ctx.restore();
-
-      // 7. 3 Castle Squad Barracks + Formation Pads inside the Castle Compound (like image_97ae56.jpg!)
-      const squadsCfg = window.GameConfig.WAR_SQUADS || [];
-      for (const sq of squadsCfg) {
-        const bp = sq.castleBarracksPos;
-        const sqState = (state.warSquads && state.warSquads[sq.id]) || { count: sq.initialSize, tier: 1 };
-        ctx.save();
-        ctx.translate(bp.x, bp.z);
-        ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
-        ctx.strokeStyle = sq.color;
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.roundRect(-115, -62, 230, 124, 12);
-        ctx.fill();
-        ctx.stroke();
-
-        ctx.fillStyle = sq.color;
-        ctx.font = '900 10.5px Orbitron, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText(`${sq.icon} ${sq.name.toUpperCase()} (${sqState.count}/8 · T${sqState.tier})`, 0, -44);
-
-        // 2x4 Formation Pad Markers inside Castle Barracks
-        for (let slot = 0; slot < 8; slot++) {
-          const col = slot % 4;
-          const row = Math.floor(slot / 4);
-          const fx = -66 + col * 44;
-          const fz = -12 + row * 36;
-          ctx.fillStyle = slot < sqState.count ? 'rgba(56, 189, 248, 0.25)' : 'rgba(30, 41, 59, 0.45)';
-          ctx.strokeStyle = slot < sqState.count ? sq.color : '#475569';
-          ctx.lineWidth = 1.5;
-          ctx.beginPath();
-          ctx.arc(fx, fz, 11, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.stroke();
-        }
-        ctx.restore();
-      }
-
-      // 8. Top War Operation Banner
-      ctx.save();
-      const isSallyOut = (state.missionType || 'defense') === 'attack';
-      ctx.fillStyle = isSallyOut ? '#f97316' : '#38bdf8';
-      ctx.font = '900 21px Orbitron, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(
-        isSallyOut
-          ? `⚔️ SALLY OUT COUNTER-ATTACK: HERO & WAR SQUADS ASSAULTING ENEMY STRONGHOLDS (據點)!`
-          : `🏰 NIGHTFALL: KINGDOM FRONTIER TD — DEFEND CASTLE GATES & STONE BRIDGE (WAVE ${state.waveNumber})`,
-        -120,
-        -1735
-      );
-      ctx.fillStyle = '#fde047';
-      ctx.font = '900 14px Orbitron, sans-serif';
-      ctx.fillText(
-        `💡 ZERO ECON BUILDINGS IN WAR: 100% OF $REQ, 🧱 TURRET AMMO & SQUAD GEAR COME FROM YOUR SHOP! TAP ANY TOWER OR 據點!`,
-        -120,
-        -1698
-      );
-      ctx.restore();
-
-      // 9. Draw the 3 Destructible Eastern Enemy Strongholds (據點) across the River!
-      if (NF && NF.strongholds) {
-        for (const sh of NF.strongholds) {
-          const shState = (state.strongholds && state.strongholds[sh.id]) || { hp: sh.baseHp, maxHp: sh.baseHp, level: 1, destroyedCount: 0 };
-          const hpRatio = Math.max(0, Math.min(1, shState.hp / Math.max(1, shState.maxHp)));
-          const isTarget = state.targetStrongholdId === sh.id;
-
-          ctx.save();
-          ctx.translate(sh.x, sh.z);
-
-          // Stronghold Crater / Cave Mound
-          ctx.fillStyle = '#2e1015';
-          ctx.strokeStyle = isTarget ? '#facc15' : sh.color;
-          ctx.lineWidth = isTarget ? 6 : 4;
-          ctx.beginPath();
-          ctx.roundRect(-165, -82, 330, 164, 24);
-          ctx.fill();
-          ctx.stroke();
-
-          // Dark Cave Entrance Arch
-          ctx.fillStyle = '#090d14';
-          ctx.beginPath();
-          ctx.arc(0, 8, 48, Math.PI, 0, false);
-          ctx.lineTo(48, 42);
-          ctx.lineTo(-48, 42);
-          ctx.closePath();
-          ctx.fill();
-
-          ctx.font = '34px sans-serif';
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillText(sh.icon, 0, 8);
-
-          // Stronghold HP Bar
-          ctx.fillStyle = '#090d14';
-          ctx.fillRect(-135, -66, 270, 18);
-          ctx.fillStyle = sh.color;
-          ctx.fillRect(-133, -64, 266 * hpRatio, 14);
-          ctx.strokeStyle = '#ffffff';
-          ctx.lineWidth = 1.5;
-          ctx.strokeRect(-135, -66, 270, 18);
-
-          ctx.fillStyle = '#ffffff';
-          ctx.font = '900 10.5px Orbitron, sans-serif';
-          ctx.fillText(
-            `${sh.icon} ${sh.name.toUpperCase()} (Lv.${shState.level}): ${Math.ceil(shState.hp)}/${shState.maxHp} HP`,
-            0,
-            -53
-          );
-
-          ctx.fillStyle = '#fde047';
-          ctx.font = '900 10px Orbitron, sans-serif';
-          ctx.fillText(
-            `🎁 BOUNTY: +$${sh.rewardCash * shState.level} · +${sh.rewardMedals} ⭐ · 👆 TAP TO TARGET & SALLY OUT!`,
-            0,
-            64
-          );
-          ctx.restore();
-        }
-      }
-    }
-
     drawFloorSector(ctx, x, z, w, h, bg, accent, title) {
       ctx.save();
       ctx.fillStyle = bg;
@@ -1689,36 +1374,20 @@
     //    - Belts 4–6: conv_gate_1/2/3             -> Ammo Press -> Gate Layers 1/2/3
     // ========================================================================
     drawConveyorNetwork(ctx, state, mode = 'shop') {
-      const AP = window.GameConfig.AMMO_PRESS;
-      const gates = window.GameConfig.GATES;
+      if (mode === 'war') return;
 
-      if (mode === 'war') {
-        for (const g of gates) {
-          const beltLvl = state.conveyorLevels?.[g.conveyorId] || 0;
-          const path = [
-            { x: -560, z: -150 },
-            { x: -560, z: g.turretZ },
-            { x: g.leftTurretX, z: g.turretZ }
-          ];
-          this.drawBeltPath(ctx, path, beltLvl, g.color);
-        }
-        return;
-      }
-
-      // 1. PURPLE BIO-FUEL & BUG SAND BELT (conv_raw_e710): Connects Port Oil Silo (-1200, 210) & Bug Sand Silo (-1200, 810) along x = -960
+      // 1. PURPLE BIO-FUEL & BUG UNIQUE BELT (conv_raw_e710): Connects Port Oil (z=160), Sand (z=600) & Bile (z=820)
       const e710BeltLvl = state.conveyorLevels?.conv_raw_e710 || 0;
       const e710Items = window.GameConfig.ITEMS.filter((it) => it.recipe.raw_e710 && (state.unlocked[it.id] || it.id === 'cloth'));
-      const maxE710Z = e710Items.length > 0 ? Math.max(810, ...e710Items.map((it) => it.inputPos.z)) : 810;
+      const maxE710Z = e710Items.length > 0 ? Math.max(820, ...e710Items.map((it) => it.inputPos.z)) : 820;
       this.drawBeltPath(ctx, [
-        { x: -1200, z: 210 },
-        { x: -960, z: 210 },
+        { x: -1200, z: 160 },
+        { x: -960, z: 160 },
         { x: -960, z: 120 },
         { x: -960, z: maxE710Z }
       ], e710BeltLvl, '#a855f7');
-      this.drawBeltPath(ctx, [
-        { x: -1200, z: 810 },
-        { x: -960, z: 810 }
-      ], e710BeltLvl, '#eab308');
+      this.drawBeltPath(ctx, [{ x: -1200, z: 600 }, { x: -960, z: 600 }], e710BeltLvl, '#eab308');
+      this.drawBeltPath(ctx, [{ x: -1200, z: 820 }, { x: -960, z: 820 }], e710BeltLvl, '#84cc16');
 
       for (const item of e710Items) {
         this.drawBeltPath(ctx, [
@@ -1727,20 +1396,17 @@
         ], e710BeltLvl, '#a855f7');
       }
 
-      // 2. CYAN SUPER IRON & BOT TITANIUM BELT (conv_raw_iron): Connects Port Iron Silo (-1200, 510) & Bot Titanium Silo (-1200, 1110) along x = -910
+      // 2. CYAN SUPER IRON & BOT UNIQUE BELT (conv_raw_iron): Connects Port Iron (z=380), Titanium (z=1040) & Q-Core (z=1260)
       const ironBeltLvl = state.conveyorLevels?.conv_raw_iron || 0;
       const ironItems = window.GameConfig.ITEMS.filter((it) => it.recipe.raw_iron && (state.unlocked[it.id] || it.id === 'gun'));
-      const maxIronZ = ironItems.length > 0 ? Math.max(1110, ...ironItems.map((it) => it.inputPos.z)) : 1110;
+      const maxIronZ = ironItems.length > 0 ? Math.max(1260, ...ironItems.map((it) => it.inputPos.z)) : 1260;
       this.drawBeltPath(ctx, [
-        { x: -1200, z: 510 },
-        { x: -910, z: 510 },
-        { x: -910, z: 390 },
+        { x: -1200, z: 380 },
+        { x: -910, z: 380 },
         { x: -910, z: maxIronZ }
       ], ironBeltLvl, '#38bdf8');
-      this.drawBeltPath(ctx, [
-        { x: -1200, z: 1110 },
-        { x: -910, z: 1110 }
-      ], ironBeltLvl, '#ec4899');
+      this.drawBeltPath(ctx, [{ x: -1200, z: 1040 }, { x: -910, z: 1040 }], ironBeltLvl, '#ec4899');
+      this.drawBeltPath(ctx, [{ x: -1200, z: 1260 }, { x: -910, z: 1260 }], ironBeltLvl, '#06b6d4');
 
       for (const item of ironItems) {
         this.drawBeltPath(ctx, [
@@ -1749,9 +1415,7 @@
         ], ironBeltLvl, '#38bdf8');
       }
 
-      // Gate Turret Ammo Belts are rendered in War Mode ('war') only
-
-      // 4. 7 DEDICATED HORIZONTAL OUTPUT-TO-COUNTER BELTS (conv_counter_auto -> 1 to 3 Physical Counters!)
+      // 3. 7 DEDICATED HORIZONTAL OUTPUT-TO-COUNTER BELTS (conv_counter_auto -> 1 to 3 Physical Counters!)
       const counterBeltLvl = state.conveyorLevels?.conv_counter_auto || 0;
       for (const item of window.GameConfig.ITEMS) {
         if (!state.unlocked[item.id]) continue;
@@ -1938,239 +1602,32 @@
     // 4. NIGHTFALL CASTLE GATES (EAST GATE & SOUTH BRIDGE GATE) + 6 WATCHTOWERS
     //    All upgraded with Shop $REQ and powered by Shop 🧱 Turret Ammo!
     // ========================================================================
-    drawThreeLayerGates(ctx, state) {
-      const NF = window.GameConfig.NIGHTFALL_CASTLE;
-      const gEast = state.gates?.gate_3 || { hp: 750, maxHp: 750, defenseLevel: 1, ammo: 18, maxAmmo: 45, broken: false };
-      const gSouth = state.gates?.gate_2 || { hp: 850, maxHp: 850, defenseLevel: 1, ammo: 18, maxAmmo: 50, broken: false };
-      const gKeep = state.gates?.gate_1 || { hp: 950, maxHp: 950, defenseLevel: 1, ammo: 24, maxAmmo: 60, broken: false };
-
-      // 1. Draw East Frontier Castle Gate (gate_3 at x: -220, z: -1020)
-      this.drawCastleGateHouse(
-        ctx,
-        -220,
-        -1020,
-        true,
-        gEast,
-        'EAST FRONTIER GATE (東側正門)',
-        '#f97316',
-        state.getGateUpgradeCost ? state.getGateUpgradeCost('gate_3') : 150
-      );
-
-      // 2. Draw South Stone Bridge Gate (gate_2 at x: -680, z: -480)
-      this.drawCastleGateHouse(
-        ctx,
-        -680,
-        -480,
-        false,
-        gSouth,
-        'SOUTH STONE BRIDGE GATE (南側石橋門)',
-        '#38bdf8',
-        state.getGateUpgradeCost ? state.getGateUpgradeCost('gate_2') : 190
-      );
-
-      // 3. Draw Castle Ammo Resupply & Wall Repair Pad inside the courtyard (x: -450, z: -820)
-      const totalAmmo = (gEast.ammo || 0) + (gSouth.ammo || 0) + (gKeep.ammo || 0);
-      this.drawPadBox(
-        ctx,
-        -450,
-        -820,
-        210,
-        82,
-        (gEast.broken || gSouth.broken) ? '#ef4444' : '#f97316',
-        (gEast.broken || gSouth.broken) ? '🔧 REBUILD CASTLE GATES' : `🧱 CASTLE AMMO DEPOT (${totalAmmo})`,
-        `Step or Tap to Load Shop 🧱 Ammo & Repair Walls!`
-      );
-
-      // 4. Draw all 6 Circular Frontier Watchtowers (matching image_97ae56.jpg!)
-      if (NF && NF.watchtowers) {
-        for (const tw of NF.watchtowers) {
-          const ts = (state.watchtowers && state.watchtowers[tw.id]) || {
-            level: tw.unlockedAtStart ? 1 : 0,
-            angle: 0,
-            lastFireTime: -10
-          };
-          const lvl = ts.level || 0;
-          const upgCost = state.getWatchtowerUpgradeCost ? state.getWatchtowerUpgradeCost(tw.id) : tw.baseCost;
-
-          ctx.save();
-          ctx.translate(tw.x, tw.z);
-
-          if (lvl <= 0) {
-            // Locked Watchtower Slot Foundation (Like the "+" build slots in Nightfall TD!)
-            ctx.fillStyle = 'rgba(15, 23, 42, 0.82)';
-            ctx.strokeStyle = tw.color;
-            ctx.lineWidth = 3;
-            ctx.setLineDash([8, 6]);
-            ctx.beginPath();
-            ctx.arc(0, 0, 44, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.stroke();
-            ctx.setLineDash([]);
-
-            ctx.fillStyle = '#fde047';
-            ctx.font = '900 11px Orbitron, sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText(`🔨 BUILD TOWER #${tw.slot}`, 0, -6);
-            ctx.fillStyle = '#4ade80';
-            ctx.font = '900 11px Orbitron, sans-serif';
-            ctx.fillText(`👆 TAP ($${upgCost})`, 0, 12);
-          } else {
-            // Active Circular Frontier Watchtower with Rotating Turret & Shop Ammo Feed!
-            ctx.fillStyle = '#334155';
-            ctx.strokeStyle = tw.color;
-            ctx.lineWidth = 4;
-            ctx.beginPath();
-            ctx.arc(0, 0, 44, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.stroke();
-
-            ctx.restore();
-            this.drawSingleTurretMount(
-              ctx,
-              tw.x,
-              tw.z,
-              tw.color,
-              gEast.ammo + gSouth.ammo,
-              gEast.maxAmmo + gSouth.maxAmmo,
-              ts.angle || 0,
-              ts.lastFireTime || -10,
-              `🗼 T${tw.slot} Lv.${lvl}/10 (${ lvl >= 10 ? 'MAX' : '$' + upgCost })`
-            );
-            continue;
-          }
-          ctx.restore();
-        }
-      }
-    }
-
-    drawCastleGateHouse(ctx, x, z, isVerticalWall, gs, title, color, upgCost) {
-      const isBroken = !!gs.broken || gs.hp <= 0;
-      const hpRatio = Math.max(0, Math.min(1, gs.hp / Math.max(1, gs.maxHp)));
-      const defLvl = gs.defenseLevel || 1;
-
+    drawSingleTurretMount(ctx, x, z, color, ammo, maxAmmo, angle, timeSinceFire, label = "TURRET") {
       ctx.save();
       ctx.translate(x, z);
-
-      ctx.fillStyle = isBroken ? 'rgba(239, 68, 68, 0.35)' : '#334155';
-      ctx.strokeStyle = isBroken ? '#ef4444' : color;
-      ctx.lineWidth = 4;
-      if (isVerticalWall) {
-        ctx.fillRect(-26, -110, 52, 220);
-        ctx.strokeRect(-26, -110, 52, 220);
-      } else {
-        ctx.fillRect(-110, -26, 220, 52);
-        ctx.strokeRect(-110, -26, 220, 52);
-      }
-
-      // HP Bar above Gatehouse
-      const barW = 220;
-      const barH = 16;
-      ctx.fillStyle = '#090d14';
-      ctx.fillRect(-barW / 2, -68, barW, barH);
-      ctx.fillStyle = hpRatio > 0.5 ? '#22c55e' : (hpRatio > 0.25 ? '#facc15' : '#ef4444');
-      ctx.fillRect(-barW / 2 + 2, -66, (barW - 4) * hpRatio, barH - 4);
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 1.5;
-      ctx.strokeRect(-barW / 2, -68, barW, barH);
-
-      ctx.fillStyle = '#ffffff';
-      ctx.font = '900 10.5px Orbitron, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(
-        isBroken
-          ? `💥 ${title} BROKEN! (TAP TO REBUILD)`
-          : `🏰 ${title} Lv.${defLvl}/10: ${Math.ceil(gs.hp)}/${gs.maxHp} HP`,
-        0,
-        -56
-      );
-
-      ctx.fillStyle = '#0f172a';
-      ctx.strokeStyle = color;
-      ctx.lineWidth = 2;
+      ctx.fillStyle = "#0f172a";
+      ctx.strokeStyle = color || "#facc15";
+      ctx.lineWidth = 2.5;
       ctx.beginPath();
-      ctx.roundRect(-95, 34, 190, 22, 6);
+      ctx.arc(0, 0, 18, 0, Math.PI * 2);
       ctx.fill();
-      ctx.stroke();
-      ctx.fillStyle = '#fde047';
-      ctx.font = '900 9.5px Orbitron, sans-serif';
-      ctx.fillText(
-        defLvl >= 10 ? '✅ WALL MAX Lv.10' : `👆 TAP TO FORTIFY WALL Lv.${defLvl + 1} ($${upgCost})`,
-        0,
-        48
-      );
-      ctx.restore();
-    }
-
-    drawSingleTurretMount(ctx, tx, tz, color, ammo, maxAmmo, angle, lastFireTime, labelText) {
-      ctx.save();
-      ctx.translate(tx, tz);
-
-      ctx.fillStyle = '#1e293b';
-      ctx.strokeStyle = '#0f172a';
-      ctx.lineWidth = 4;
-      ctx.beginPath();
-      ctx.arc(0, 0, 28, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-
-      const ammoRatio = Math.max(0, Math.min(1, ammo / Math.max(1, maxAmmo)));
-      ctx.strokeStyle = ammo > 0 ? '#f97316' : '#ef4444';
-      ctx.lineWidth = 4;
-      ctx.beginPath();
-      ctx.arc(0, 0, 22, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * ammoRatio);
       ctx.stroke();
 
       ctx.save();
-      ctx.rotate(angle ?? -Math.PI / 2);
-
-      const kick = (this.time - (lastFireTime || 0)) < 0.12 ? -5 : 0;
-      ctx.translate(kick, 0);
-
-      ctx.fillStyle = '#475569';
-      ctx.strokeStyle = '#090d14';
-      ctx.lineWidth = 3;
-      ctx.fillRect(6, -11, 28, 7);
-      ctx.strokeRect(6, -11, 28, 7);
-      ctx.fillRect(6, 4, 28, 7);
-      ctx.strokeRect(6, 4, 28, 7);
-
-      if ((this.time - (lastFireTime || 0)) < 0.08) {
-        ctx.fillStyle = '#facc15';
-        ctx.beginPath();
-        ctx.arc(38, -7, 7, 0, Math.PI * 2);
-        ctx.arc(38, 7, 7, 0, Math.PI * 2);
-        ctx.fill();
-      }
-
-      ctx.fillStyle = color;
-      ctx.beginPath();
-      ctx.arc(0, 0, 15, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
+      ctx.rotate(angle || 0);
+      ctx.fillStyle = "#334155";
+      ctx.fillRect(0, -5, 22, 10);
+      ctx.fillStyle = color || "#facc15";
+      ctx.fillRect(14, -4, 9, 8);
       ctx.restore();
 
-      ctx.fillStyle = ammo > 0 ? 'rgba(15, 23, 42, 0.9)' : 'rgba(185, 28, 28, 0.95)';
-      ctx.fillRect(-56, 30, 112, 20);
-      ctx.strokeStyle = ammo > 0 ? '#f97316' : '#fca5a5';
-      ctx.lineWidth = 1.5;
-      ctx.strokeRect(-56, 30, 112, 20);
-
-      ctx.fillStyle = '#ffffff';
-      ctx.font = '900 10.5px Orbitron, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(
-        ammo > 0 ? `🧱 ${ammo}/${maxAmmo} (${labelText})` : `⚠️ NO AMMO (搬🧱!)`,
-        0,
-        44
-      );
-
+      ctx.fillStyle = "#fde047";
+      ctx.font = "900 8.5px Orbitron, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(label, 0, 28);
       ctx.restore();
     }
 
-    // ========================================================================
-    // 5. SECTOR A: LEFT-HAND TRANSPORT SHIP PORTS (#1–#4), ANIMATED CARGO SHIPS
-    //    & PORT STORAGE SILOS (Fixed 1 Oil + 1 Iron at Start + Planet Ore Hauling!)
-    // ========================================================================
     drawLeftHandTransportPortsAndShips(ctx, state) {
       const PL = window.GameConfig.PORT_LOGISTICS;
       if (!PL) return;
@@ -2326,7 +1783,7 @@
       // 1. Draw the Left-Hand Orbital Docking Ports (#1-#4) & Animated Transport Ships
       this.drawLeftHandTransportPortsAndShips(ctx, state);
 
-      // 2. Draw the 4 Port Cargo Storage Silos & Player Pickup Pads (ZERO Drills or War Press on Shop Floor!)
+      // 2. Draw all 6 Port Cargo Storage Silos (2 Basic + 2 Bug Unique + 2 Bot Unique) & Pickup Pads
       const maxPortCap = state.getPortStorageLimit ? state.getPortStorageLimit() : 25;
       for (const raw of window.GameConfig.RAW_EXTRACTORS) {
         const rs = state.rawExtractors[raw.id];
@@ -2334,7 +1791,6 @@
         const maxBuf = rs ? (rs.maxBuffer || maxPortCap) : maxPortCap;
         const fillRatio = Math.max(0, Math.min(1, stock / Math.max(1, maxBuf)));
 
-        // Conduit Pipe from Port Trench (-1685) -> Port Cargo Silo (-1460) -> Player/Belt Pickup Pad (-1200)
         this.drawStationConnectorPipe(
           ctx,
           { x: -1685, z: raw.z },
@@ -2343,62 +1799,51 @@
           raw.color
         );
 
-        // Port Cargo Silo Tank at (raw.x = -1460, raw.z)
         ctx.save();
         ctx.translate(raw.x, raw.z);
 
         ctx.fillStyle = '#0f172a';
         ctx.strokeStyle = raw.color;
-        ctx.lineWidth = 3.5;
+        ctx.lineWidth = 3;
         ctx.beginPath();
-        ctx.roundRect(-102, -62, 204, 124, 14);
+        ctx.roundRect(-102, -46, 204, 92, 12);
         ctx.fill();
         ctx.stroke();
 
-        // Fill gauge bar inside Silo
         ctx.fillStyle = '#090d14';
-        ctx.fillRect(-86, 26, 172, 16);
+        ctx.fillRect(-86, 16, 172, 12);
         ctx.fillStyle = raw.color;
-        ctx.fillRect(-84, 28, 168 * fillRatio, 12);
+        ctx.fillRect(-84, 18, 168 * fillRatio, 8);
 
-        ctx.font = '28px sans-serif';
+        ctx.font = '24px sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(raw.itemIcon, -56, -12);
+        ctx.fillText(raw.itemIcon, -62, -10);
 
         ctx.fillStyle = '#ffffff';
-        ctx.font = '900 11.5px Orbitron, sans-serif';
+        ctx.font = '900 10.5px Orbitron, sans-serif';
         ctx.textAlign = 'left';
-        ctx.fillText(`${raw.shortName.toUpperCase()}`, -28, -22);
+        ctx.fillText(`${raw.shortName.toUpperCase()}`, -36, -20);
 
         ctx.fillStyle = '#fde047';
-        ctx.font = '900 13px Orbitron, sans-serif';
-        ctx.fillText(`STORED: ${stock} / ${maxBuf}`, -28, -2);
+        ctx.font = '900 11.5px Orbitron, sans-serif';
+        ctx.fillText(`ORE: ${stock} / ${maxBuf}`, -36, -3);
 
         ctx.fillStyle = '#94a3b8';
-        ctx.font = '700 10px Rajdhani, sans-serif';
+        ctx.font = '700 9.5px Rajdhani, sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText(
-          raw.id === 'raw_sand'
-            ? '🐛 Captured Bug Planet Unique Ore (+50% Value!)'
-            : (raw.id === 'raw_titanium'
-              ? '🤖 Captured Bot Planet Unique Ore (+50% Value!)'
-              : '🛸 Unloaded by Left-Hand Transport Ships'),
-          0,
-          52
-        );
+        ctx.fillText(raw.planetLevels || 'Super Earth + Planets', 0, 38);
         ctx.restore();
 
-        // Player & SEAF Direct Port Pickup Pad at (raw.pickupX = -1200, raw.pickupZ)
         this.drawPadBox(
           ctx,
           raw.pickupX,
           raw.pickupZ,
-          168,
-          82,
+          164,
+          70,
           stock > 0 ? raw.color : '#64748b',
-          `📤 PICKUP ${raw.itemIcon} (${stock}/${maxBuf})`,
-          `Walk Here to Pick ${raw.itemIcon} from Port!`
+          `📤 PICK ${raw.itemIcon} (${stock}/${maxBuf})`,
+          raw.planetLevels || 'Port Pickup Pad'
         );
       }
     }
@@ -2683,61 +2128,6 @@
       this.drawPadBox(ctx, TC.x, TC.z, 132, 76, '#ef4444', '🗑️ DUMP / CLEAR', 'Clear Held Stack');
     }
 
-    drawWarZoneObjects(ctx, state) {
-      for (const s of state.snowTiles) {
-        if (s.cleared) continue;
-        ctx.save();
-        ctx.translate(s.x, s.z);
-        ctx.fillStyle = 'rgba(203, 213, 225, 0.22)';
-        ctx.beginPath();
-        ctx.arc(0, 0, 36, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-      }
-
-      // Draw Fallen Hero Martyr Memorials (When a Gen-1 Hero dies heroically in action!)
-      if (state.martyrMemorials && state.martyrMemorials.length > 0) {
-        for (const mem of state.martyrMemorials) {
-          ctx.save();
-          ctx.translate(mem.x, mem.z);
-          ctx.fillStyle = '#1e293b';
-          ctx.strokeStyle = '#facc15';
-          ctx.lineWidth = 3;
-          ctx.beginPath();
-          ctx.roundRect(-55, -28, 110, 56, 8);
-          ctx.fill();
-          ctx.stroke();
-          ctx.font = '20px sans-serif';
-          ctx.textAlign = 'center';
-          ctx.fillText('🪦', 0, -4);
-          ctx.fillStyle = '#fde047';
-          ctx.font = '900 9.5px Orbitron, sans-serif';
-          ctx.fillText(`MARTYR: ${mem.name}`, 0, 14);
-          ctx.fillStyle = '#86efac';
-          ctx.font = '700 9px Rajdhani, sans-serif';
-          ctx.fillText(`Gen-${mem.gen} Fallen Hero (+1 ⭐)`, 0, 24);
-          ctx.restore();
-        }
-      }
-
-      for (const d of state.warDrops) {
-        ctx.save();
-        ctx.translate(d.x, d.z + Math.sin(this.time * 5 + d.id) * 4);
-        ctx.fillStyle = '#0f172a';
-        ctx.beginPath();
-        ctx.arc(0, 0, 17, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = d.color || '#a855f7';
-        ctx.lineWidth = 2.5;
-        ctx.stroke();
-        ctx.font = '18px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(d.icon, 0, 1);
-        ctx.restore();
-      }
-    }
-
     drawSortedEntities(ctx, state, mode = 'shop') {
       const renderList = [];
 
@@ -2762,14 +2152,7 @@
           });
         }
       } else {
-        if (state.alliedUnits) {
-          for (const u of state.alliedUnits) {
-            renderList.push({
-              z: u.z,
-              draw: () => this.drawAlliedWarUnit(ctx, u)
-            });
-          }
-        }
+
 
         for (const e of state.enemies) {
           renderList.push({
@@ -3461,81 +2844,6 @@
     }
 
     // Mindustry Core Shard, Multi-Base Orbital Receiver & Split Shop/War Rapid-Transit Portal
-    drawMindustryCoreAndPortal(ctx, state) {
-      const baseCfg = state.getActiveBaseConfig ? state.getActiveBaseConfig() : { name: 'Base Alpha', code: 'SECTOR ALPHA-01', color: '#facc15' };
-      ctx.save();
-      ctx.translate(-520, -90);
-      ctx.fillStyle = '#1e293b';
-      ctx.strokeStyle = baseCfg.color || '#facc15';
-      ctx.lineWidth = 4;
-      ctx.fillRect(-70, -54, 140, 108);
-      ctx.strokeRect(-70, -54, 140, 108);
-
-      const pulse = 1 + Math.sin(this.time * 4) * 0.08;
-      ctx.save();
-      ctx.scale(pulse, pulse);
-      ctx.fillStyle = baseCfg.color || '#facc15';
-      ctx.beginPath();
-      ctx.arc(0, 0, 22, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-
-      ctx.font = '22px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('🏛️', 0, 1);
-
-      ctx.fillStyle = '#fde047';
-      ctx.font = '900 11.5px Orbitron, sans-serif';
-      ctx.fillText(`🏛️ MINDUSTRY CORE: ${baseCfg.code}`, 0, -64);
-      ctx.fillStyle = '#4ade80';
-      ctx.font = '700 11px Rajdhani, sans-serif';
-      const exportIncome = state.getTotalPassiveBaseIncome ? state.getTotalPassiveBaseIncome() : 0;
-      ctx.fillText(`🚀 Launch Pad Network: +$${exportIncome}/s Passive`, 0, 68);
-      ctx.restore();
-
-    }
-
-    // Draws Allied Combat Units Deployed on the War Front (`deploy_squad`, `deploy_buggy`, `deploy_mech`)
-    drawAlliedWarUnit(ctx, u) {
-      if (u.unitType === 'deploy_mech') {
-        this.drawPatriotMechSprite(ctx, u.x, u.z, this.time * 1.4, 1.15, true, []);
-      } else if (u.unitType === 'deploy_buggy') {
-        this.drawReconVehicleSprite(ctx, u.x, u.z, this.time * 1.6, 1.12, true, []);
-      } else {
-        this.drawCarbotBean(ctx, u.x, u.z, {
-          bodyColor: '#1d4ed8',
-          capeColor: '#facc15',
-          trimColor: '#fde047',
-          visorColor: '#38bdf8',
-          isCommander: false,
-          hasRifle: true,
-          weaponId: 'w_liberator',
-          walkPhase: this.time * 8,
-          scale: 0.96,
-          label: ''
-        });
-      }
-      ctx.save();
-      ctx.translate(u.x, u.z);
-      const hpRatio = Math.max(0, Math.min(1, u.hp / u.maxHp));
-      ctx.fillStyle = '#090d14';
-      ctx.fillRect(-20, -38, 40, 6);
-      ctx.fillStyle = '#4ade80';
-      ctx.fillRect(-19, -37, 38 * hpRatio, 4);
-      ctx.fillStyle = u.isHero ? '#fde047' : '#86efac';
-      ctx.font = u.isHero ? '900 11px Orbitron, sans-serif' : '900 9.5px Orbitron, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(u.label || 'ALLIED UNIT', 0, -42);
-      if (u.isHero && u.subTag) {
-        ctx.fillStyle = u.gen === 1 ? '#fca5a5' : '#38bdf8';
-        ctx.font = '700 9.5px Rajdhani, sans-serif';
-        ctx.fillText(u.subTag, 0, -54);
-      }
-      ctx.restore();
-    }
-
-    // Interactive 2D Mindustry-Style Visual Node Tech Tree Renderer
     renderMindustryTechTree(canvas, state, selectedNodeId) {
       if (!canvas) return;
       const ctx = canvas.getContext('2d');
