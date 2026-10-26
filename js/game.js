@@ -1092,21 +1092,28 @@
         return true;
       }
 
-      // 2. Check Raw Quarry Auto-Drills -> Open Idle Multi-Ability Pop-Up Window!
+      // 2. Check 4 Left-Hand Port Cargo Silos & Pickup Pads -> Pick up raw resource or open Port Logistics!
       for (const raw of CFG.RAW_EXTRACTORS) {
-        if (Math.hypot(wx - raw.x, wz - raw.z) < 135) {
-          this.audio.playPickup();
-          this.openBuildingPopover('raw', raw.id);
+        const nearSilo = Math.hypot(wx - raw.x, wz - raw.z) < 125;
+        const nearPick = Math.hypot(wx - raw.pickupX, wz - raw.pickupZ) < 110;
+        if (nearSilo || nearPick) {
+          const rs = this.rawExtractors[raw.id];
+          const maxCap = this.getPlayerMaxCapacity();
+          if (rs && rs.stock >= 1 && this.player.inventory.length < maxCap) {
+            rs.stock--;
+            this.player.inventory.push({ id: raw.id, icon: raw.itemIcon, color: raw.color });
+            this.audio.playPickup();
+            this.spawnArc(raw.x, raw.z, this.player.x, this.player.z - 20, raw.itemIcon, raw.color);
+            this.spawnFloatingText(raw.pickupX, raw.pickupZ - 30, `+1 ${raw.itemIcon} PICKED FROM PORT!`, raw.color);
+            this.updateHUD();
+          } else {
+            this.audio.playPickup();
+            this.portModalPage = 'overview';
+            this.renderPortLogisticsModal();
+            document.getElementById('modal-port-logistics')?.classList.add('open');
+          }
           return true;
         }
-      }
-
-      // 3. Check Munitions Ammo Press -> Open Idle Multi-Ability Pop-Up Window!
-      const AP = CFG.AMMO_PRESS;
-      if (Math.hypot(wx - AP.x, wz - AP.z) < 120) {
-        this.audio.playPickup();
-        this.openBuildingPopover('ammo', 'ammo');
-        return true;
       }
 
       // 4. Check All 7 Production Stations, 3-Counter Bays & Cash Vaults!
@@ -1725,7 +1732,10 @@
       const armorBonus = eq.armor?.sellBonus || 0;
       const planetMult = this.getCurrentPlanet().reqMult || 1.0;
       const baseSellMult = this.getActiveBaseConfig().sellMult || 1.0;
-      const sampleMult = 1 + (this.superSamples || 0) * 0.15;
+      const hasBugSand = (this.rawExtractors?.raw_sand?.stock || 0) >= 1 || !!st.uniqueSandBoost;
+      const hasBotTitanium = (this.rawExtractors?.raw_titanium?.stock || 0) >= 1 || !!st.uniqueTitaniumBoost;
+      const uniqueFactionMult = 1 + (hasBugSand ? 0.25 : 0) + (hasBotTitanium ? 0.25 : 0);
+      const sampleMult = (1 + (this.superSamples || 0) * 0.15) * uniqueFactionMult;
       const counterCountMult = 1 + (this.getUnlockedCounterCount(itemCfg?.id) - 1) * 0.25;
       const prestigeMult = this.getPrestigeMultiplier() * sampleMult * counterCountMult;
       const buff = this.stratagemBuffTimer > 0 ? 1.5 : 1.0;
@@ -1870,18 +1880,7 @@
 
       // Note: In v0.0.11 Nightfall Castle TD mode, the War Zone is an open Castle + River Bridge + Stronghold map!
 
-      // Unlocked Raw Extractor Auto-Drill Rigs (Only solid when level > 0!)
-      for (const raw of CFG.RAW_EXTRACTORS) {
-        if ((this.rawExtractors[raw.id]?.level || 0) > 0) {
-          boxes.push({ minX: raw.x - 95, maxX: raw.x + 95, minZ: raw.z - 65, maxZ: raw.z + 65 });
-        }
-      }
-
-      // Unlocked Munitions Press Machine (Only solid when level > 0!)
-      const AP = CFG.AMMO_PRESS;
-      if ((this.ammoPress?.level || 0) > 0) {
-        boxes.push({ minX: AP.x - 54, maxX: AP.x + 54, minZ: AP.z - 54, maxZ: AP.z + 54 });
-      }
+      // v0.0.13: Zero Drills or Ammo Press obstacles on the Shop Floor — Port Pickup Pads are 100% walkable!
 
       // Unlocked Arsenal Fabricator Machines & Dedicated Item Counters
       for (const item of CFG.ITEMS) {
@@ -2001,7 +2000,9 @@
       this.updatePlayerInteractions(dt);
       this.updateWorkers(dt);
       this.updateCustomersAndSales(dt);
-      this.updateWaveAndGates(dt);
+      if (this.viewMode === 'war') {
+        this.updateWaveAndGates(dt);
+      }
       this.updateMindustryBasesAndAllies(dt);
       this.updateVisualEffects(dt);
       this.checkMilestones(dt);
@@ -2326,31 +2327,51 @@
 
       const AP = CFG.AMMO_PRESS;
 
-      // 1. PURPLE E-710 FUEL BELT (`conv_raw_e710`): ONLY moves 🛢️ E-710 from E-710 Pump to E-710 Hoppers!
+      // 1. PURPLE BIO-FUEL & BUG SAND BELT (`conv_raw_e710`): Pipes 🛢️ E-710 Oil & 🏜️ Bug Bio-Sand from Port Silos to E-710 Hoppers!
       const e710BeltLvl = this.conveyorLevels?.conv_raw_e710 || 0;
       if (e710BeltLvl > 0) {
         const e710Stock = this.rawExtractors.raw_e710;
+        const sandStock = this.rawExtractors.raw_sand;
         const transferCap = 1 + Math.floor(e710BeltLvl / 4);
         const maxHopperFill = 8 + e710BeltLvl * 2;
         const speed = 0.95 + e710BeltLvl * 0.08;
 
-        if (e710Stock && e710Stock.stock > 0) {
-          for (const item of CFG.ITEMS) {
-            if (!this.unlocked[item.id] || !item.recipe.raw_e710) continue;
-            if (e710Stock.stock <= 0) break;
-            const st = this.stations[item.id];
-            const targetKey = `hopper_${item.id}_e710`;
-            const curTotal = (st.inputStock.raw_e710 || 0) + this.countInFlightToTarget(targetKey);
-            if (curTotal < maxHopperFill) {
-              const take = Math.min(transferCap, e710Stock.stock, maxHopperFill - curTotal);
+        for (const item of CFG.ITEMS) {
+          if (!this.unlocked[item.id] || !item.recipe.raw_e710) continue;
+          const st = this.stations[item.id];
+          const targetKey = `hopper_${item.id}_e710`;
+          const curTotal = (st.inputStock.raw_e710 || 0) + this.countInFlightToTarget(targetKey);
+          if (curTotal < maxHopperFill) {
+            if (sandStock && sandStock.stock >= 1 && item.tier >= 3) {
+              sandStock.stock -= 1;
+              this.spawnBeltPacket({
+                beltId: 'conv_raw_e710',
+                targetKey,
+                path: [
+                  { x: -1200, z: 810 },
+                  { x: -960, z: 810 },
+                  { x: -960, z: item.inputPos.z - 12 },
+                  { x: item.inputPos.x, z: item.inputPos.z - 12 }
+                ],
+                icon: '🏜️',
+                color: '#eab308',
+                qty: 2,
+                speed,
+                onArrive: () => {
+                  st.inputStock.raw_e710 = (st.inputStock.raw_e710 || 0) + 2;
+                  st.uniqueSandBoost = true;
+                }
+              });
+            } else if (e710Stock && e710Stock.stock >= 1) {
+              const take = Math.min(transferCap, Math.floor(e710Stock.stock), maxHopperFill - curTotal);
               if (take > 0) {
                 e710Stock.stock -= take;
                 this.spawnBeltPacket({
                   beltId: 'conv_raw_e710',
                   targetKey,
                   path: [
-                    { x: -1200, z: 240 },
-                    { x: -960, z: 240 },
+                    { x: -1200, z: 210 },
+                    { x: -960, z: 210 },
                     { x: -960, z: item.inputPos.z - 12 },
                     { x: item.inputPos.x, z: item.inputPos.z - 12 }
                   ],
@@ -2368,60 +2389,51 @@
         }
       }
 
-      // 2. CYAN SUPER IRON BELT (`conv_raw_iron`): ONLY moves ⛏️ Super Iron from Iron Drill to Iron & Ammo Hoppers!
+      // 2. CYAN SUPER IRON & BOT TITANIUM BELT (`conv_raw_iron`): Pipes ⛏️ Super Iron & 🔩 Bot Titanium from Port Silos to Iron Hoppers!
       const ironBeltLvl = this.conveyorLevels?.conv_raw_iron || 0;
       if (ironBeltLvl > 0) {
         const ironStock = this.rawExtractors.raw_iron;
+        const tiStock = this.rawExtractors.raw_titanium;
         const transferCap = 1 + Math.floor(ironBeltLvl / 4);
         const maxHopperFill = 8 + ironBeltLvl * 2;
         const speed = 0.95 + ironBeltLvl * 0.08;
 
-        if (ironStock && ironStock.stock > 0) {
-          // A. Feed Munitions Ammo Press Hopper if unlocked
-          if ((this.ammoPress.level || 0) > 0 && ironStock.stock > 0) {
-            const apKey = 'hopper_ammo_press_iron';
-            const curAp = (this.ammoPress.inputStock.raw_iron || 0) + this.countInFlightToTarget(apKey);
-            if (curAp < maxHopperFill) {
-              const take = Math.min(transferCap, ironStock.stock, maxHopperFill - curAp);
-              if (take > 0) {
-                ironStock.stock -= take;
-                this.spawnBeltPacket({
-                  beltId: 'conv_raw_iron',
-                  targetKey: apKey,
-                  path: [
-                    { x: -1200, z: 780 },
-                    { x: -1360, z: 780 },
-                    { x: AP.inputPos.x, z: AP.inputPos.z }
-                  ],
-                  icon: '⛏️',
-                  color: '#38bdf8',
-                  qty: take,
-                  speed,
-                  onArrive: () => {
-                    this.ammoPress.inputStock.raw_iron = (this.ammoPress.inputStock.raw_iron || 0) + take;
-                  }
-                });
-              }
-            }
-          }
-
-          // B. Feed Iron-using Arsenal Station Hoppers
-          for (const item of CFG.ITEMS) {
-            if (!this.unlocked[item.id] || !item.recipe.raw_iron) continue;
-            if (ironStock.stock <= 0) break;
-            const st = this.stations[item.id];
-            const targetKey = `hopper_${item.id}_iron`;
-            const curTotal = (st.inputStock.raw_iron || 0) + this.countInFlightToTarget(targetKey);
-            if (curTotal < maxHopperFill) {
-              const take = Math.min(transferCap, ironStock.stock, maxHopperFill - curTotal);
+        for (const item of CFG.ITEMS) {
+          if (!this.unlocked[item.id] || !item.recipe.raw_iron) continue;
+          const st = this.stations[item.id];
+          const targetKey = `hopper_${item.id}_iron`;
+          const curTotal = (st.inputStock.raw_iron || 0) + this.countInFlightToTarget(targetKey);
+          if (curTotal < maxHopperFill) {
+            if (tiStock && tiStock.stock >= 1 && item.tier >= 3) {
+              tiStock.stock -= 1;
+              this.spawnBeltPacket({
+                beltId: 'conv_raw_iron',
+                targetKey,
+                path: [
+                  { x: -1200, z: 1110 },
+                  { x: -910, z: 1110 },
+                  { x: -910, z: item.inputPos.z + 12 },
+                  { x: item.inputPos.x, z: item.inputPos.z + 12 }
+                ],
+                icon: '🔩',
+                color: '#ec4899',
+                qty: 2,
+                speed,
+                onArrive: () => {
+                  st.inputStock.raw_iron = (st.inputStock.raw_iron || 0) + 2;
+                  st.uniqueTitaniumBoost = true;
+                }
+              });
+            } else if (ironStock && ironStock.stock >= 1) {
+              const take = Math.min(transferCap, Math.floor(ironStock.stock), maxHopperFill - curTotal);
               if (take > 0) {
                 ironStock.stock -= take;
                 this.spawnBeltPacket({
                   beltId: 'conv_raw_iron',
                   targetKey,
                   path: [
-                    { x: -1200, z: 780 },
-                    { x: -910, z: 780 },
+                    { x: -1200, z: 510 },
+                    { x: -910, z: 510 },
                     { x: -910, z: item.inputPos.z + 12 },
                     { x: item.inputPos.x, z: item.inputPos.z + 12 }
                   ],
@@ -2435,44 +2447,6 @@
                 });
               }
             }
-          }
-        }
-      }
-
-      // 3. GATE TURRET AMMO BELTS (`conv_gate_1`, `conv_gate_2`, `conv_gate_3`)
-      for (const g of CFG.GATES) {
-        const gs = this.gates[g.id];
-        if (!gs) continue;
-        const beltLvl = this.conveyorLevels?.[g.conveyorId] || 0;
-        if (beltLvl > 0) {
-          const maxAmmo = gs.maxAmmo || g.maxAmmo;
-          const gateKey = `gate_ammo_${g.id}`;
-          const inFlightAmmo = this.countInFlightToTarget(gateKey);
-          if (gs.ammo + inFlightAmmo < maxAmmo && this.ammoPress.stock > 0) {
-            const takeCrates = Math.min(this.ammoPress.stock, 1 + Math.floor(beltLvl / 6));
-            const ammoGain = takeCrates * (2 + Math.floor(beltLvl / 4));
-            this.ammoPress.stock -= takeCrates;
-            this.spawnBeltPacket({
-              beltId: g.conveyorId,
-              targetKey: gateKey,
-              path: [
-                { x: AP.padX, z: AP.padZ },
-                { x: -860, z: AP.padZ },
-                { x: -860, z: g.turretZ },
-                { x: g.leftTurretX, z: g.turretZ }
-              ],
-              icon: '🧱',
-              color: g.color,
-              qty: takeCrates,
-              speed: 0.85 + beltLvl * 0.07,
-              onArrive: () => {
-                gs.ammo = Math.min(gs.maxAmmo || g.maxAmmo, gs.ammo + ammoGain);
-              }
-            });
-          }
-          // STRICT RULE: If the gate is broken (0 HP), NO auto HP recovery!
-          if (!gs.broken && gs.hp > 0 && gs.hp < gs.maxHp) {
-            gs.hp = Math.min(gs.maxHp, gs.hp + beltLvl * 1.5);
           }
         }
       }
@@ -2564,94 +2538,8 @@
         document.getElementById('modal-loadout')?.classList.add('open');
       }
 
-      // 4. Manual Harvest Quarry Veins (Available at Start!)
-      if (this.harvestCooldown <= 0 && p.inventory.length < maxCap) {
-        const harvestRangeBonus = eq.backpack?.autoHarvest ? 160 : 0;
-        for (const raw of CFG.RAW_EXTRACTORS) {
-          const hp = raw.harvestPos;
-          const dVein = Math.hypot(p.x - hp.x, p.z - hp.z);
-          if (dVein <= hp.radius + harvestRangeBonus) {
-            p.inventory.push({ id: raw.id, icon: raw.itemIcon, color: raw.color });
-            this.harvestCooldown = 0.24 / harvestSpeedMult;
-            this.audio.playPickup();
-            this.spawnArc(hp.x, hp.z, p.x, p.z - 20, raw.itemIcon, raw.color);
-            this.spawnFloatingText(p.x, p.z - 35, `+1 ${raw.itemIcon} HARVESTED`, raw.color);
-            break;
-          }
-        }
-      }
-
-      // 5. Unlock / Upgrade Quarry Auto-Drill Scale (Lv.0 -> Lv.10)
-      if (this.rawPadCooldown <= 0) {
-        for (const raw of CFG.RAW_EXTRACTORS) {
-          const rs = this.rawExtractors[raw.id];
-          if ((rs.level || 0) >= (raw.maxLevel || 20)) continue;
-          const distRaw = Math.hypot(p.x - raw.padX, p.z - raw.padZ);
-          if (distRaw < 88) {
-            const cost = this.getRawUpgradeCost(raw.id);
-            if (this.cash >= cost) {
-              this.cash -= cost;
-              rs.level = (rs.level || 0) + 1;
-              if (rs.level === 1) rs.stock = 4;
-              this.rawPadCooldown = 0.55;
-              this.recalcDerivedStats();
-              this.buildSolidObstacles();
-              this.audio.playUnlock();
-              this.spawnFloatingText(
-                raw.x,
-                raw.z - 45,
-                rs.level === 1 ? `🎉 AUTO ${raw.shortName.toUpperCase()} UNLOCKED (Lv.1/10)!` : `⬆️ ${raw.shortName} Lv.${rs.level}/10!`,
-                raw.color
-              );
-            }
-          }
-        }
-      }
-
-      // 6. Unlock / Upgrade Munitions Ammo Press (Lv.0 -> Lv.10 at safe offset AP.unlockPos)
-      const AP = CFG.AMMO_PRESS;
-      if (this.stationPadCooldown <= 0 && (this.ammoPress.level || 0) < (AP.maxLevel || 20)) {
-        const distApUpg = Math.hypot(p.x - AP.unlockPos.x, p.z - AP.unlockPos.z);
-        if (distApUpg < 88) {
-          const cost = this.getAmmoPressUpgradeCost();
-          if (this.cash >= cost) {
-            this.cash -= cost;
-            this.ammoPress.level = (this.ammoPress.level || 0) + 1;
-            this.stationPadCooldown = 0.55;
-            this.recalcDerivedStats();
-            this.buildSolidObstacles();
-            this.audio.playUnlock();
-            this.spawnFloatingText(
-              AP.x,
-              AP.z - 45,
-              this.ammoPress.level === 1 ? `🎉 MUNITIONS PRESS UNLOCKED (Lv.1/10)!` : `⬆️ AMMO PRESS Lv.${this.ammoPress.level}/10!`,
-              '#f97316'
-            );
-          }
-        }
-      }
-
-      // 7. Upgrade Gate Defense Level Pads (Lv.1 -> Lv.10)
-      if (this.gatePadCooldown <= 0) {
-        for (const g of CFG.GATES) {
-          const gs = this.gates[g.id];
-          if ((gs.defenseLevel || 1) >= (g.maxLevel || 20)) continue;
-          const distUpg = Math.hypot(p.x - g.upgradePadX, p.z - g.upgradePadZ);
-          if (distUpg < 88) {
-            const cost = this.getGateUpgradeCost(g.id);
-            if (this.cash >= cost) {
-              this.cash -= cost;
-              gs.defenseLevel = (gs.defenseLevel || 1) + 1;
-              this.gatePadCooldown = 0.55;
-              this.recalcDerivedStats();
-              gs.broken = false;
-              gs.hp = gs.maxHp;
-              this.audio.playUnlock();
-              this.spawnFloatingText(g.x, g.z - 50, `🛡️ ${g.shortName} FORTIFIED Lv.${gs.defenseLevel}/10!`, g.color);
-            }
-          }
-        }
-      }
+      // 4. v0.0.13: All manual drills, auto-drills, and war gates are removed from the Shop page!
+      //    Player picks up raw resources directly from the 4 Left-Hand Port Pickup Pads below.
 
       this.transferCooldown -= dt;
       if (this.transferCooldown > 0) return;
@@ -2694,59 +2582,49 @@
         }
       }
 
-      // 10. Pickup Raw Ore from Auto-Drill Output Pads (Only when Auto-Drill is unlocked!)
+      // 10. Pickup Raw Resources (🛢️ Oil, ⛏️ Iron, 🏜️ Bug Sand, 🔩 Bot Titanium) Directly from the 4 Left-Hand Port Pickup Pads!
       for (const raw of CFG.RAW_EXTRACTORS) {
         const rs = this.rawExtractors[raw.id];
-        if (!rs || (rs.level || 0) <= 0) continue;
-        const distPickRaw = Math.hypot(p.x - raw.pickupX, p.z - raw.pickupZ);
-        if (distPickRaw < 88 && rs.stock > 0 && p.inventory.length < maxCap) {
+        if (!rs) continue;
+        const distPickPort = Math.min(
+          Math.hypot(p.x - raw.pickupX, p.z - raw.pickupZ),
+          Math.hypot(p.x - raw.x, p.z - raw.z)
+        );
+        if (distPickPort < 105 && rs.stock >= 1 && p.inventory.length < maxCap) {
           rs.stock--;
           p.inventory.push({ id: raw.id, icon: raw.itemIcon, color: raw.color });
           this.transferCooldown = CFG.PLAYER.transferInterval;
           this.audio.playPickup();
           this.spawnArc(raw.x, raw.z, p.x, p.z - 20, raw.itemIcon, raw.color);
+          this.spawnFloatingText(p.x, p.z - 35, `+1 ${raw.itemIcon} FROM PORT`, raw.color);
           return;
         }
       }
 
-      // 11. Feed Raw Iron into Munitions Ammo Press Input Hopper & Pickup 🧱 Ammo
-      if ((this.ammoPress.level || 0) >= 1) {
-        const distAmmoIn = Math.hypot(p.x - AP.inputPos.x, p.z - AP.inputPos.z);
-        if (distAmmoIn < 92) {
-          const ironIdx = p.inventory.findIndex((it) => it.id === 'raw_iron');
-          if (ironIdx !== -1) {
-            const entry = p.inventory.splice(ironIdx, 1)[0];
-            this.ammoPress.inputStock.raw_iron = (this.ammoPress.inputStock.raw_iron || 0) + 1;
-            this.transferCooldown = CFG.PLAYER.transferInterval;
-            this.audio.playPickup();
-            this.spawnArc(p.x, p.z - 20, AP.inputPos.x, AP.inputPos.z, entry.icon, entry.color);
-            return;
-          }
-        }
-
-        const distAmmoPickup = Math.hypot(p.x - AP.padX, p.z - AP.padZ);
-        if (distAmmoPickup < 88 && this.ammoPress.stock > 0 && p.inventory.length < maxCap) {
-          this.ammoPress.stock--;
-          p.inventory.push({ id: 'ammo', icon: '🧱', color: '#f97316' });
-          this.transferCooldown = CFG.PLAYER.transferInterval;
-          this.audio.playPickup();
-          this.spawnArc(AP.x, AP.z, p.x, p.z - 20, '🧱', '#f97316');
-          return;
-        }
-      }
-
-      // 12. Feed Raw Materials (⛏️ Iron / 🛢️ E-710) into Factory Input Hoppers
+      // 12. Feed Port Raw Materials (🛢️ E-710, ⛏️ Iron, 🏜️ Bug Bio-Sand, 🔩 Bot Titanium) into Factory Input Hoppers!
       for (const item of CFG.ITEMS) {
         if (!this.unlocked[item.id]) continue;
         const st = this.stations[item.id];
         const distHopper = Math.hypot(p.x - item.inputPos.x, p.z - item.inputPos.z);
-        if (distHopper < 92) {
+        if (distHopper < 95) {
           const rawIdx = p.inventory.findIndex(
-            (it) => (it.id === 'raw_iron' && item.recipe.raw_iron) || (it.id === 'raw_e710' && item.recipe.raw_e710)
+            (it) =>
+              (it.id === 'raw_iron' && item.recipe.raw_iron) ||
+              (it.id === 'raw_e710' && item.recipe.raw_e710) ||
+              (it.id === 'raw_titanium' && item.recipe.raw_iron) ||
+              (it.id === 'raw_sand' && item.recipe.raw_e710)
           );
           if (rawIdx !== -1) {
             const entry = p.inventory.splice(rawIdx, 1)[0];
-            st.inputStock[entry.id] = (st.inputStock[entry.id] || 0) + 1;
+            if (entry.id === 'raw_sand') {
+              st.inputStock.raw_e710 = (st.inputStock.raw_e710 || 0) + 2;
+              st.uniqueSandBoost = true;
+            } else if (entry.id === 'raw_titanium') {
+              st.inputStock.raw_iron = (st.inputStock.raw_iron || 0) + 2;
+              st.uniqueTitaniumBoost = true;
+            } else {
+              st.inputStock[entry.id] = (st.inputStock[entry.id] || 0) + 1;
+            }
             this.transferCooldown = CFG.PLAYER.transferInterval;
             this.audio.playPickup();
             this.spawnArc(p.x, p.z - 20, item.inputPos.x, item.inputPos.z, entry.icon, entry.color);
@@ -2767,42 +2645,6 @@
           this.audio.playPickup();
           this.spawnArc(item.stationPos.x, item.stationPos.z, p.x, p.z - 20, item.icon, item.color);
           return;
-        }
-      }
-
-      // 14. Load 🧱 Ammo & Manually Repair / Rebuild Broken Gate Layers 3, 2, 1
-      for (const g of CFG.GATES) {
-        const gs = this.gates[g.id];
-        if (!gs) continue;
-        const distPad = Math.hypot(p.x - g.ammoPadX, p.z - g.ammoPadZ);
-        if (distPad < 95) {
-          const ammoIdx = p.inventory.findIndex((it) => it.id === 'ammo');
-          const ammoPerCrate = eq.backpack?.ammoBonus ? 5 : 3;
-          const maxAmmo = gs.maxAmmo || g.maxAmmo;
-          if (ammoIdx !== -1 && gs.ammo < maxAmmo) {
-            p.inventory.splice(ammoIdx, 1);
-            gs.ammo = Math.min(maxAmmo, gs.ammo + ammoPerCrate);
-            this.transferCooldown = CFG.PLAYER.transferInterval;
-            this.audio.playPickup();
-            this.spawnArc(p.x, p.z - 20, g.leftTurretX, g.turretZ, '🧱', '#f97316');
-            this.spawnFloatingText(g.x, g.z - 32, `+${ammoPerCrate} 🧱 TURRET AMMO`, '#f97316');
-            return;
-          }
-          // Manual Repair on Pad: CAN repair broken (0 HP) gates!
-          if (gs.hp < gs.maxHp) {
-            const wasBroken = gs.broken || gs.hp <= 0;
-            const repairAmt = Math.round(45 * harvestSpeedMult * (eq.mount?.id === 'm_mech' ? 2.0 : 1.0));
-            gs.hp = Math.min(gs.maxHp, gs.hp + repairAmt);
-            if (gs.hp > 0) gs.broken = false;
-            this.transferCooldown = 0.18;
-            this.spawnFloatingText(
-              g.x,
-              g.z - 38,
-              wasBroken ? `🔧 ${g.shortName.toUpperCase()} REBUILT! (+${repairAmt} HP)` : `🔧 +${repairAmt} GATE HP`,
-              '#4ade80'
-            );
-            return;
-          }
         }
       }
 
@@ -3127,6 +2969,7 @@
       }
 
       if (heroGrid) {
+        heroGrid.style.display = 'none';
         heroGrid.innerHTML = '';
         for (const hCfg of (CFG.WAR_HEROES || [])) {
           const hs = this.heroesState?.[hCfg.id] || { unlocked: false, gen: 1, dead: false, deaths: 0 };
@@ -3196,13 +3039,10 @@
         const speed = 215 * cloneSpdBonus * eliteBonus;
         const carryCap = 3 + Math.floor((this.cloneRoomLevel || 1) / 2);
 
-        // 1. ⛏️ MINER (Pick Raw -> Feed Hoppers)
+        // 1. 🛸 PORT CARGO HAULER (Pick Raw from Left-Hand Port Pickup Pads -> Feed Hoppers)
         if (w.role === 'miner') {
           if (w.inventory.length === 0) {
             const needyHoppers = [];
-            if ((this.ammoPress.level || 0) > 0) {
-              needyHoppers.push({ rawId: 'raw_iron', stock: this.ammoPress.inputStock.raw_iron || 0 });
-            }
             for (const item of CFG.ITEMS) {
               if (!this.unlocked[item.id]) continue;
               const st = this.stations[item.id];
@@ -3210,13 +3050,17 @@
               if (item.recipe.raw_iron) needyHoppers.push({ rawId: 'raw_iron', stock: st.inputStock.raw_iron || 0 });
             }
             needyHoppers.sort((a, b) => a.stock - b.stock);
-            const chosenNeed = needyHoppers[slotIdx % Math.max(1, needyHoppers.length)] || { rawId: 'raw_e710' };
-            const rawCfg = CFG.RAW_EXTRACTORS.find((r) => r.id === chosenNeed.rawId) || CFG.RAW_EXTRACTORS[0];
+            let chosenRawId = (needyHoppers[slotIdx % Math.max(1, needyHoppers.length)] || { rawId: 'raw_e710' }).rawId;
+            if (chosenRawId === 'raw_e710' && (this.rawExtractors.raw_sand?.stock || 0) >= 2 && slotIdx % 2 === 1) {
+              chosenRawId = 'raw_sand';
+            } else if (chosenRawId === 'raw_iron' && (this.rawExtractors.raw_titanium?.stock || 0) >= 2 && slotIdx % 2 === 1) {
+              chosenRawId = 'raw_titanium';
+            }
+            const rawCfg = CFG.RAW_EXTRACTORS.find((r) => r.id === chosenRawId) || CFG.RAW_EXTRACTORS[0];
             const rs = this.rawExtractors[rawCfg.id];
-            const useAutoPickup = rs && rs.level > 0 && rs.stock > 0;
-            const targetX = useAutoPickup ? rawCfg.pickupX : rawCfg.harvestPos.x + Math.cos(slotIdx * 1.7) * 35;
-            const targetZ = useAutoPickup ? rawCfg.pickupZ : rawCfg.harvestPos.z + Math.sin(slotIdx * 1.7) * 35;
-            w.taskLabel = `⛏️ Pick ${rawCfg.itemIcon}`;
+            const targetX = rawCfg.pickupX;
+            const targetZ = rawCfg.pickupZ;
+            w.taskLabel = `🛸 Pick Port ${rawCfg.itemIcon}`;
 
             const dx = targetX - w.x;
             const dz = targetZ - w.z;
@@ -3224,30 +3068,26 @@
             if (dist > 28) {
               w.x += (dx / dist) * speed * dt;
               w.z += (dz / dist) * speed * dt;
-            } else {
-              if (useAutoPickup && rs.stock > 0) {
-                const take = Math.min(carryCap, rs.stock);
+            } else if (rs && rs.stock >= 1) {
+              const take = Math.min(carryCap, Math.floor(rs.stock));
+              if (take > 0) {
                 rs.stock -= take;
                 for (let k = 0; k < take; k++) w.inventory.push({ id: rawCfg.id, icon: rawCfg.itemIcon, color: rawCfg.color });
-              } else {
-                for (let k = 0; k < Math.min(3, carryCap); k++) w.inventory.push({ id: rawCfg.id, icon: rawCfg.itemIcon, color: rawCfg.color });
               }
             }
           } else {
             const heldId = w.inventory[0].id;
+            const mapKey = (heldId === 'raw_sand') ? 'raw_e710' : ((heldId === 'raw_titanium') ? 'raw_iron' : heldId);
             const candidates = [];
-            if (heldId === 'raw_iron' && (this.ammoPress.level || 0) > 0) {
-              candidates.push({ key: 'ammo_press', pos: AP.inputPos, hopper: this.ammoPress.inputStock, count: this.ammoPress.inputStock.raw_iron || 0, name: 'Ammo Hopper' });
-            }
             for (const item of CFG.ITEMS) {
-              if (!this.unlocked[item.id] || !item.recipe[heldId]) continue;
+              if (!this.unlocked[item.id] || !item.recipe[mapKey]) continue;
               const st = this.stations[item.id];
-              candidates.push({ key: item.id, pos: item.inputPos, hopper: st.inputStock, count: st.inputStock[heldId] || 0, name: `${item.icon} Hopper` });
+              candidates.push({ key: item.id, pos: item.inputPos, hopper: st.inputStock, st, count: st.inputStock[mapKey] || 0, name: `${item.icon} Hopper` });
             }
             if (candidates.length === 0) { w.inventory = []; continue; }
             candidates.sort((a, b) => a.count - b.count);
-            const chosen = candidates.find((c) => !reservedHoppers.has(`${c.key}_${heldId}`)) || candidates[0];
-            reservedHoppers.add(`${chosen.key}_${heldId}`);
+            const chosen = candidates.find((c) => !reservedHoppers.has(`${c.key}_${mapKey}`)) || candidates[0];
+            reservedHoppers.add(`${chosen.key}_${mapKey}`);
             w.taskLabel = `📥 Feed ${chosen.name}`;
             const dx = chosen.pos.x - w.x;
             const dz = chosen.pos.z - w.z;
@@ -3256,7 +3096,10 @@
               w.x += (dx / dist) * speed * dt;
               w.z += (dz / dist) * speed * dt;
             } else {
-              chosen.hopper[heldId] = (chosen.hopper[heldId] || 0) + w.inventory.length;
+              const mult = (heldId === 'raw_sand' || heldId === 'raw_titanium') ? 2 : 1;
+              chosen.hopper[mapKey] = (chosen.hopper[mapKey] || 0) + w.inventory.length * mult;
+              if (heldId === 'raw_sand') chosen.st.uniqueSandBoost = true;
+              if (heldId === 'raw_titanium') chosen.st.uniqueTitaniumBoost = true;
               w.inventory = [];
             }
           }
@@ -3343,41 +3186,35 @@
             }
           }
         }
-        // 5. 🧱 AMMO & GATE TECH (Pick Ammo & Supply Gates)
+        // 5. 🔧 FACTORY OVERCLOCK TECH (Boosts unlocked Factory Stations on the Shop floor)
         else if (w.role === 'ammo') {
-          w.taskLabel = `🧱 Supply Ammo`;
-          const tx = (this.ammoPress.level || 0) > 0 ? AP.padX : -1500;
-          const tz = (this.ammoPress.level || 0) > 0 ? AP.padZ : 1200;
+          const unlockedItems = CFG.ITEMS.filter((it) => this.unlocked[it.id]);
+          const targetLane = unlockedItems[slotIdx % Math.max(1, unlockedItems.length)] || CFG.ITEMS[0];
+          w.taskLabel = `🔧 Overclock ${targetLane.icon}`;
+          const tx = targetLane.stationPos.x;
+          const tz = targetLane.stationPos.z + 64;
           const dx = tx - w.x;
           const dz = tz - w.z;
           const dist = Math.hypot(dx, dz);
-          if (dist > 32) {
+          if (dist > 28) {
             w.x += (dx / dist) * speed * dt;
             w.z += (dz / dist) * speed * dt;
           } else {
-            w.assistTimer = (w.assistTimer || 0) + dt;
-            if (w.assistTimer >= 2.5) {
-              w.assistTimer = 0;
-              this.ammoPress.inputStock.raw_iron = Math.min(30, (this.ammoPress.inputStock.raw_iron || 0) + 1);
-              for (const g of CFG.GATES) {
-                const gs = this.gates[g.id];
-                if (gs) {
-                  gs.ammo = Math.min(gs.maxAmmo || g.maxAmmo, gs.ammo + 2);
-                  if (!gs.broken && gs.hp < gs.maxHp) gs.hp = Math.min(gs.maxHp, gs.hp + 25);
-                }
-              }
-            }
+            const st = this.stations[targetLane.id];
+            if (st) st.progress += dt * 0.35;
           }
         }
-        // 6. ⚔️ WAR RESERVE (Stands near Bridge Barracks & deploys in War Games)
+        // 6. ⚓ PORT DOCKMASTER (Works at Left-Hand Port to speed up Ship Unloading!)
         else if (w.role === 'war') {
-          w.taskLabel = `⚔️ War Reserve`;
-          const tx = -950 + (slotIdx % 4) * 55;
-          const tz = -85;
+          const ports = CFG.PORT_LOGISTICS.portPositions || [];
+          const pCfg = ports[slotIdx % Math.max(1, ports.length)] || { x: -1820, z: 210 };
+          w.taskLabel = `⚓ Dockmaster #${(slotIdx % 4) + 1}`;
+          const tx = pCfg.x + 95;
+          const tz = pCfg.z;
           const dx = tx - w.x;
           const dz = tz - w.z;
           const dist = Math.hypot(dx, dz);
-          if (dist > 22) {
+          if (dist > 24) {
             w.x += (dx / dist) * speed * dt;
             w.z += (dz / dist) * speed * dt;
           }
@@ -4592,6 +4429,16 @@
         const c = this.player.inventory.filter((it) => it.id === 'raw_e710').length;
         rawE710Badge.textContent = `🛢️ ${c}`;
       }
+      const rawSandBadge = document.getElementById('inv-badge-raw_sand');
+      if (rawSandBadge) {
+        const c = this.player.inventory.filter((it) => it.id === 'raw_sand').length;
+        rawSandBadge.textContent = `🏜️ ${c}`;
+      }
+      const rawTiBadge = document.getElementById('inv-badge-raw_titanium');
+      if (rawTiBadge) {
+        const c = this.player.inventory.filter((it) => it.id === 'raw_titanium').length;
+        rawTiBadge.textContent = `🔩 ${c}`;
+      }
 
       for (const item of CFG.ITEMS) {
         const badge = document.getElementById(`inv-badge-${item.id}`);
@@ -5270,19 +5117,21 @@
 
 
     // ========================================================================
-    // NEW IN v0.0.12: LEFT-HAND TRANSPORT SHIP & PORT LOGISTICS ENGINE
+    // NEW IN v0.0.13: LEFT-HAND TRANSPORT SHIP & 4-RESOURCE PORT LOGISTICS ENGINE
     // - Fixed 1 Oil/s + 1 Iron/s at start from HallTown Orbital Supply.
-    // - Transport Ships fly to Captured Space Map Planets, load mined Ore,
-    //   dock at Left-Hand Ports (#1-#4), and unload into Port Storage Silos!
+    // - Transport Ships fly to Captured Space Map Planets (10 Bug Lv.1-10 + 10 Bot Lv.1-10),
+    //   load Main Ores (🛢️ Oil / ⛏️ Iron) + Faction Unique Ores (🏜️ Bug Bio-Sand / 🔩 Bot Titanium),
+    //   dock at Left-Hand Ports (#1-#4), and unload into the 4 Port Storage Silos!
     // ========================================================================
     getPortStorageLimit() {
       const lvl = this.portLogistics?.storageLimitLvl || 1;
-      return 25 + (lvl - 1) * 22;
+      return 25 + (lvl - 1) * 25;
     }
 
     getPortUnloadRate() {
       const lvl = this.portLogistics?.unloadSpeedLvl || 1;
-      return 1.6 + (lvl - 1) * 0.95;
+      const dockmasters = this.workerJobs?.war || 0;
+      return (1.6 + (lvl - 1) * 0.95) * (1 + dockmasters * 0.20);
     }
 
     getShipCargoCap() {
@@ -5325,16 +5174,22 @@
           unloadProgress: 0,
           cargoOil: 3,
           cargoIron: 3,
+          cargoSand: 1,
+          cargoTitanium: 0,
           sourcePlanetId: 'planet_halltown',
-          sourceName: 'HallTown Fixed 1/s'
+          sourceName: 'HallTown + Heeth'
         });
       }
       if (this.transportShips.length > count) {
         this.transportShips.length = count;
       }
       const maxS = this.getPortStorageLimit();
-      if (this.rawExtractors?.raw_e710) this.rawExtractors.raw_e710.maxBuffer = maxS;
-      if (this.rawExtractors?.raw_iron) this.rawExtractors.raw_iron.maxBuffer = maxS;
+      for (const raw of CFG.RAW_EXTRACTORS) {
+        if (!this.rawExtractors[raw.id]) {
+          this.rawExtractors[raw.id] = { level: 1, speedLvl: 1, yieldLvl: 1, bufferLvl: 1, stock: raw.id === 'raw_titanium' ? 0 : 3, maxBuffer: maxS, progress: 0, cycleTime: 1.0 };
+        }
+        this.rawExtractors[raw.id].maxBuffer = maxS;
+      }
     }
 
     buyTransportShip() {
@@ -5394,21 +5249,22 @@
     updatePortAndSpaceLogistics(dt) {
       const PL = CFG.PORT_LOGISTICS;
       const maxPortStorage = this.getPortStorageLimit();
-      if (this.rawExtractors.raw_e710) this.rawExtractors.raw_e710.maxBuffer = maxPortStorage;
-      if (this.rawExtractors.raw_iron) this.rawExtractors.raw_iron.maxBuffer = maxPortStorage;
+      for (const raw of CFG.RAW_EXTRACTORS) {
+        if (this.rawExtractors[raw.id]) this.rawExtractors[raw.id].maxBuffer = maxPortStorage;
+      }
 
       // 1. Fixed Starter Providing Speed: Strictly 1 Oil/s and 1 Iron/s at HallTown Orbit!
       this.fixedStartSupplyBuffer = this.fixedStartSupplyBuffer || { oil: 2, iron: 2 };
       this.fixedStartSupplyBuffer.oil = Math.min(40, (this.fixedStartSupplyBuffer.oil || 0) + (PL?.fixedStartOilPerSec || 1.0) * dt);
       this.fixedStartSupplyBuffer.iron = Math.min(40, (this.fixedStartSupplyBuffer.iron || 0) + (PL?.fixedStartIronPerSec || 1.0) * dt);
 
-      // 2. Update Space Map Planet Mining & Travian Enemy Army Buildup
+      // 2. Update Space Map Planet Mining (Main + Unique Ores) & Travian Enemy Army Buildup
       this.updateSpaceMapAndTravianWars(dt);
 
       // 3. Update Left-Hand Transport Ships (Inbound -> Docked Unloading -> Outbound Pickup)
       const unloadRate = this.getPortUnloadRate();
       const cargoCap = this.getShipCargoCap();
-      const shipSpeed = 0.42 + ((this.portLogistics?.shipCargoLvl || 1) - 1) * 0.06;
+      const shipSpeed = 0.44 + ((this.portLogistics?.shipCargoLvl || 1) - 1) * 0.06;
       const portsUnlocked = Math.max(1, this.portLogistics?.portsUnlocked || 1);
 
       this.initTransportShips();
@@ -5424,26 +5280,36 @@
             sh.unloadProgress = 0;
           }
         } else if (sh.state === 'docked') {
-          const totalCargo = Math.max(0.1, (sh.cargoOil || 0) + (sh.cargoIron || 0));
+          const totalCargo = Math.max(0.1, (sh.cargoOil || 0) + (sh.cargoIron || 0) + (sh.cargoSand || 0) + (sh.cargoTitanium || 0));
           const unloadStep = unloadRate * dt;
           sh.unloadProgress = Math.min(1, (sh.unloadProgress || 0) + unloadStep / Math.max(1, totalCargo * 0.5));
 
           if (sh.unloadProgress >= 1) {
             const addOil = Math.round(sh.cargoOil || 0);
             const addIron = Math.round(sh.cargoIron || 0);
+            const addSand = Math.round(sh.cargoSand || 0);
+            const addTi = Math.round(sh.cargoTitanium || 0);
             if (this.rawExtractors.raw_e710 && addOil > 0) {
               this.rawExtractors.raw_e710.stock = Math.min(maxPortStorage, (this.rawExtractors.raw_e710.stock || 0) + addOil);
             }
             if (this.rawExtractors.raw_iron && addIron > 0) {
               this.rawExtractors.raw_iron.stock = Math.min(maxPortStorage, (this.rawExtractors.raw_iron.stock || 0) + addIron);
             }
+            if (this.rawExtractors.raw_sand && addSand > 0) {
+              this.rawExtractors.raw_sand.stock = Math.min(maxPortStorage, (this.rawExtractors.raw_sand.stock || 0) + addSand);
+            }
+            if (this.rawExtractors.raw_titanium && addTi > 0) {
+              this.rawExtractors.raw_titanium.stock = Math.min(maxPortStorage, (this.rawExtractors.raw_titanium.stock || 0) + addTi);
+            }
             sh.cargoOil = 0;
             sh.cargoIron = 0;
+            sh.cargoSand = 0;
+            sh.cargoTitanium = 0;
             sh.state = 'outbound';
             sh.progress = 0;
           }
         } else {
-          // Outbound to Space Map planets to pick up mined Ore + Fixed 1 Oil/1 Iron starter supply
+          // Outbound to Space Map planets to pick up mined Main + Unique Ore + Fixed 1 Oil/1 Iron starter supply
           sh.progress = (sh.progress || 0) + shipSpeed * 1.15 * dt;
           if (sh.progress >= 1) {
             sh.progress = 0;
@@ -5451,11 +5317,13 @@
 
             let pickedOil = 0;
             let pickedIron = 0;
+            let pickedSand = 0;
+            let pickedTi = 0;
             let pickedName = 'HallTown (1🛢️/1⛏️)';
 
             // First pull from fixed starter supply (1 per Oil & Iron)
-            const takeStartOil = Math.min(cargoCap * 0.5, Math.floor(this.fixedStartSupplyBuffer.oil || 0));
-            const takeStartIron = Math.min(cargoCap * 0.5, Math.floor(this.fixedStartSupplyBuffer.iron || 0));
+            const takeStartOil = Math.min(Math.ceil(cargoCap * 0.35), Math.floor(this.fixedStartSupplyBuffer.oil || 0));
+            const takeStartIron = Math.min(Math.ceil(cargoCap * 0.35), Math.floor(this.fixedStartSupplyBuffer.iron || 0));
             if (takeStartOil >= 1 || takeStartIron >= 1) {
               pickedOil += takeStartOil;
               pickedIron += takeStartIron;
@@ -5463,20 +5331,26 @@
               this.fixedStartSupplyBuffer.iron -= takeStartIron;
             }
 
-            // Next pull from our Captured Planets' Storage Silos!
+            // Next pull from our Captured Planets' Storage Silos (Main + Unique Ores)!
             const ownedPlanets = (CFG.SPACE_MAP_PLANETS || []).filter((p) => !p.isHome && this.spacePlanets?.[p.id]?.owned);
             if (ownedPlanets.length > 0) {
               const targetP = ownedPlanets[(i + Math.floor(this.playTimeSeconds)) % ownedPlanets.length];
               const ps = this.spacePlanets[targetP.id];
               if (ps) {
-                const remCap = Math.max(1, cargoCap - (pickedOil + pickedIron));
+                const remCap = Math.max(2, cargoCap - (pickedOil + pickedIron));
                 const pOil = Math.min(remCap, Math.floor(ps.storedOil || 0));
                 const pIron = Math.min(Math.max(0, remCap - pOil), Math.floor(ps.storedIron || 0));
-                if (pOil > 0 || pIron > 0) {
-                  ps.storedOil -= pOil;
-                  ps.storedIron -= pIron;
+                const pSand = Math.min(Math.ceil(cargoCap * 0.4), Math.floor(ps.storedSand || 0));
+                const pTi = Math.min(Math.ceil(cargoCap * 0.4), Math.floor(ps.storedTitanium || 0));
+                if (pOil > 0 || pIron > 0 || pSand > 0 || pTi > 0) {
+                  ps.storedOil = Math.max(0, (ps.storedOil || 0) - pOil);
+                  ps.storedIron = Math.max(0, (ps.storedIron || 0) - pIron);
+                  ps.storedSand = Math.max(0, (ps.storedSand || 0) - pSand);
+                  ps.storedTitanium = Math.max(0, (ps.storedTitanium || 0) - pTi);
                   pickedOil += pOil;
                   pickedIron += pIron;
+                  pickedSand += pSand;
+                  pickedTi += pTi;
                   pickedName = targetP.name.split(' ')[0];
                 }
               }
@@ -5489,55 +5363,34 @@
             }
             sh.cargoOil = pickedOil;
             sh.cargoIron = pickedIron;
+            sh.cargoSand = pickedSand;
+            sh.cargoTitanium = pickedTi;
             sh.sourceName = pickedName;
-          }
-        }
-      }
-
-      // 4. Keep Munitions Ammo Press crafting 🧱 Ammo from ⛏️ Iron
-      if ((this.ammoPress.level || 0) >= 1) {
-        const apIn = this.ammoPress.inputStock;
-        const reqIron = CFG.AMMO_PRESS.recipe.raw_iron || 1;
-        if (this.ammoPress.stock < this.ammoPress.maxBuffer && (apIn.raw_iron || 0) >= reqIron) {
-          this.ammoPress.progress += dt;
-          if (this.ammoPress.progress >= this.ammoPress.cycleTime) {
-            this.ammoPress.progress = 0;
-            const saveChance = Math.min(0.50, (this.foreverSkills.perm_raw_speed || 0) * 0.025);
-            if (Math.random() > saveChance) {
-              apIn.raw_iron = Math.max(0, apIn.raw_iron - reqIron);
-            }
-            const outBatch = (CFG.AMMO_PRESS.outputBatch || 3) + ((this.ammoPress.yieldLvl || 1) - 1);
-            this.ammoPress.stock = Math.min(this.ammoPress.maxBuffer, this.ammoPress.stock + outBatch);
           }
         }
       }
     }
 
+    // ========================================================================
+    // STEP-BY-STEP SUB-PAGE PORT LOGISTICS MODAL (`overview` ➔ `facilities` | `fleet`)
+    // ========================================================================
     renderPortLogisticsModal() {
       const sumEl = document.getElementById('port-logistics-summary');
+      const upgTitle = document.getElementById('port-upgrades-title');
       const upgGrid = document.getElementById('port-upgrades-grid');
+      const shipTitle = document.getElementById('port-ships-title');
       const shipGrid = document.getElementById('transport-ships-list');
       if (!sumEl || !upgGrid || !shipGrid) return;
 
+      this.portModalPage = this.portModalPage || 'overview';
+      const page = this.portModalPage;
       const PL = CFG.PORT_LOGISTICS;
       const p = this.portLogistics;
-      const oilStock = this.rawExtractors?.raw_e710?.stock || 0;
-      const ironStock = this.rawExtractors?.raw_iron?.stock || 0;
+      const oilStock = Math.floor(this.rawExtractors?.raw_e710?.stock || 0);
+      const ironStock = Math.floor(this.rawExtractors?.raw_iron?.stock || 0);
+      const sandStock = Math.floor(this.rawExtractors?.raw_sand?.stock || 0);
+      const tiStock = Math.floor(this.rawExtractors?.raw_titanium?.stock || 0);
       const maxS = this.getPortStorageLimit();
-
-      sumEl.innerHTML = `
-        <div>
-          <div style="font-family:var(--font-display);font-weight:900;color:#fde047;font-size:0.94rem;">
-            🛸 LEFT-HAND PORT FLEET: ${p.shipsCount}/${PL.maxShips} SHIPS · ⚓ DOCKING PORTS: ${p.portsUnlocked}/${PL.maxPorts}
-          </div>
-          <div style="font-size:0.78rem;color:#e2e8f0;margin-top:2px;">
-            Fixed Starter Supply: <strong>1.0 🛢️ Oil/s + 1.0 ⛏️ Iron/s</strong> · Port Storage: <strong>🛢️ ${oilStock}/${maxS} | ⛏️ ${ironStock}/${maxS}</strong> · Unload Speed: <strong>${this.getPortUnloadRate().toFixed(1)}/s</strong>
-          </div>
-        </div>
-        <div style="font-family:var(--font-display);font-weight:900;color:#4ade80;font-size:0.9rem;">
-          💵 Wallet: $${Math.floor(this.cash)}
-        </div>
-      `;
 
       const buyShipCost = this.getBuyShipCost();
       const addPortCost = this.getAddPortCost();
@@ -5545,6 +5398,7 @@
       const storageCost = this.getPortUpgradeCost('storageLimitLvl');
       const cargoCost = this.getPortUpgradeCost('shipCargoLvl');
 
+      // Always populate DOM grids for verification, then show/hide according to current Sub-Page!
       upgGrid.innerHTML = `
         <div class="upgrade-card">
           <div class="upg-top"><span class="upg-title">🛸 Buy Transport Ship (${p.shipsCount}/${PL.maxShips})</span></div>
@@ -5569,7 +5423,7 @@
         </div>
         <div class="upgrade-card">
           <div class="upg-top"><span class="upg-title">📦 Port Storage Limit (Lv.${p.storageLimitLvl}/10)</span></div>
-          <p class="upg-desc">Increases HallTown Port Silo capacity (${maxS} ➔ ${maxS + 22} max 🛢️ Oil & ⛏️ Iron).</p>
+          <p class="upg-desc">Increases HallTown Port Silo capacity (${maxS} ➔ ${maxS + 25} max for all 4 Port Silos: 🛢️/⛏️/🏜️/🔩).</p>
           <button class="buy-btn" id="btn-port-upg-storage" ${p.storageLimitLvl >= 10 || this.cash < storageCost ? 'disabled' : ''}>
             ${p.storageLimitLvl >= 10 ? 'MAX Lv.10' : `⬆️ Upgrade Lv.${p.storageLimitLvl + 1} ($${storageCost})`}
           </button>
@@ -5592,22 +5446,145 @@
       shipGrid.innerHTML = (this.transportShips || []).map((sh, idx) => `
         <div class="upgrade-card" style="padding:8px 10px;">
           <div style="font-family:var(--font-display);font-weight:800;color:#38bdf8;font-size:0.8rem;">
-            🛸 Transport Ship #${idx + 1} (Assigned to Port #${(sh.portIndex || 0) + 1})
+            🛸 Transport Ship #${idx + 1} (Docking Port #${(sh.portIndex || 0) + 1})
           </div>
           <div style="font-size:0.75rem;color:#e2e8f0;margin-top:3px;">
-            Route: <strong>${sh.sourceName || 'Orbit'} ➔ HallTown</strong> · Status: <strong style="color:#fde047;">${sh.state.toUpperCase()}</strong> · Cargo: 🛢️${Math.ceil(sh.cargoOil || 0)} ⛏️${Math.ceil(sh.cargoIron || 0)}
+            Route: <strong>${sh.sourceName || 'Orbit'} ➔ HallTown</strong> · Status: <strong style="color:#fde047;">${sh.state.toUpperCase()}</strong> · Cargo: 🛢️${Math.ceil(sh.cargoOil || 0)} ⛏️${Math.ceil(sh.cargoIron || 0)} 🏜️${Math.ceil(sh.cargoSand || 0)} 🔩${Math.ceil(sh.cargoTitanium || 0)}
           </div>
         </div>
       `).join('');
+
+      if (page === 'overview') {
+        if (upgTitle) upgTitle.style.display = 'none';
+        upgGrid.style.display = 'none';
+        if (shipTitle) shipTitle.style.display = 'none';
+        shipGrid.style.display = 'none';
+
+        sumEl.innerHTML = `
+          <div style="width:100%;">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+              <div style="font-family:var(--font-display);font-weight:900;color:#fde047;font-size:0.96rem;">
+                🛸 LEFT-HAND ORBITAL PORT — 4 CARGO SILOS (ALL SHOP RESOURCES COME FROM HERE!)
+              </div>
+              <div style="font-family:var(--font-display);font-weight:900;color:#4ade80;font-size:0.9rem;">
+                💵 Wallet: $${Math.floor(this.cash)}
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-bottom:14px;">
+              <div style="background:rgba(168,85,247,0.15);border:1.5px solid #a855f7;border-radius:10px;padding:10px;">
+                <div style="font-family:var(--font-display);font-weight:900;color:#e9d5ff;font-size:0.82rem;">🛢️ E-710 BIO-OIL SILO</div>
+                <div style="font-size:1.1rem;font-weight:900;color:#fff;margin:4px 0;">${oilStock} / ${maxS}</div>
+                <div style="font-size:0.72rem;color:#cbd5e1;">Fixed 1/s + 🐛 Bug Planet Main Ore</div>
+              </div>
+              <div style="background:rgba(56,189,248,0.15);border:1.5px solid #38bdf8;border-radius:10px;padding:10px;">
+                <div style="font-family:var(--font-display);font-weight:900;color:#bae6fd;font-size:0.82rem;">⛏️ SUPER IRON SILO</div>
+                <div style="font-size:1.1rem;font-weight:900;color:#fff;margin:4px 0;">${ironStock} / ${maxS}</div>
+                <div style="font-size:0.72rem;color:#cbd5e1;">Fixed 1/s + 🤖 Autobot Planet Main Ore</div>
+              </div>
+              <div style="background:rgba(234,179,8,0.15);border:1.5px solid #eab308;border-radius:10px;padding:10px;">
+                <div style="font-family:var(--font-display);font-weight:900;color:#fef08a;font-size:0.82rem;">🏜️ BUG BIO-SAND SILO</div>
+                <div style="font-size:1.1rem;font-weight:900;color:#fff;margin:4px 0;">${sandStock} / ${maxS}</div>
+                <div style="font-size:0.72rem;color:#cbd5e1;">🐛 Bug Unique Ore (2x🛢️ + 25% Sell Value!)</div>
+              </div>
+              <div style="background:rgba(236,72,153,0.15);border:1.5px solid #ec4899;border-radius:10px;padding:10px;">
+                <div style="font-family:var(--font-display);font-weight:900;color:#fbcfe8;font-size:0.82rem;">🔩 BOT TITANIUM SILO</div>
+                <div style="font-size:1.1rem;font-weight:900;color:#fff;margin:4px 0;">${tiStock} / ${maxS}</div>
+                <div style="font-size:0.72rem;color:#cbd5e1;">🤖 Bot Unique Ore (2x⛏️ + 25% Sell Value!)</div>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;">
+              <button class="buy-btn" id="btn-port-goto-facilities" style="padding:12px;font-size:0.86rem;">
+                ⚓ Next Page: Port Docks, Unload Speed &amp; Storage Limit (${p.portsUnlocked}/${PL.maxPorts} Ports) ➔
+              </button>
+              <button class="buy-btn medal-btn" id="btn-port-goto-fleet" style="padding:12px;font-size:0.86rem;">
+                🛸 Next Page: Transport Ship Fleet &amp; Cargo Routes (${p.shipsCount}/${PL.maxShips} Ships) ➔
+              </button>
+            </div>
+          </div>
+        `;
+        document.getElementById('btn-port-goto-facilities')?.addEventListener('click', () => {
+          this.portModalPage = 'facilities';
+          this.renderPortLogisticsModal();
+        });
+        document.getElementById('btn-port-goto-fleet')?.addEventListener('click', () => {
+          this.portModalPage = 'fleet';
+          this.renderPortLogisticsModal();
+        });
+      } else if (page === 'facilities') {
+        if (upgTitle) upgTitle.style.display = 'block';
+        upgGrid.style.display = 'grid';
+        if (shipTitle) shipTitle.style.display = 'none';
+        shipGrid.style.display = 'none';
+
+        sumEl.innerHTML = `
+          <div style="display:flex;align-items:center;justify-content:space-between;width:100%;flex-wrap:wrap;gap:8px;">
+            <button class="hud-btn" id="btn-port-back-overview" style="border-color:#facc15;color:#fde047;padding:7px 14px;">
+              ⬅️ Back to Port Silos Overview
+            </button>
+            <div style="font-family:var(--font-display);font-weight:900;color:#fde047;font-size:0.9rem;">
+              ⚓ PORT FACILITIES &amp; UNLOAD UPGRADES · 💵 $${Math.floor(this.cash)}
+            </div>
+            <button class="hud-btn" id="btn-port-switch-fleet" style="border-color:#38bdf8;color:#7dd3fc;">
+              🛸 Go to Ship Fleet Page ➔
+            </button>
+          </div>
+        `;
+        document.getElementById('btn-port-back-overview')?.addEventListener('click', () => {
+          this.portModalPage = 'overview';
+          this.renderPortLogisticsModal();
+        });
+        document.getElementById('btn-port-switch-fleet')?.addEventListener('click', () => {
+          this.portModalPage = 'fleet';
+          this.renderPortLogisticsModal();
+        });
+      } else {
+        if (upgTitle) upgTitle.style.display = 'none';
+        upgGrid.style.display = 'none';
+        if (shipTitle) shipTitle.style.display = 'block';
+        shipGrid.style.display = 'grid';
+
+        sumEl.innerHTML = `
+          <div style="display:flex;align-items:center;justify-content:space-between;width:100%;flex-wrap:wrap;gap:8px;">
+            <button class="hud-btn" id="btn-port-back-overview" style="border-color:#facc15;color:#fde047;padding:7px 14px;">
+              ⬅️ Back to Port Silos Overview
+            </button>
+            <div style="font-family:var(--font-display);font-weight:900;color:#4ade80;font-size:0.9rem;">
+              🛸 ACTIVE TRANSPORT SHIP FLEET (${p.shipsCount}/${PL.maxShips} SHIPS) · 💵 $${Math.floor(this.cash)}
+            </div>
+            <div style="display:flex;gap:6px;">
+              <button class="buy-btn" id="btn-port-fleet-buy" ${p.shipsCount >= PL.maxShips || this.cash < buyShipCost ? 'disabled' : ''}>
+                ${p.shipsCount >= PL.maxShips ? 'MAX SHIPS' : `➕ Buy Ship ($${buyShipCost})`}
+              </button>
+              <button class="hud-btn" id="btn-port-switch-fac" style="border-color:#38bdf8;color:#7dd3fc;">
+                ⚓ Port Upgrades ➔
+              </button>
+            </div>
+          </div>
+        `;
+        document.getElementById('btn-port-back-overview')?.addEventListener('click', () => {
+          this.portModalPage = 'overview';
+          this.renderPortLogisticsModal();
+        });
+        document.getElementById('btn-port-fleet-buy')?.addEventListener('click', () => this.buyTransportShip());
+        document.getElementById('btn-port-switch-fac')?.addEventListener('click', () => {
+          this.portModalPage = 'facilities';
+          this.renderPortLogisticsModal();
+        });
+      }
     }
 
     // ========================================================================
-    // NEW IN v0.0.12: GALACTIC SPACE MAP, PLANET MINING & TRAVIAN DEFENSE ENGINE
-    // - Single enemy faction per planet ('bugs' OR 'autobots').
-    // - Upgrade Mine & Storage on captured planets; Transport Ships haul the ore.
-    // - Enemy planets store army based on Difficulty (1-10); when >= threshold,
-    //   launches Travian-style auto-calculated attack on our closest linked planet!
-    // - Send Troops to Attack reduces enemy army (cannot capture; capture = 10-wave run).
+    // NEW IN v0.0.13: 21-PLANET GALACTIC SPACE MAP (10 BUG Lv.1-10 + 10 BOT Lv.1-10)
+    // - Each faction has its own Main Resource AND Unique Resource:
+    //   * 🐛 Terminid Bugs (Lv.1-10): Main = 🛢️ E-710 Oil | Unique = 🏜️ Chitin Bio-Sand
+    //   * 🤖 Automaton Bots (Lv.1-10): Main = ⛏️ Super Iron | Unique = 🔩 Cyber-Titanium
+    // - Clean Step-by-Step Multi-Page UI:
+    //   * Page 1 ('map'): Shows ONLY the big 21-Planet Space Map!
+    //   * Page 2 ('planet'): Click a planet -> shows what Ores it has + buttons for
+    //                        '⛏️ Economy Page' OR '🛡️ Defense Page' (if captured),
+    //                        or '⚔️ Troop Raid' / '🚩 10-Wave Capture' (if enemy).
+    //   * Page 3A ('econ'): Ores, Drill Upgrade, Storage Upgrade & Transport Ship status.
+    //   * Page 3B ('defense'): Travian Wall (breaks first!), Turrets & Hire Garrison Troops.
     // ========================================================================
     initSpaceMapState() {
       if (!this.spacePlanets) this.spacePlanets = {};
@@ -5618,7 +5595,9 @@
             mineLvl: 1,
             storageLvl: 1,
             storedOil: p.ownedAtStart ? 6 : 0,
-            storedIron: p.ownedAtStart ? 6 : 0,
+            storedIron: p.ownedAtStart ? 4 : 0,
+            storedSand: (p.ownedAtStart && p.faction === 'bugs') ? 3 : 0,
+            storedTitanium: (p.ownedAtStart && p.faction === 'autobots') ? 3 : 0,
             buildings: {
               def_wall: p.ownedAtStart ? 1 : 0,
               def_flak: 0,
@@ -5633,11 +5612,15 @@
             enemyArmy: p.ownedAtStart ? 0 : Math.round(25 + p.difficulty * 18),
             enemyThreshold: Math.round(85 + p.difficulty * 55)
           };
+        } else {
+          if (typeof this.spacePlanets[p.id].storedSand !== 'number') this.spacePlanets[p.id].storedSand = 0;
+          if (typeof this.spacePlanets[p.id].storedTitanium !== 'number') this.spacePlanets[p.id].storedTitanium = 0;
         }
       }
       this.selectedSpacePlanetId = this.selectedSpacePlanetId || 'sp_heeth';
+      this.spaceMapPage = this.spaceMapPage || 'map';
       this.travianBattleLogs = this.travianBattleLogs || [
-        '📡 [System] Galactic Space Map initialized. Heeth (Lv.1 Bugs) is under Super Earth control. Enemy planets are accumulating armies!'
+        '📡 [System] 21-Planet Galactic Space Map initialized (10 🐛 Bug Lv.1–10 + 10 🤖 Autobot Lv.1–10). Heeth (Bug Lv.1) is mining 🛢️ Oil & 🏜️ Bio-Sand!'
       ];
       this.galacticDayTimer = this.galacticDayTimer || 0;
     }
@@ -5717,19 +5700,23 @@
         }
       }
 
-      // 2. Mine Ores on Owned Planets & Accumulate Enemy Armies on Linked Enemy Planets
+      // 2. Mine Main & Unique Ores on Owned Planets & Accumulate Enemy Armies on Linked Enemy Planets
       for (const p of planets) {
         const ps = this.spacePlanets[p.id];
         if (!ps || p.isHome) continue;
 
         if (ps.owned) {
-          // Mine planet-specific ore into Planet Storage
           const cap = this.getPlanetStorageCap(p.id);
           const rate = this.getPlanetMineRate(p.id);
-          ps.storedOil = Math.min(cap, (ps.storedOil || 0) + rate * p.oilRatio * dt);
-          ps.storedIron = Math.min(cap, (ps.storedIron || 0) + rate * p.ironRatio * dt);
+          ps.storedOil = Math.min(cap, (ps.storedOil || 0) + rate * (p.oilRatio || 0) * dt);
+          ps.storedIron = Math.min(cap, (ps.storedIron || 0) + rate * (p.ironRatio || 0) * dt);
+          if (p.sandRatio > 0) {
+            ps.storedSand = Math.min(cap, (ps.storedSand || 0) + rate * p.sandRatio * dt);
+          }
+          if (p.titaniumRatio > 0) {
+            ps.storedTitanium = Math.min(cap, (ps.storedTitanium || 0) + rate * p.titaniumRatio * dt);
+          }
         } else if (this.isPlanetAdjacentToOwned(p.id)) {
-          // Enemy planet linked to our territory accumulates army based on Difficulty (1-10)
           const growth = (0.65 + p.difficulty * 0.48) * dt;
           ps.enemyArmy = (ps.enemyArmy || 0) + growth;
           if (ps.enemyArmy >= ps.enemyThreshold) {
@@ -5743,7 +5730,6 @@
       const atkState = this.spacePlanets[attackerCfg.id];
       if (!atkState) return;
 
-      // Find closest linked owned planet (prefer non-homeworld planets first; if only HallTown is linked, raid Heeth or HallTown buffer)
       const linkedOwned = (attackerCfg.links || [])
         .map((id) => (CFG.SPACE_MAP_PLANETS || []).find((p) => p.id === id))
         .filter((p) => p && this.spacePlanets[p.id]?.owned);
@@ -5761,7 +5747,6 @@
       const atkPower = Math.round(enemyTroops * (11 + attackerCfg.difficulty * 4.2));
       const defPower = Math.max(50, defStats.totalDef + (targetCfg.isHome ? 650 : 0));
 
-      // Reset attacker army after launching invasion
       atkState.enemyArmy = Math.round(atkState.enemyThreshold * 0.18);
 
       // PHASE 1: Break the Planetary Wall First! (Travian Wall Mechanics)
@@ -5805,7 +5790,7 @@
       if (!targetCfg.isHome && remainingTroops <= 0 && remBuildings <= 0 && atkPower > defPower) {
         defState.owned = false;
         defState.enemyArmy = Math.round(40 + targetCfg.difficulty * 25);
-        const logMsg = `💀 [PLANET LOST] ${attackerCfg.name} (Diff ${attackerCfg.difficulty} · ${enemyTroops} Army, PWR ${atkPower}) overwhelmed ${targetCfg.name} (DEF ${defPower})! Wall & Garrison wiped out — Planet Control LOST!`;
+        const logMsg = `💀 [PLANET LOST] ${attackerCfg.name} (Lv.${attackerCfg.difficulty} · ${enemyTroops} Army, PWR ${atkPower}) overwhelmed ${targetCfg.name} (DEF ${defPower})! Wall & Garrison wiped out — Planet Control LOST!`;
         this.travianBattleLogs.unshift(logMsg);
         this.spawnFloatingText(this.player.x, this.player.z - 55, `💀 LOST CONTROL OF ${targetCfg.name.toUpperCase()}!`, '#ef4444');
       } else {
@@ -5826,7 +5811,6 @@
       const enemyState = this.spacePlanets?.[enemyPlanetId];
       if (!enemyCfg || !enemyState || enemyState.owned) return;
 
-      // Gather strike force from all owned planets
       let totalRaidPower = 0;
       let totalTroopsSent = 0;
       for (const p of (CFG.SPACE_MAP_PLANETS || [])) {
@@ -5850,7 +5834,6 @@
       const oldArmy = Math.round(enemyState.enemyArmy || 0);
       enemyState.enemyArmy = Math.max(0, oldArmy - armyReduction);
 
-      // Small attrition (10-15%) on attacking troops
       for (const p of (CFG.SPACE_MAP_PLANETS || [])) {
         const ps = this.spacePlanets[p.id];
         if (!ps || !ps.owned) continue;
@@ -5873,120 +5856,325 @@
     renderSpaceMapModal() {
       this.initSpaceMapState();
       const bannerEl = document.getElementById('space-map-summary-banner');
+      const mapWrapEl = document.getElementById('space-map-canvas-wrap');
       const inspEl = document.getElementById('space-planet-inspector');
+      const logTitleEl = document.getElementById('travian-battle-log-title');
       const logEl = document.getElementById('travian-battle-log');
+      const gridTitleEl = document.getElementById('space-planets-grid-title');
       const gridEl = document.getElementById('space-planets-grid');
       if (!bannerEl || !inspEl || !gridEl) return;
 
+      this.spaceMapPage = this.spaceMapPage || 'map';
+      const page = this.spaceMapPage;
       const planets = CFG.SPACE_MAP_PLANETS || [];
       const ownedCount = planets.filter((p) => this.spacePlanets[p.id]?.owned).length;
-      let totalUpkeep = 0;
-      for (const p of planets) {
-        if (!p.isHome && this.spacePlanets[p.id]?.owned) {
-          totalUpkeep += this.getPlanetDefenseStats(p.id).dailyUpkeep;
-        }
-      }
-
-      bannerEl.innerHTML = `
-        <div>
-          <div style="font-family:var(--font-display);font-weight:900;color:#fde047;font-size:0.92rem;">
-            🪐 LIBERATED PLANETS: ${ownedCount}/${planets.length} · 🛸 TRANSPORT SHIPS: ${this.portLogistics.shipsCount} · 💵 DAILY GARRISON UPKEEP: $${totalUpkeep}/day
-          </div>
-          <div style="font-size:0.76rem;color:#e2e8f0;margin-top:2px;">
-            Each planet has <strong>1 Enemy Faction (🐛 Bugs OR 🤖 Autobots)</strong> &amp; specific Ores. Enemy planets store armies and attack our closest linked planet when full!
-          </div>
-        </div>
-        <div style="font-family:var(--font-display);font-weight:900;color:#4ade80;font-size:0.88rem;">
-          💵 $${Math.floor(this.cash)} | 🟢${this.samples.common} 🟠${this.samples.rare} 🟣${this.samples.superRare}
-        </div>
-      `;
-
-      this.drawSpaceMapCanvas();
-
-      // Render Selected Planet Inspector
       const selCfg = planets.find((p) => p.id === this.selectedSpacePlanetId) || planets[1];
       const selState = this.spacePlanets[selCfg.id];
       const isOwned = !!selState.owned;
       const isAdj = this.isPlanetAdjacentToOwned(selCfg.id);
       const defStats = this.getPlanetDefenseStats(selCfg.id);
 
-      if (selCfg.isHome) {
-        inspEl.innerHTML = `
-          <div style="font-family:var(--font-display);font-weight:900;color:#fde047;font-size:0.95rem;">
-            🛸 ${selCfg.name} — SUPER EARTH ORBITAL HQ
+      // Always draw the 21-Planet Space Map Canvas
+      this.drawSpaceMapCanvas();
+
+      if (logEl) {
+        logEl.innerHTML = (this.travianBattleLogs || []).map((msg) => `<div style="margin-bottom:6px;border-bottom:1px solid rgba(148,163,184,0.18);padding-bottom:4px;">${msg}</div>`).join('');
+      }
+
+      // PAGE 1: ONLY THE BIG 21-PLANET SPACE MAP!
+      if (page === 'map') {
+        if (mapWrapEl) mapWrapEl.style.display = 'block';
+        inspEl.style.display = 'none';
+        if (logTitleEl) logTitleEl.style.display = 'none';
+        if (logEl) logEl.style.display = 'none';
+        if (gridTitleEl) gridTitleEl.style.display = 'none';
+        gridEl.style.display = 'none';
+
+        bannerEl.innerHTML = `
+          <div>
+            <div style="font-family:var(--font-display);font-weight:900;color:#fde047;font-size:0.92rem;">
+              🪐 GALACTIC SPACE MAP (ONLY MAP VIEW): ${ownedCount}/${planets.length} PLANETS LIBERATED
+            </div>
+            <div style="font-size:0.76rem;color:#e2e8f0;margin-top:2px;">
+              Left Wing: <strong>10 🐛 Bug Planets (Lv.1–10 · Main: 🛢️ Oil · Unique: 🏜️ Bio-Sand)</strong> | Right Wing: <strong>10 🤖 Autobot Planets (Lv.1–10 · Main: ⛏️ Iron · Unique: 🔩 Titanium)</strong>
+            </div>
           </div>
-          <p style="font-size:0.8rem;color:#cbd5e1;margin-top:4px;">${selCfg.desc}</p>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <span style="font-family:var(--font-display);font-weight:900;color:#4ade80;font-size:0.86rem;">💵 $${Math.floor(this.cash)}</span>
+            <button class="hud-btn" id="btn-sp-open-logs" style="border-color:#f97316;color:#fdba74;">
+              📜 Defense Battle Reports (${(this.travianBattleLogs || []).length}) ➔
+            </button>
+          </div>
         `;
-      } else if (isOwned) {
+        document.getElementById('btn-sp-open-logs')?.addEventListener('click', () => {
+          this.spaceMapPage = 'logs';
+          this.renderSpaceMapModal();
+        });
+        return;
+      }
+
+      // Hide the Space Map Canvas on Sub-Pages so only the current Sub-Page is shown!
+      if (mapWrapEl) mapWrapEl.style.display = 'none';
+      if (gridTitleEl) gridTitleEl.style.display = 'none';
+      gridEl.style.display = 'none';
+
+      // PAGE 3C: TRAVIAN DEFENSE BATTLE LOG PAGE
+      if (page === 'logs') {
+        inspEl.style.display = 'none';
+        if (logTitleEl) logTitleEl.style.display = 'block';
+        if (logEl) logEl.style.display = 'block';
+        bannerEl.innerHTML = `
+          <div style="display:flex;align-items:center;justify-content:space-between;width:100%;flex-wrap:wrap;gap:8px;">
+            <button class="hud-btn" id="btn-sp-back-map" style="border-color:#facc15;color:#fde047;padding:7px 14px;">
+              ⬅️ Back to Space Map
+            </button>
+            <div style="font-family:var(--font-display);font-weight:900;color:#f97316;font-size:0.92rem;">
+              📜 TRAVIAN-STYLE PLANETARY DEFENSE BATTLE REPORTS
+            </div>
+          </div>
+        `;
+        document.getElementById('btn-sp-back-map')?.addEventListener('click', () => {
+          this.spaceMapPage = 'map';
+          this.renderSpaceMapModal();
+        });
+        return;
+      }
+
+      if (logTitleEl) logTitleEl.style.display = 'none';
+      if (logEl) logEl.style.display = 'none';
+      inspEl.style.display = 'block';
+
+      // PAGE 2: PLANET OVERVIEW PAGE (Shows what Ores the planet has -> Next Page: Economy OR Defense!)
+      if (page === 'planet') {
+        bannerEl.innerHTML = `
+          <div style="display:flex;align-items:center;justify-content:space-between;width:100%;flex-wrap:wrap;gap:8px;">
+            <button class="hud-btn" id="btn-sp-back-map" style="border-color:#facc15;color:#fde047;padding:7px 14px;">
+              ⬅️ Back to Space Map
+            </button>
+            <div style="font-family:var(--font-display);font-weight:900;color:#fde047;font-size:0.92rem;">
+              🪐 PLANET OVERVIEW: ${selCfg.name.toUpperCase()} ${selCfg.isHome ? '(HQ)' : `(Lv.${selCfg.difficulty}/10)`}
+            </div>
+            <div style="font-family:var(--font-display);font-weight:900;color:#4ade80;font-size:0.86rem;">
+              💵 $${Math.floor(this.cash)}
+            </div>
+          </div>
+        `;
+        document.getElementById('btn-sp-back-map')?.addEventListener('click', () => {
+          this.spaceMapPage = 'map';
+          this.renderSpaceMapModal();
+        });
+
+        if (selCfg.isHome) {
+          inspEl.innerHTML = `
+            <div style="font-family:var(--font-display);font-weight:900;color:#fde047;font-size:1.05rem;margin-bottom:6px;">
+              🛸 ${selCfg.name} — SUPER EARTH ORBITAL HQ
+            </div>
+            <p style="font-size:0.84rem;color:#e2e8f0;margin-bottom:12px;">${selCfg.desc}</p>
+            <button class="buy-btn" id="btn-sp-hq-open-port" style="padding:10px 18px;font-size:0.86rem;">
+              🛸 Open Left-Hand Port &amp; Transport Fleet Logistics ➔
+            </button>
+          `;
+          document.getElementById('btn-sp-hq-open-port')?.addEventListener('click', () => {
+            document.getElementById('modal-space-map')?.classList.remove('open');
+            this.portModalPage = 'overview';
+            this.renderPortLogisticsModal();
+            document.getElementById('modal-port-logistics')?.classList.add('open');
+          });
+          return;
+        }
+
+        const maxCap = this.getPlanetStorageCap(selCfg.id);
+        const uniqueStored = selCfg.faction === 'bugs' ? Math.floor(selState.storedSand || 0) : Math.floor(selState.storedTitanium || 0);
+        const uniqueIcon = selCfg.uniqueOreIcon || (selCfg.faction === 'bugs' ? '🏜️' : '🔩');
+
+        if (isOwned) {
+          inspEl.innerHTML = `
+            <div style="margin-bottom:12px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+                <div style="font-family:var(--font-display);font-weight:900;color:#4ade80;font-size:1.02rem;">
+                  🚩 CAPTURED PLANET: ${selCfg.name} (${selCfg.zhName})
+                </div>
+                <span class="version-pill" style="border-color:#4ade80;color:#86efac;">${selCfg.factionLabel} · Lv.${selCfg.difficulty}/10</span>
+              </div>
+              <p style="font-size:0.8rem;color:#cbd5e1;margin-top:4px;">${selCfg.desc}</p>
+            </div>
+
+            <!-- What Ores This Planet Has -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-bottom:14px;">
+              <div style="background:rgba(30,41,59,0.9);border:1.5px solid ${selCfg.color};border-radius:10px;padding:10px;">
+                <div style="font-family:var(--font-display);font-weight:900;color:#fde047;font-size:0.8rem;">⛏️ MAIN PLANET RESOURCE</div>
+                <div style="font-size:0.95rem;font-weight:900;color:#fff;margin:4px 0;">${selCfg.mainOreName || selCfg.oreName}</div>
+                <div style="font-size:0.75rem;color:#cbd5e1;">Stored on Planet: 🛢️ ${Math.floor(selState.storedOil || 0)}/${maxCap} · ⛏️ ${Math.floor(selState.storedIron || 0)}/${maxCap}</div>
+              </div>
+              <div style="background:rgba(30,41,59,0.9);border:1.5px solid #facc15;border-radius:10px;padding:10px;">
+                <div style="font-family:var(--font-display);font-weight:900;color:#fde047;font-size:0.8rem;">✨ FACTION UNIQUE RESOURCE</div>
+                <div style="font-size:0.95rem;font-weight:900;color:#fef08a;margin:4px 0;">${selCfg.uniqueOreName || 'Unique Alloy'}</div>
+                <div style="font-size:0.75rem;color:#cbd5e1;">Stored for Transport Ship: ${uniqueIcon} ${uniqueStored}/${maxCap}</div>
+              </div>
+            </div>
+
+            <!-- Choose Next Sub-Page: Economy Page OR Defense Page -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;">
+              <button class="buy-btn" id="btn-sp-goto-econ" style="padding:14px;font-size:0.9rem;">
+                ⛏️ Go to Economy Page (Ores, Drill Lv.${selState.mineLvl}/10 &amp; Transport) ➔
+              </button>
+              <button class="buy-btn medal-btn" id="btn-sp-goto-defense" style="padding:14px;font-size:0.9rem;">
+                🛡️ Go to Defense Page (Wall Lv.${selState.buildings?.def_wall || 0}, Turrets &amp; Hire Troops · DEF ${defStats.totalDef}) ➔
+              </button>
+            </div>
+          `;
+          document.getElementById('btn-sp-goto-econ')?.addEventListener('click', () => {
+            this.spaceMapPage = 'econ';
+            this.renderSpaceMapModal();
+          });
+          document.getElementById('btn-sp-goto-defense')?.addEventListener('click', () => {
+            this.spaceMapPage = 'defense';
+            this.renderSpaceMapModal();
+          });
+        } else {
+          const armyPct = Math.min(100, Math.round(((selState.enemyArmy || 0) / Math.max(1, selState.enemyThreshold)) * 100));
+          inspEl.innerHTML = `
+            <div style="margin-bottom:12px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+                <div style="font-family:var(--font-display);font-weight:900;color:#f87171;font-size:1.02rem;">
+                  🏴‍☠️ ENEMY PLANET: ${selCfg.name} (${selCfg.zhName})
+                </div>
+                <span class="version-pill" style="border-color:#ef4444;color:#fca5a5;">${selCfg.factionLabel} · Difficulty ${selCfg.difficulty}/10</span>
+              </div>
+              <p style="font-size:0.8rem;color:#cbd5e1;margin-top:4px;">${selCfg.desc}</p>
+            </div>
+
+            <!-- What Ores This Planet Has When Captured -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-bottom:14px;">
+              <div style="background:rgba(30,41,59,0.9);border:1.5px solid ${selCfg.color};border-radius:10px;padding:10px;">
+                <div style="font-family:var(--font-display);font-weight:900;color:#fde047;font-size:0.8rem;">⛏️ MAIN RESOURCE WHEN CAPTURED</div>
+                <div style="font-size:0.95rem;font-weight:900;color:#fff;margin:4px 0;">${selCfg.mainOreName || selCfg.oreName}</div>
+                <div style="font-size:0.75rem;color:#cbd5e1;">Base Mining Rate: ${selCfg.baseMineRate}/s</div>
+              </div>
+              <div style="background:rgba(30,41,59,0.9);border:1.5px solid #facc15;border-radius:10px;padding:10px;">
+                <div style="font-family:var(--font-display);font-weight:900;color:#fde047;font-size:0.8rem;">✨ FACTION UNIQUE RESOURCE</div>
+                <div style="font-size:0.95rem;font-weight:900;color:#fef08a;margin:4px 0;">${selCfg.uniqueOreName || 'Unique Ore'}</div>
+                <div style="font-size:0.75rem;color:#cbd5e1;">Required for High-Value Shop Production (+50% Value!)</div>
+              </div>
+              <div style="background:rgba(127,29,29,0.35);border:1.5px solid #ef4444;border-radius:10px;padding:10px;">
+                <div style="font-family:var(--font-display);font-weight:900;color:#fca5a5;font-size:0.8rem;">👾 ENEMY STORED ARMY</div>
+                <div style="font-size:0.95rem;font-weight:900;color:#fff;margin:4px 0;">${Math.round(selState.enemyArmy)} / ${selState.enemyThreshold} (${armyPct}%)</div>
+                <div style="font-size:0.75rem;color:#fecaca;">Attacks our closest linked planet when full!</div>
+              </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;">
+              <button class="hud-btn" id="btn-sp-raid-army" ${!isAdj ? 'disabled' : ''} style="border-color:#38bdf8;color:#7dd3fc;padding:12px;font-size:0.86rem;">
+                ⚔️ Send Pre-Emptive Troop Strike (Reduce Enemy Army · Cannot Capture)
+              </button>
+              <button class="buy-btn" id="btn-sp-start-capture" ${!isAdj ? 'disabled' : ''} style="background:linear-gradient(135deg,#f97316,#ea580c);color:#fff;padding:12px;font-size:0.88rem;">
+                ${isAdj ? `🚩 Launch 10-Wave Capture (Lv.${selCfg.difficulty}/10 · Capybara Go!)` : '🔒 Must Capture Adjacent Linked Planet First'}
+              </button>
+            </div>
+          `;
+          document.getElementById('btn-sp-raid-army')?.addEventListener('click', () => {
+            this.sendPreemptiveTroopAttack(selCfg.id);
+          });
+          document.getElementById('btn-sp-start-capture')?.addEventListener('click', () => {
+            this.targetCapturePlanetId = selCfg.id;
+            document.getElementById('modal-space-map')?.classList.remove('open');
+            this.startPlanetCaptureRun(selCfg.id);
+          });
+        }
+        return;
+      }
+
+      // PAGE 3A: CAPTURED PLANET ECONOMY PAGE (Ores, Drill, Storage & Transport)
+      if (page === 'econ') {
         const mineCost = Math.round(130 * Math.pow(1.42, (selState.mineLvl || 1) - 1));
         const storCost = Math.round(120 * Math.pow(1.40, (selState.storageLvl || 1) - 1));
         const maxCap = this.getPlanetStorageCap(selCfg.id);
+        const rate = this.getPlanetMineRate(selCfg.id);
+        const uniqueStored = selCfg.faction === 'bugs' ? Math.floor(selState.storedSand || 0) : Math.floor(selState.storedTitanium || 0);
+        const uniqueIcon = selCfg.uniqueOreIcon || (selCfg.faction === 'bugs' ? '🏜️' : '🔩');
+        const uniqueRate = (rate * (selCfg.faction === 'bugs' ? (selCfg.sandRatio || 0.35) : (selCfg.titaniumRatio || 0.35))).toFixed(2);
 
-        const bldCards = (CFG.PLANET_DEFENSE_BUILDINGS || []).map((b) => {
-          const bLvl = selState.buildings?.[b.id] || 0;
-          const bCost = Math.round(b.baseBuildCost * Math.pow(b.costScale, bLvl));
-          return `
-            <div style="background:rgba(30,41,59,0.85);border:1px solid ${b.color};border-radius:8px;padding:8px;">
-              <div style="font-family:var(--font-display);font-weight:800;color:${b.color};font-size:0.78rem;">
-                ${b.icon} ${b.name} (Lv.${bLvl}/10)
-              </div>
-              <div style="font-size:0.71rem;color:#cbd5e1;margin:3px 0;">
-                ${b.breaksFirst ? '🛡️ Breaks First! ' : ''}+${b.defPowerPerLvl} DEF · Maint: $${b.dailyMaintPerLvl}/day
-              </div>
-              <button class="buy-btn btn-planet-bld" data-bld="${b.id}" ${bLvl >= 10 || this.cash < bCost ? 'disabled' : ''} style="width:100%;padding:4px 8px;font-size:0.72rem;">
-                ${bLvl >= 10 ? 'MAX Lv.10' : `🔨 Build Lv.${bLvl + 1} ($${bCost})`}
+        bannerEl.innerHTML = `
+          <div style="display:flex;align-items:center;justify-content:space-between;width:100%;flex-wrap:wrap;gap:8px;">
+            <div style="display:flex;gap:6px;">
+              <button class="hud-btn" id="btn-sp-back-planet" style="border-color:#facc15;color:#fde047;padding:7px 12px;">
+                ⬅️ Back to Planet
+              </button>
+              <button class="hud-btn" id="btn-sp-back-map" style="border-color:#94a3b8;color:#cbd5e1;padding:7px 12px;">
+                🗺️ Space Map
               </button>
             </div>
-          `;
-        }).join('');
-
-        const unitCards = (CFG.PLANET_GARRISON_UNITS || []).map((u) => {
-          const uCnt = selState.garrison?.[u.id] || 0;
-          return `
-            <div style="background:rgba(30,41,59,0.85);border:1px solid ${u.color};border-radius:8px;padding:8px;">
-              <div style="font-family:var(--font-display);font-weight:800;color:${u.color};font-size:0.78rem;">
-                ${u.icon} ${u.name} (Stationed: ${uCnt})
-              </div>
-              <div style="font-size:0.71rem;color:#cbd5e1;margin:3px 0;">
-                🛡️ DEF ${u.defValue} · ⚔️ Raid ${u.atkValue} · Wage: $${u.dailyWage}/day
-              </div>
-              <button class="buy-btn btn-planet-hire" data-unit="${u.id}" ${this.cash < u.hireCost ? 'disabled' : ''} style="width:100%;padding:4px 8px;font-size:0.72rem;">
-                ➕ Hire +1 ($${u.hireCost})
-              </button>
+            <div style="font-family:var(--font-display);font-weight:900;color:#4ade80;font-size:0.9rem;">
+              ⛏️ ECONOMY &amp; MINING: ${selCfg.name.toUpperCase()} · 💵 $${Math.floor(this.cash)}
             </div>
-          `;
-        }).join('');
-
-        inspEl.innerHTML = `
-          <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;">
-            <div>
-              <div style="font-family:var(--font-display);font-weight:900;color:#4ade80;font-size:0.95rem;">
-                🚩 CAPTURED PLANET: ${selCfg.name} (Diff ${selCfg.difficulty} · ${selCfg.factionLabel})
-              </div>
-              <div style="font-size:0.76rem;color:#e2e8f0;">
-                Specialty Ore: <strong>${selCfg.oreName}</strong> · Stored for Transport Ship Pickup: <strong>🛢️ ${Math.floor(selState.storedOil || 0)}/${maxCap} | ⛏️ ${Math.floor(selState.storedIron || 0)}/${maxCap}</strong>
-              </div>
-            </div>
-            <div style="display:flex;gap:6px;flex-wrap:wrap;">
-              <button class="buy-btn" id="btn-sp-upg-mine" ${selState.mineLvl >= 10 || this.cash < mineCost ? 'disabled' : ''}>
-                ⛏️ Mine Lv.${selState.mineLvl}/10 ($${mineCost})
-              </button>
-              <button class="buy-btn" id="btn-sp-upg-storage" ${selState.storageLvl >= 10 || this.cash < storCost ? 'disabled' : ''}>
-                📦 Storage Lv.${selState.storageLvl}/10 ($${storCost})
-              </button>
-            </div>
-          </div>
-          <div style="font-size:0.76rem;color:#fde047;margin-bottom:6px;">
-            🛡️ Total Planet Defense Power: <strong>${defStats.totalDef} DEF</strong> (Wall Shield: ${defStats.wallShield} · Wall Bonus: +${Math.round((defStats.defBonusMult - 1) * 100)}% · Upkeep: $${defStats.dailyUpkeep}/day)
-          </div>
-          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;margin-bottom:8px;">
-            ${bldCards}
-          </div>
-          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px;">
-            ${unitCards}
+            <button class="hud-btn" id="btn-sp-switch-def" style="border-color:#38bdf8;color:#7dd3fc;">
+              🛡️ Go to Defense Page ➔
+            </button>
           </div>
         `;
 
+        inspEl.innerHTML = `
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-bottom:14px;">
+            <div style="background:rgba(15,23,42,0.9);border:1.5px solid #a855f7;border-radius:10px;padding:10px;">
+              <div style="font-family:var(--font-display);font-weight:900;color:#e9d5ff;font-size:0.8rem;">🛢️ / ⛏️ MAIN ORE STORAGE</div>
+              <div style="font-size:1rem;font-weight:900;color:#fff;margin:4px 0;">
+                🛢️ ${Math.floor(selState.storedOil || 0)}/${maxCap} · ⛏️ ${Math.floor(selState.storedIron || 0)}/${maxCap}
+              </div>
+              <div style="font-size:0.74rem;color:#cbd5e1;">Output: ${(rate * selCfg.oilRatio).toFixed(2)}🛢️/s &amp; ${(rate * selCfg.ironRatio).toFixed(2)}⛏️/s</div>
+            </div>
+            <div style="background:rgba(15,23,42,0.9);border:1.5px solid #facc15;border-radius:10px;padding:10px;">
+              <div style="font-family:var(--font-display);font-weight:900;color:#fde047;font-size:0.8rem;">${uniqueIcon} UNIQUE FACTION ORE</div>
+              <div style="font-size:1rem;font-weight:900;color:#fef08a;margin:4px 0;">
+                ${uniqueIcon} ${uniqueStored} / ${maxCap} Stored
+              </div>
+              <div style="font-size:0.74rem;color:#cbd5e1;">${selCfg.uniqueOreName} (+${uniqueRate}/s)</div>
+            </div>
+            <div style="background:rgba(15,23,42,0.9);border:1.5px solid #38bdf8;border-radius:10px;padding:10px;">
+              <div style="font-family:var(--font-display);font-weight:900;color:#7dd3fc;font-size:0.8rem;">🛸 TRANSPORT FLEET PICKUP</div>
+              <div style="font-size:1rem;font-weight:900;color:#fff;margin:4px 0;">
+                ${this.portLogistics.shipsCount} Active Ships
+              </div>
+              <div style="font-size:0.74rem;color:#cbd5e1;">Hauling to HallTown Left-Hand Port</div>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;">
+            <div class="upgrade-card" style="border-color:#4ade80;">
+              <div class="upg-top"><span class="upg-title">⛏️ Planetary Mine Drill (Lv.${selState.mineLvl}/10)</span></div>
+              <p class="upg-desc">Increases mining speed of both Main Ore and ${uniqueIcon} Unique Faction Ore by +42% per level!</p>
+              <button class="buy-btn" id="btn-sp-upg-mine" ${selState.mineLvl >= 10 || this.cash < mineCost ? 'disabled' : ''}>
+                ${selState.mineLvl >= 10 ? 'MAX Lv.10' : `⬆️ Upgrade Mine Drill Lv.${selState.mineLvl + 1}/10 ($${mineCost})`}
+              </button>
+            </div>
+            <div class="upgrade-card" style="border-color:#38bdf8;">
+              <div class="upg-top"><span class="upg-title">📦 Planet Ore Storage Silo (Lv.${selState.storageLvl}/10)</span></div>
+              <p class="upg-desc">Expands planetary ore buffer (${maxCap} ➔ ${maxCap + 35}) so Transport Ships can load larger batches!</p>
+              <button class="buy-btn" id="btn-sp-upg-storage" ${selState.storageLvl >= 10 || this.cash < storCost ? 'disabled' : ''}>
+                ${selState.storageLvl >= 10 ? 'MAX Lv.10' : `⬆️ Upgrade Planet Storage Lv.${selState.storageLvl + 1}/10 ($${storCost})`}
+              </button>
+            </div>
+            <div class="upgrade-card" style="border-color:#facc15;">
+              <div class="upg-top"><span class="upg-title">🛸 Orbital Transport Fleet (${this.portLogistics.shipsCount}/10 Ships)</span></div>
+              <p class="upg-desc">Need faster hauling to your Shop Port? Add more Transport Ships or Docking Ports in Port Logistics!</p>
+              <button class="buy-btn medal-btn" id="btn-sp-econ-open-port">
+                🛸 Open Port &amp; Transport Fleet ➔
+              </button>
+            </div>
+          </div>
+        `;
+
+        document.getElementById('btn-sp-back-planet')?.addEventListener('click', () => {
+          this.spaceMapPage = 'planet';
+          this.renderSpaceMapModal();
+        });
+        document.getElementById('btn-sp-back-map')?.addEventListener('click', () => {
+          this.spaceMapPage = 'map';
+          this.renderSpaceMapModal();
+        });
+        document.getElementById('btn-sp-switch-def')?.addEventListener('click', () => {
+          this.spaceMapPage = 'defense';
+          this.renderSpaceMapModal();
+        });
         document.getElementById('btn-sp-upg-mine')?.addEventListener('click', () => {
           if (this.cash >= mineCost && selState.mineLvl < 10) {
             this.cash -= mineCost;
@@ -6005,6 +6193,98 @@
             this.renderSpaceMapModal();
           }
         });
+        document.getElementById('btn-sp-econ-open-port')?.addEventListener('click', () => {
+          document.getElementById('modal-space-map')?.classList.remove('open');
+          this.portModalPage = 'overview';
+          this.renderPortLogisticsModal();
+          document.getElementById('modal-port-logistics')?.classList.add('open');
+        });
+        return;
+      }
+
+      // PAGE 3B: CAPTURED PLANET DEFENSE PAGE (Wall, Turrets & Hire Garrison Troops)
+      if (page === 'defense') {
+        bannerEl.innerHTML = `
+          <div style="display:flex;align-items:center;justify-content:space-between;width:100%;flex-wrap:wrap;gap:8px;">
+            <div style="display:flex;gap:6px;">
+              <button class="hud-btn" id="btn-sp-back-planet" style="border-color:#facc15;color:#fde047;padding:7px 12px;">
+                ⬅️ Back to Planet
+              </button>
+              <button class="hud-btn" id="btn-sp-back-map" style="border-color:#94a3b8;color:#cbd5e1;padding:7px 12px;">
+                🗺️ Space Map
+              </button>
+            </div>
+            <div style="font-family:var(--font-display);font-weight:900;color:#38bdf8;font-size:0.9rem;">
+              🛡️ DEFENSE &amp; GARRISON: ${selCfg.name.toUpperCase()} (DEF ${defStats.totalDef}) · 💵 $${Math.floor(this.cash)}
+            </div>
+            <button class="hud-btn" id="btn-sp-switch-econ" style="border-color:#4ade80;color:#86efac;">
+              ⛏️ Go to Economy Page ➔
+            </button>
+          </div>
+        `;
+
+        const bldCards = (CFG.PLANET_DEFENSE_BUILDINGS || []).map((b) => {
+          const bLvl = selState.buildings?.[b.id] || 0;
+          const bCost = Math.round(b.baseBuildCost * Math.pow(b.costScale, bLvl));
+          return `
+            <div style="background:rgba(30,41,59,0.9);border:1.5px solid ${b.color};border-radius:10px;padding:10px;">
+              <div style="font-family:var(--font-display);font-weight:800;color:${b.color};font-size:0.82rem;">
+                ${b.icon} ${b.name} (Lv.${bLvl}/10)
+              </div>
+              <div style="font-size:0.73rem;color:#cbd5e1;margin:4px 0;">
+                ${b.breaksFirst ? '🧱 <strong>Breaks First!</strong> ' : ''}+${b.defPowerPerLvl} DEF · Maint: $${b.dailyMaintPerLvl}/day
+              </div>
+              <button class="buy-btn btn-planet-bld" data-bld="${b.id}" ${bLvl >= 10 || this.cash < bCost ? 'disabled' : ''} style="width:100%;padding:6px 8px;font-size:0.76rem;">
+                ${bLvl >= 10 ? 'MAX Lv.10' : `🔨 Build Lv.${bLvl + 1} ($${bCost})`}
+              </button>
+            </div>
+          `;
+        }).join('');
+
+        const unitCards = (CFG.PLANET_GARRISON_UNITS || []).map((u) => {
+          const uCnt = selState.garrison?.[u.id] || 0;
+          return `
+            <div style="background:rgba(30,41,59,0.9);border:1.5px solid ${u.color};border-radius:10px;padding:10px;">
+              <div style="font-family:var(--font-display);font-weight:800;color:${u.color};font-size:0.82rem;">
+                ${u.icon} ${u.name} (Stationed: ${uCnt})
+              </div>
+              <div style="font-size:0.73rem;color:#cbd5e1;margin:4px 0;">
+                🛡️ DEF ${u.defValue} · ⚔️ Raid ${u.atkValue} · Wage: $${u.dailyWage}/day
+              </div>
+              <button class="buy-btn btn-planet-hire" data-unit="${u.id}" ${this.cash < u.hireCost ? 'disabled' : ''} style="width:100%;padding:6px 8px;font-size:0.76rem;">
+                ➕ Hire +1 ($${u.hireCost})
+              </button>
+            </div>
+          `;
+        }).join('');
+
+        inspEl.innerHTML = `
+          <div style="background:rgba(250,204,21,0.1);border:1px solid #facc15;border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:0.78rem;color:#fde047;">
+            🛡️ <strong>Total Planet Defense: ${defStats.totalDef} DEF</strong> · 🧱 Wall Shield: <strong>${defStats.wallShield}</strong> (Breaks First!) · Wall DEF Bonus: <strong>+${Math.round((defStats.defBonusMult - 1) * 100)}%</strong> · Daily Upkeep: <strong>$${defStats.dailyUpkeep}/day</strong>
+          </div>
+          <h4 style="font-family:var(--font-display);color:#fde047;font-size:0.8rem;margin:6px 0;">🧱 PLANETARY WALL &amp; TURRET FORTIFICATIONS (EXPENSIVE BUILD · LOW UPKEEP · WALL BREAKS FIRST)</h4>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin-bottom:12px;">
+            ${bldCards}
+          </div>
+          <h4 style="font-family:var(--font-display);color:#4ade80;font-size:0.8rem;margin:6px 0;">🪖 HIRE GARRISON TROOPS (SEAF, HEAVY SQUADS, HELLDIVERS &amp; PATRIOT MECHS)</h4>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;">
+            ${unitCards}
+          </div>
+        `;
+
+        document.getElementById('btn-sp-back-planet')?.addEventListener('click', () => {
+          this.spaceMapPage = 'planet';
+          this.renderSpaceMapModal();
+        });
+        document.getElementById('btn-sp-back-map')?.addEventListener('click', () => {
+          this.spaceMapPage = 'map';
+          this.renderSpaceMapModal();
+        });
+        document.getElementById('btn-sp-switch-econ')?.addEventListener('click', () => {
+          this.spaceMapPage = 'econ';
+          this.renderSpaceMapModal();
+        });
+
         inspEl.querySelectorAll('.btn-planet-bld').forEach((btn) => {
           btn.addEventListener('click', () => {
             const bId = btn.getAttribute('data-bld');
@@ -6033,74 +6313,7 @@
             }
           });
         });
-      } else {
-        // Enemy Planet Inspector: Shows Stored Enemy Army, Pre-Emptive Troop Strike, & 10-Wave Capture Button
-        const armyPct = Math.min(100, Math.round(((selState.enemyArmy || 0) / Math.max(1, selState.enemyThreshold)) * 100));
-        inspEl.innerHTML = `
-          <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px;">
-            <div>
-              <div style="font-family:var(--font-display);font-weight:900;color:#f87171;font-size:0.95rem;">
-                🏴‍☠️ ENEMY PLANET: ${selCfg.name} (Difficulty ${selCfg.difficulty}/10 · ${selCfg.factionLabel})
-              </div>
-              <div style="font-size:0.78rem;color:#e2e8f0;margin-top:3px;">
-                Specialty Ore When Captured: <strong>${selCfg.oreName}</strong> · Base Yield: <strong>${selCfg.baseMineRate}/s</strong>
-              </div>
-              <div style="font-size:0.78rem;color:#fde047;margin-top:3px;">
-                👾 Enemy Stored Army: <strong>${Math.round(selState.enemyArmy)} / ${selState.enemyThreshold} (${armyPct}%)</strong> — Once full, automatically attacks our closest linked planet!
-              </div>
-            </div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;">
-              <button class="hud-btn" id="btn-sp-raid-army" ${!isAdj ? 'disabled' : ''} style="border-color:#38bdf8;color:#7dd3fc;padding:8px 12px;">
-                ⚔️ Send Troop Strike (Reduce Enemy Army · Cannot Capture)
-              </button>
-              <button class="buy-btn" id="btn-sp-start-capture" ${!isAdj ? 'disabled' : ''} style="background:linear-gradient(135deg,#f97316,#ea580c);color:#fff;padding:8px 14px;">
-                ${isAdj ? `🚩 Launch 10-Wave Capture (Diff ${selCfg.difficulty}/10)` : '🔒 Must Link to Owned Planet First'}
-              </button>
-            </div>
-          </div>
-        `;
-
-        document.getElementById('btn-sp-raid-army')?.addEventListener('click', () => {
-          this.sendPreemptiveTroopAttack(selCfg.id);
-        });
-        document.getElementById('btn-sp-start-capture')?.addEventListener('click', () => {
-          this.targetCapturePlanetId = selCfg.id;
-          document.getElementById('modal-space-map')?.classList.remove('open');
-          this.startPlanetCaptureRun(selCfg.id);
-        });
       }
-
-      if (logEl) {
-        logEl.innerHTML = (this.travianBattleLogs || []).map((msg) => `<div style="margin-bottom:5px;border-bottom:1px solid rgba(148,163,184,0.15);padding-bottom:3px;">${msg}</div>`).join('');
-      }
-
-      gridEl.innerHTML = planets.filter((p) => !p.isHome).map((p) => {
-        const ps = this.spacePlanets[p.id];
-        const owned = !!ps?.owned;
-        const adj = this.isPlanetAdjacentToOwned(p.id);
-        return `
-          <div class="upgrade-card" style="border-color:${owned ? '#22c55e' : (adj ? '#f97316' : '#475569')};cursor:pointer;" data-planet-card="${p.id}">
-            <div class="upg-top">
-              <span class="upg-title" style="color:${owned ? '#4ade80' : '#fde047'};">${p.oreIcon} ${p.name} (Diff ${p.difficulty})</span>
-              <span class="version-pill">${owned ? '🚩 OWNED' : (adj ? '⚔️ NEXT TO US' : '🔒 DEEP SPACE')}</span>
-            </div>
-            <p class="upg-desc">
-              <strong>${p.factionLabel}</strong> · Ore: ${p.oreName}<br/>
-              ${owned
-                ? `⛏️ Mine Lv.${ps.mineLvl}/10 · 📦 Stored: 🛢️${Math.floor(ps.storedOil)} ⛏️${Math.floor(ps.storedIron)} · 🛡️ DEF: ${this.getPlanetDefenseStats(p.id).totalDef}`
-                : `👾 Stored Enemy Army: <strong>${Math.round(ps.enemyArmy)}/${ps.enemyThreshold}</strong>`}
-            </p>
-          </div>
-        `;
-      }).join('');
-
-      gridEl.querySelectorAll('[data-planet-card]').forEach((card) => {
-        card.addEventListener('click', () => {
-          this.selectedSpacePlanetId = card.getAttribute('data-planet-card');
-          this.audio.playPickup();
-          this.renderSpaceMapModal();
-        });
-      });
     }
 
     drawSpaceMapCanvas() {
@@ -6111,8 +6324,23 @@
       const h = canvas.height;
       ctx.clearRect(0, 0, w, h);
 
-      ctx.fillStyle = '#040814';
+      // Deep space sector backdrop with Left Bug Wing & Right Autobot Wing tint
+      const grad = ctx.createLinearGradient(0, 0, w, 0);
+      grad.addColorStop(0, '#130d1e');
+      grad.addColorStop(0.45, '#050914');
+      grad.addColorStop(0.55, '#050914');
+      grad.addColorStop(1, '#1c0b12');
+      ctx.fillStyle = grad;
       ctx.fillRect(0, 0, w, h);
+
+      // Wing Headers on the Star Chart
+      ctx.font = '900 13px Orbitron, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#eab308';
+      ctx.fillText('🐛 TERMINID BUG SECTOR (Lv.1–10 · Main: 🛢️ Oil · Unique: 🏜️ Bio-Sand)', 18, 24);
+      ctx.textAlign = 'right';
+      ctx.fillStyle = '#38bdf8';
+      ctx.fillText('🤖 AUTOMATON BOT SECTOR (Lv.1–10 · Main: ⛏️ Iron · Unique: 🔩 Titanium)', w - 18, 24);
 
       const planets = CFG.SPACE_MAP_PLANETS || [];
       // Draw hyperlane links
@@ -6123,7 +6351,8 @@
           const lp = planets.find((x) => x.id === lid);
           if (!lp) continue;
           const bothOwned = this.spacePlanets[p.id]?.owned && this.spacePlanets[lp.id]?.owned;
-          ctx.strokeStyle = bothOwned ? 'rgba(74, 222, 128, 0.55)' : 'rgba(148, 163, 184, 0.28)';
+          const oneOwned = this.spacePlanets[p.id]?.owned || this.spacePlanets[lp.id]?.owned;
+          ctx.strokeStyle = bothOwned ? 'rgba(74, 222, 128, 0.65)' : (oneOwned ? 'rgba(250, 204, 21, 0.42)' : 'rgba(148, 163, 184, 0.22)');
           ctx.lineWidth = bothOwned ? 3 : 2;
           ctx.beginPath();
           ctx.moveTo(x1, y1);
@@ -6132,40 +6361,45 @@
         }
       }
 
-      // Draw planet nodes
+      // Draw all 21 Planet Nodes
       for (const p of planets) {
         const px = p.nx * w;
         const py = p.ny * h;
         const ps = this.spacePlanets[p.id];
         const owned = !!ps?.owned;
         const isSel = this.selectedSpacePlanetId === p.id;
+        const adj = !owned && this.isPlanetAdjacentToOwned(p.id);
 
         ctx.save();
         ctx.translate(px, py);
-        ctx.fillStyle = owned ? '#064e3b' : (p.faction === 'bugs' ? '#3f2e0e' : '#3b0a14');
-        ctx.strokeStyle = isSel ? '#facc15' : (owned ? '#4ade80' : p.color);
-        ctx.lineWidth = isSel ? 4 : 2.5;
+        ctx.fillStyle = owned ? '#064e3b' : (p.faction === 'bugs' ? '#3b2506' : '#3b0a14');
+        ctx.strokeStyle = isSel ? '#facc15' : (owned ? '#4ade80' : (adj ? '#f97316' : p.color));
+        ctx.lineWidth = isSel ? 4 : (adj ? 3 : 2.2);
         ctx.beginPath();
-        ctx.arc(0, 0, p.isHome ? 24 : 19, 0, Math.PI * 2);
+        ctx.arc(0, 0, p.isHome ? 25 : 18, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
 
-        ctx.font = '14px sans-serif';
+        ctx.font = p.isHome ? '16px sans-serif' : '13px sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(p.isHome ? '🛸' : (owned ? '🚩' : (p.faction === 'bugs' ? '🐛' : '🤖')), 0, 0);
 
         ctx.fillStyle = isSel ? '#fde047' : '#ffffff';
-        ctx.font = '900 10px Orbitron, sans-serif';
-        ctx.fillText(`${p.name.split(' ')[0]} ${p.isHome ? '(HQ)' : `(Lv.${p.difficulty})`}`, 0, -26);
+        ctx.font = '900 9.5px Orbitron, sans-serif';
+        ctx.fillText(p.isHome ? 'HallTown HQ' : `${p.name.split(' ')[0]} Lv.${p.difficulty}`, 0, -24);
 
         if (!p.isHome) {
-          ctx.fillStyle = owned ? '#86efac' : '#fca5a5';
-          ctx.font = '700 9.5px Rajdhani, sans-serif';
+          const uIcon = p.uniqueOreIcon || (p.faction === 'bugs' ? '🏜️' : '🔩');
+          const mIcon = p.faction === 'bugs' ? '🛢️' : '⛏️';
+          ctx.fillStyle = owned ? '#86efac' : (adj ? '#fdba74' : '#fca5a5');
+          ctx.font = '700 9px Rajdhani, sans-serif';
           ctx.fillText(
-            owned ? `🛢️${Math.floor(ps.storedOil)} ⛏️${Math.floor(ps.storedIron)}` : `👾${Math.round(ps.enemyArmy)}/${ps.enemyThreshold}`,
+            owned
+              ? `${mIcon}+${uIcon} Mine Lv.${ps.mineLvl}`
+              : `${mIcon}+${uIcon} · 👾${Math.round(ps.enemyArmy)}`,
             0,
-            28
+            26
           );
         }
         ctx.restore();
@@ -6173,9 +6407,8 @@
     }
 
     // ========================================================================
-    // NEW IN v0.0.12: SHOP TRAINING & RECRUITMENT ROOM (MAX Lv.100 & SKILLS)
-    // - Keep at least 4+ Helldiver Heroes (3 Active + 1 Spare Reinforcement)
-    // - True Permadeath when a Helldiver dies in Sample Search or Planet Capture!
+    // NEW IN v0.0.13: SHOP TRAINING & RECRUITMENT ROOM (MAX Lv.100 & SKILLS)
+    // - Clean Step-by-Step Multi-Page UI (`overview` ➔ `roster` | `recruit`)
     // ========================================================================
     initHelldiverRoster() {
       if (!Array.isArray(this.helldiverRoster) || this.helldiverRoster.length === 0) {
@@ -6260,7 +6493,6 @@
       const newHero = this.createHelldiverHero(classId, null, 1);
       this.helldiverRoster.push(newHero);
 
-      // Auto-fill any empty slot in the 4-hero lineup (3 Active + 1 Spare)
       for (let s = 0; s < 4; s++) {
         const curId = this.capybaraLineup[s];
         if (!curId || !this.helldiverRoster.some((h) => h.id === curId)) {
@@ -6316,24 +6548,16 @@
     renderTrainingRoomModal() {
       this.initHelldiverRoster();
       const sumEl = document.getElementById('training-room-summary');
+      const lineupTitle = document.getElementById('training-lineup-title');
       const lineupGrid = document.getElementById('training-lineup-grid');
+      const rosterTitle = document.getElementById('training-roster-title');
       const rosterGrid = document.getElementById('training-roster-grid');
+      const recruitTitle = document.getElementById('training-recruit-title');
       const recruitGrid = document.getElementById('training-recruit-grid');
       if (!sumEl || !lineupGrid || !rosterGrid || !recruitGrid) return;
 
-      sumEl.innerHTML = `
-        <div>
-          <div style="font-family:var(--font-display);font-weight:900;color:#fde047;font-size:0.94rem;">
-            🏋️ HELLDIVER BARRACKS: ${this.helldiverRoster.length} HEROES · MAX ABILITY LEVEL 100 · 3 ACTIVE + 1 SPARE
-          </div>
-          <div style="font-size:0.77rem;color:#e2e8f0;margin-top:2px;">
-            Train Helldivers up to <strong>Lv.100</strong> to unlock <strong>Lv.1, Lv.25 &amp; Lv.60 Class Skills</strong>. ⚠️ <strong>Permadeath Rule</strong>: If a Helldiver dies in combat, they are lost forever and your Slot #4 Spare automatically drops in!
-          </div>
-        </div>
-        <div style="font-family:var(--font-display);font-weight:900;color:#4ade80;font-size:0.88rem;">
-          💵 $${Math.floor(this.cash)} | 🟢${this.samples.common} 🟠${this.samples.rare} 🟣${this.samples.superRare}
-        </div>
-      `;
+      this.trainingModalPage = this.trainingModalPage || 'overview';
+      const page = this.trainingModalPage;
 
       const slotTitles = [
         '⚔️ SLOT #1: ACTIVE FRONT VANGUARD',
@@ -6366,7 +6590,6 @@
         sel.addEventListener('change', () => {
           const slot = parseInt(sel.getAttribute('data-slot'), 10);
           const chosenId = sel.value || null;
-          // Swap if already in another slot
           const otherIdx = this.capybaraLineup.indexOf(chosenId);
           if (chosenId && otherIdx !== -1 && otherIdx !== slot) {
             this.capybaraLineup[otherIdx] = this.capybaraLineup[slot];
@@ -6443,6 +6666,103 @@
       recruitGrid.querySelectorAll('.btn-hire-class').forEach((b) => {
         b.addEventListener('click', () => this.hireHelldiverHero(b.getAttribute('data-cls')));
       });
+
+      // Sub-Page Visibility Routing (`overview` ➔ `roster` | `recruit`)
+      if (page === 'overview') {
+        if (lineupTitle) lineupTitle.style.display = 'block';
+        lineupGrid.style.display = 'grid';
+        if (rosterTitle) rosterTitle.style.display = 'none';
+        rosterGrid.style.display = 'none';
+        if (recruitTitle) recruitTitle.style.display = 'none';
+        recruitGrid.style.display = 'none';
+
+        sumEl.innerHTML = `
+          <div style="width:100%;">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
+              <div style="font-family:var(--font-display);font-weight:900;color:#fde047;font-size:0.94rem;">
+                🏋️ HELLDIVER TRAINING ROOM (3 ACTIVE + 1 SPARE SQUAD · ${this.helldiverRoster.length} HEROES)
+              </div>
+              <div style="font-family:var(--font-display);font-weight:900;color:#4ade80;font-size:0.88rem;">
+                💵 $${Math.floor(this.cash)} | 🟢${this.samples.common} 🟠${this.samples.rare} 🟣${this.samples.superRare}
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;margin-top:6px;">
+              <button class="buy-btn" id="btn-train-goto-roster" style="padding:11px;font-size:0.86rem;">
+                🏋️ Next Page: Train Heroes (Lv.1–100, Skills &amp; 4-Slot Gear) ➔
+              </button>
+              <button class="buy-btn medal-btn" id="btn-train-goto-recruit" style="padding:11px;font-size:0.86rem;">
+                ➕ Next Page: Recruit New Helldivers (6 Classes) ➔
+              </button>
+            </div>
+          </div>
+        `;
+        document.getElementById('btn-train-goto-roster')?.addEventListener('click', () => {
+          this.trainingModalPage = 'roster';
+          this.renderTrainingRoomModal();
+        });
+        document.getElementById('btn-train-goto-recruit')?.addEventListener('click', () => {
+          this.trainingModalPage = 'recruit';
+          this.renderTrainingRoomModal();
+        });
+      } else if (page === 'roster') {
+        if (lineupTitle) lineupTitle.style.display = 'none';
+        lineupGrid.style.display = 'none';
+        if (rosterTitle) rosterTitle.style.display = 'block';
+        rosterGrid.style.display = 'grid';
+        if (recruitTitle) recruitTitle.style.display = 'none';
+        recruitGrid.style.display = 'none';
+
+        sumEl.innerHTML = `
+          <div style="display:flex;align-items:center;justify-content:space-between;width:100%;flex-wrap:wrap;gap:8px;">
+            <button class="hud-btn" id="btn-train-back-overview" style="border-color:#facc15;color:#fde047;padding:7px 14px;">
+              ⬅️ Back to 3+1 Squad Lineup
+            </button>
+            <div style="font-family:var(--font-display);font-weight:900;color:#fde047;font-size:0.9rem;">
+              🎖️ TRAIN HEROES Lv.1–100 &amp; EQUIP GEAR · 💵 $${Math.floor(this.cash)} | 🟢${this.samples.common}
+            </div>
+            <button class="hud-btn" id="btn-train-switch-recruit" style="border-color:#38bdf8;color:#7dd3fc;">
+              ➕ Go to Recruit Classes ➔
+            </button>
+          </div>
+        `;
+        document.getElementById('btn-train-back-overview')?.addEventListener('click', () => {
+          this.trainingModalPage = 'overview';
+          this.renderTrainingRoomModal();
+        });
+        document.getElementById('btn-train-switch-recruit')?.addEventListener('click', () => {
+          this.trainingModalPage = 'recruit';
+          this.renderTrainingRoomModal();
+        });
+      } else {
+        if (lineupTitle) lineupTitle.style.display = 'none';
+        lineupGrid.style.display = 'none';
+        if (rosterTitle) rosterTitle.style.display = 'none';
+        rosterGrid.style.display = 'none';
+        if (recruitTitle) recruitTitle.style.display = 'block';
+        recruitGrid.style.display = 'grid';
+
+        sumEl.innerHTML = `
+          <div style="display:flex;align-items:center;justify-content:space-between;width:100%;flex-wrap:wrap;gap:8px;">
+            <button class="hud-btn" id="btn-train-back-overview" style="border-color:#facc15;color:#fde047;padding:7px 14px;">
+              ⬅️ Back to 3+1 Squad Lineup
+            </button>
+            <div style="font-family:var(--font-display);font-weight:900;color:#38bdf8;font-size:0.9rem;">
+              ➕ RECRUIT NEW HELLDIVER ARCHETYPES (${this.helldiverRoster.length} IN ROSTER) · 💵 $${Math.floor(this.cash)}
+            </div>
+            <button class="hud-btn" id="btn-train-switch-roster" style="border-color:#4ade80;color:#86efac;">
+              🏋️ Train Heroes Lv.1–100 ➔
+            </button>
+          </div>
+        `;
+        document.getElementById('btn-train-back-overview')?.addEventListener('click', () => {
+          this.trainingModalPage = 'overview';
+          this.renderTrainingRoomModal();
+        });
+        document.getElementById('btn-train-switch-roster')?.addEventListener('click', () => {
+          this.trainingModalPage = 'roster';
+          this.renderTrainingRoomModal();
+        });
+      }
     }
 
     // ========================================================================
@@ -6982,6 +7302,8 @@
         ps.storageLvl = Math.max(1, ps.storageLvl || 1);
         ps.storedOil = 10;
         ps.storedIron = 10;
+        ps.storedSand = 6;
+        ps.storedTitanium = 6;
         ps.buildings = { def_wall: 1, def_flak: 1, def_rail: 0 };
         ps.garrison = { g_seaf_militia: 3, g_seaf_heavy: 1, g_helldiver_vet: 1, g_patriot_mech: 0 };
         this.travianBattleLogs.unshift(`🚩 [VICTORY] Liberated ${run.planetName} after clearing all 10 Waves! Transport Ships are now hauling its ore to HallTown!`);
@@ -7619,6 +7941,7 @@
 
       // v0.0.12 Event Bindings: Left-Hand Port, Training Room, Space Map, Sample Search (1-10) & 10-Wave Capture
       document.getElementById('btn-open-port-top')?.addEventListener('click', () => {
+        this.portModalPage = 'overview';
         this.renderPortLogisticsModal();
         document.getElementById('modal-port-logistics')?.classList.add('open');
       });
@@ -7627,6 +7950,7 @@
       });
 
       document.getElementById('btn-open-training-top')?.addEventListener('click', () => {
+        this.trainingModalPage = 'overview';
         this.renderTrainingRoomModal();
         document.getElementById('modal-training-room')?.classList.add('open');
       });
@@ -7635,6 +7959,7 @@
       });
 
       document.getElementById('btn-open-space-map')?.addEventListener('click', () => {
+        this.spaceMapPage = 'map';
         this.renderSpaceMapModal();
         document.getElementById('modal-space-map')?.classList.add('open');
       });
@@ -7658,6 +7983,7 @@
         }
         if (bestP) {
           this.selectedSpacePlanetId = bestP.id;
+          this.spaceMapPage = 'planet';
           this.audio.playPickup();
           this.renderSpaceMapModal();
         }
@@ -7677,6 +8003,7 @@
       });
 
       document.getElementById('btn-mode-capture')?.addEventListener('click', () => {
+        this.spaceMapPage = 'map';
         this.renderSpaceMapModal();
         document.getElementById('modal-space-map')?.classList.add('open');
       });

@@ -1,4 +1,4 @@
-# HELLDIVERS PLEASE! — Nightfall: Kingdom Frontier TD Castle Defense, Dedicated Shop Clone Sector & Tactical War Squad Manager (`v0.0.12`)
+# HELLDIVERS PLEASE! — Nightfall: Kingdom Frontier TD Castle Defense, Dedicated Shop Clone Sector & Tactical War Squad Manager (`v0.0.13`)
 
 An arcade factory-automation, Mindustry multi-base logistics, and *Capybara Go!* / Tower-Defense Roguelike War-Front web game inspired by **Burger Please!**, **Whiteout Survival Playable Ads**, **Capybara Go!**, **Factorio**, **Mindustry**, and **CarbotAnimations' Helldivers 2 cartoons** (across **all episodes Ep1–Ep10+**, including [Pro vs Noobs | Helldivers 2 Ep7](http://www.youtube.com/watch?v=bn0GTO_zvAg)), built from the [Modular Game Prompt Library](https://docs.google.com/document/d/1ZoW7Oou5QpTyvwD6vrczKuXv0nW42JgLJC-au62H7Pw/edit?usp=drivesdk&ouid=114024991701964609548).
 
@@ -29,6 +29,27 @@ An arcade factory-automation, Mindustry multi-base logistics, and *Capybara Go!*
 ---
 
 ## 📜 Complete Version History & Changelog (`v0.0.00` – `v0.0.09`)
+
+### `v0.0.13` — 100% Port-Only Raw Resource Pickup (Zero Drills on Shop Floor), Pure Shop Deck (Zero War in Shop), 21-Planet Space Map (10 Bug Lv.1–10 & 10 Bot Lv.1–10), Faction Main & Unique Ores (`🏜️ Bio-Sand` / `🔩 Titanium`), and Clean Step-by-Step Multi-Page UI Navigation (`Page ➔ Next Page`)
+- **Removed All Manual Drills & Auto-Drills on the Shop Page — 100% Port Pickup (`🛸 港口提貨`)**:
+  - Removed all manual quarry harvest circles and spinning auto-drill rigs from the Shop deck.
+  - All raw resources now arrive exclusively at the **Left-Hand Orbital Port (`🛸 Port`)** into **4 Port Cargo Silos & Player Pickup Pads (`📤 PICKUP FROM PORT`)**: `🛢️ E-710 Bio-Oil`, `⛏️ Super Iron Ore`, `🏜️ Bug Chitin Bio-Sand`, and `🔩 Bot Cyber-Titanium`.
+  - The Commander (as well as SEAF Port Haulers and Split Conveyor Belts) can walk directly onto the 4 Port Pickup Pads (`x = -1200`) or tap any Port Silo to pick up raw resources into their hand stack and feed Factory Hoppers!
+- **Removed All War Elements from the Shop Page**:
+  - Removed the Munitions Ammo Press (`🧱`), Gate Ammo Belts, Gate Mend Projectors, and background Wave/Gate timers from the Shop page so the Shop is 100% focused on your **Super Destroyer Factory, Port Logistics, SEAF Clone Room, and Helldiver Training Room**.
+- **Expanded 21-Planet Galactic Space Map (`10 Levels Lv.1–10 for EACH Faction` + `HallTown HQ`)**:
+  - Enlarged the interactive Space Map (`1080×500`) to feature **10 Terminid Bug Planets (`🐛 Bug Lv.1 – Lv.10` on the Left Wing)** and **10 Automaton Bot Planets (`🤖 Autobot Lv.1 – Lv.10` on the Right Wing)**.
+- **Faction-Specific Main & Unique Resources (`Must Capture Both Factions' Planets`)**:
+  - **🐛 Terminid Bug Planets (`Lv.1–10`)**: Main Resource = `🛢️ E-710 Bio-Oil (80%–92%)`, Unique Faction Resource = `🏜️ Chitin Bio-Sand (蟲殼矽砂)`.
+  - **🤖 Automaton Bot Planets (`Lv.1–10`)**: Main Resource = `⛏️ Super Iron Ore (80%–92%)`, Unique Faction Resource = `🔩 Cyber-Titanium Alloy (賽博鈦合金)`.
+  - Transport Ships haul `🛢️`, `⛏️`, `🏜️`, and `🔩` to the Left-Hand Port; feeding or stocking `🏜️ Bio-Sand` and `🔩 Cyber-Titanium` counts as `2x` raw input and grants a **+50% Factory Sell Value Overcharge**!
+- **Split UI Modals into Clean Step-by-Step Sub-Pages (`Page ➔ Next Page` with `⬅️ Back` Navigation)**:
+  - **Space Map (`#modal-space-map`)**:
+    - **Page 1 (`Space Map Only`)**: Displays ONLY the large 21-Planet Star Chart (zero card clutter below).
+    - **Page 2 (`Planet Overview`)**: Clicking any planet opens its overview showing what Ores (`🛢️/⛏️/🏜️/🔩`) it has. If captured, displays two next-page buttons: **`⛏️ Go to Economy Page ➔`** and **`🛡️ Go to Defense Page ➔`** (if enemy-controlled, displays **`⚔️ Send Troop Strike`** and **`🚩 Launch 10-Wave Capture`**).
+    - **Page 3A (`Economy Page`)**: Shows only that planet's Ore production, Stored Ores, **Mine Drill Upgrade (`Lv.1–10`)**, **Planet Storage Upgrade (`Lv.1–10`)**, and **Transport Fleet Status**, with a `⬅️ Back` button.
+    - **Page 3B (`Defense Page`)**: Shows only that planet's **Planetary Wall (`🧱` breaks first!)**, **Turrets (`🗼 Flak`, `⚡ Railgun`)**, and **Garrison Troop Hiring (`👷 SEAF`, `🪖 Heavy`, `🫡 Helldiver`, `🤖 Mech`)**, with a `⬅️ Back` button.
+  - Applied the same clean step-by-step sub-page navigation (`Page 1 ➔ Page 2` with `⬅️ Back`) to **Port Logistics (`#modal-port-logistics`)**, **Helldiver Training Room (`#modal-training-room`)**, and **Clone Room (`#modal-clone-room`)**.
 
 ### `v0.0.12` — Left-Hand Transport Ship & Port Logistics (Fixed 1🛢️/1⛏️ Start), Galactic Space Map (Single-Faction Planet Ores & Travian Auto-Defense), Shop Training Room (Max Lv.100 & Skills) & Two-Part *Capybara Go!* Attack War (Sample Search Diff 1–10 + 10-Wave Planet Capture with Retreat & Permadeath)
 - **Fixed Starter Raw Supply (`1 Oil + 1 Iron/s`) & Left-Hand Transport Ship / Port Logistics (`🛸 港口`)**:

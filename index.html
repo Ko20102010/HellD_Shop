@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>HELLDIVERS PLEASE! — Super Destroyer Warship &amp; Mindustry War-Zone Tycoon (v0.0.12)</title>
+  <title>HELLDIVERS PLEASE! — Super Destroyer Warship &amp; Mindustry War-Zone Tycoon (v0.0.13)</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
@@ -103,7 +103,7 @@
             <div class="brand-badge">
               <span>🚀</span>
               <span class="brand-title">SES SUPER DESTROYER COMMAND</span>
-              <span class="version-pill" id="hud-version">v0.0.12</span>
+              <span class="version-pill" id="hud-version">v0.0.13</span>
             </div>
 
             <div class="stat-pill gate-pill" title="Wave &amp; Rest Timer">
@@ -183,8 +183,10 @@
             </div>
             <div class="controls-hint">
               <div style="display:flex;gap:5px;flex-wrap:wrap;">
-                <span class="version-pill" id="inv-badge-raw_iron" title="Raw Super Iron Ore">⛏️ 0</span>
-                <span class="version-pill" id="inv-badge-raw_e710" title="Raw E-710 Fuel">🛢️ 1</span>
+                <span class="version-pill" id="inv-badge-raw_iron" title="Port Super Iron Ore (Bot Main)">⛏️ 0</span>
+                <span class="version-pill" id="inv-badge-raw_e710" title="Port E-710 Bio-Oil (Bug Main)">🛢️ 1</span>
+                <span class="version-pill" id="inv-badge-raw_sand" title="Port Chitin Bio-Sand (Bug Unique)">🏜️ 0</span>
+                <span class="version-pill" id="inv-badge-raw_titanium" title="Port Cyber-Titanium (Bot Unique)">🔩 0</span>
                 <span class="version-pill" id="inv-badge-cloth">🦺 2</span>
                 <span class="version-pill" id="inv-badge-gun">🔫 0</span>
                 <span class="version-pill" id="inv-badge-resource">📦 0</span>
@@ -209,7 +211,7 @@
         <button class="buy-btn medal-btn" id="btn-idle-belt-upgrade">🔗 Belt Lv.0 ($150)</button>
       </div>
 
-      <!-- NEW IN v0.0.12: IDLE GAME FLOATING LITTLE POP-UP WINDOW FOR MULTI-ABILITY UPGRADES -->
+      <!-- NEW IN v0.0.13: IDLE GAME FLOATING LITTLE POP-UP WINDOW FOR MULTI-ABILITY UPGRADES -->
       <div id="building-upgrade-popover" class="building-popover">
         <div class="popover-header">
           <div>
@@ -221,7 +223,7 @@
         <div class="popover-abilities-list" id="popover-abilities-list"></div>
       </div>
 
-      <!-- NEW IN v0.0.12: GAME-BY-GAME ROGUELIKE WAR OPERATIONS BAR (ATTACK VS DEFENSE, SHOP POWER, CLIENT HIRE & HERO) -->
+      <!-- NEW IN v0.0.13: GAME-BY-GAME ROGUELIKE WAR OPERATIONS BAR (ATTACK VS DEFENSE, SHOP POWER, CLIENT HIRE & HERO) -->
       <div id="war-game-panel">
         <div class="war-panel-top">
           <div class="war-mode-tabs">
@@ -283,7 +285,7 @@
         </div>
       </div>
 
-      <!-- NEW IN v0.0.12: CAPYBARA GO! POST-WAVE RETREAT OR CONTINUE DECISION BAR -->
+      <!-- NEW IN v0.0.13: CAPYBARA GO! POST-WAVE RETREAT OR CONTINUE DECISION BAR -->
       <div id="capybara-wave-retreat-bar" style="display:none;position:fixed;top:118px;left:50%;transform:translateX(-50%);z-index:85;width:min(760px,95vw);background:rgba(9,13,24,0.97);border:2.5px solid #facc15;border-radius:16px;padding:14px 18px;box-shadow:0 16px 45px rgba(0,0,0,0.88);pointer-events:auto;">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
           <div style="font-family:var(--font-display);font-weight:900;font-size:1rem;color:#fde047;" id="retreat-bar-title">
@@ -304,7 +306,7 @@
         </div>
       </div>
 
-      <!-- NEW IN v0.0.12: CAPYBARA GO! × ROGUELIKE 3-CARD PERK DRAFT & MISSION VICTORY CHEST OVERLAY -->
+      <!-- NEW IN v0.0.13: CAPYBARA GO! × ROGUELIKE 3-CARD PERK DRAFT & MISSION VICTORY CHEST OVERLAY -->
       <div id="roguelike-draft-bar">
         <div class="rk-header">
           <span id="rk-draft-title">🎲 ROGUELIKE TACTICAL PERK DRAFT — CHOOSE 1 OF 3 UPGRADES!</span>
@@ -418,14 +420,14 @@
         </div>
         <div class="modal-body">
           <p style="font-size:0.82rem; color:#cbd5e1; line-height:1.4;">
-            Live 60FPS animated preview of all <strong>17 CarbotAnimations Helldivers 2 (Ep1–Ep10+) 2D vector characters, Smart SEAF Staff, Terminids (Scavenger Hunter, Charger, Bile Spewer, Bile Titan), Automatons (Trooper, Rocket Devastator, Flame-Saw Hulk, Factory Strider), Vehicles, Mechs, and Sentries</strong> in <code>v0.0.12</code>.
+            Live 60FPS animated preview of all <strong>17 CarbotAnimations Helldivers 2 (Ep1–Ep10+) 2D vector characters, Smart SEAF Staff, Terminids (Scavenger Hunter, Charger, Bile Spewer, Bile Titan), Automatons (Trooper, Rocket Devastator, Flame-Saw Hulk, Factory Strider), Vehicles, Mechs, and Sentries</strong> in <code>v0.0.13</code>.
           </p>
           <div class="char-showcase-grid" id="char-showcase-grid"></div>
         </div>
       </div>
     </div>
 
-    <!-- NEW IN v0.0.12: SEAF CLONE VAT ROOM & 6-SECTOR JOB ASSIGNMENT MODAL (🧬 克隆室與工作分配) -->
+    <!-- NEW IN v0.0.13: SEAF CLONE VAT ROOM & 6-SECTOR JOB ASSIGNMENT MODAL (🧬 克隆室與工作分配) -->
     <div class="modal-backdrop" id="modal-clone-room">
       <div class="modal-card modal-wide">
         <div class="modal-header">
@@ -449,12 +451,12 @@
             </div>
           </div>
 
-          <h4 style="font-family:var(--font-display);color:#fde047;font-size:0.84rem;margin-top:4px;">
+          <h4 id="clone-jobs-title" style="font-family:var(--font-display);color:#fde047;font-size:0.84rem;margin-top:4px;">
             📋 ASSIGN SEAF CLONES ACROSS 6 SECTOR JOBS (UNASSIGNED IDLE: <span id="clone-unassigned-count">0</span>)
           </h4>
           <div class="upgrade-grid" id="clone-jobs-grid"></div>
 
-          <h4 style="font-family:var(--font-display);color:#f97316;font-size:0.84rem;margin-top:6px;">
+          <h4 id="clone-heroes-title" style="display:none;font-family:var(--font-display);color:#f97316;font-size:0.84rem;margin-top:6px;">
             🦸 HERO CLONE DNA BAY &amp; WALL OF MARTYRS (英雄招募與陣亡基因重塑 — Gen-1 可陣亡觸發烈士核爆!)
           </h4>
           <div class="upgrade-grid" id="hero-clone-grid"></div>
@@ -462,7 +464,7 @@
       </div>
     </div>
 
-    <!-- NEW IN v0.0.12: TACTICAL WAR SQUAD & FORMATION MANAGER MODAL (🪖 戰術小隊編制與據點出擊管理) -->
+    <!-- NEW IN v0.0.13: TACTICAL WAR SQUAD & FORMATION MANAGER MODAL (🪖 戰術小隊編制與據點出擊管理) -->
     <div class="modal-backdrop" id="modal-squad">
       <div class="modal-card modal-wide">
         <div class="modal-header">
@@ -503,7 +505,7 @@
     </div>
 
     <!-- ======================================================================
-         NEW IN v0.0.12: LEFT-HAND TRANSPORT SHIP & PORT LOGISTICS MODAL (🛸 港口與運輸艦管理)
+         NEW IN v0.0.13: LEFT-HAND TRANSPORT SHIP & PORT LOGISTICS MODAL (🛸 港口與運輸艦管理)
          ====================================================================== -->
     <div class="modal-backdrop" id="modal-port-logistics">
       <div class="modal-card modal-wide">
@@ -513,11 +515,11 @@
         </div>
         <div class="modal-body">
           <div id="port-logistics-summary" style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;background:rgba(56,189,248,0.12);border:1.5px solid #38bdf8;padding:10px 14px;border-radius:10px;"></div>
-          <h4 style="font-family:var(--font-display);color:#fde047;font-size:0.84rem;margin-top:4px;">
+          <h4 id="port-upgrades-title" style="font-family:var(--font-display);color:#fde047;font-size:0.84rem;margin-top:4px;">
             ⚓ PORT &amp; FLEET UPGRADES (BUY SHIPS, ADD PORTS, UNLOADING SPEED &amp; STORAGE LIMIT)
           </h4>
           <div class="upgrade-grid" id="port-upgrades-grid"></div>
-          <h4 style="font-family:var(--font-display);color:#4ade80;font-size:0.84rem;margin-top:6px;">
+          <h4 id="port-ships-title" style="font-family:var(--font-display);color:#4ade80;font-size:0.84rem;margin-top:6px;">
             🛸 ACTIVE TRANSPORT SHIP FLEET STATUS (HAULING ORES FROM CAPTURED PLANETS TO HALLTOWN LEFT PORT)
           </h4>
           <div class="upgrade-grid" id="transport-ships-list"></div>
@@ -526,7 +528,7 @@
     </div>
 
     <!-- ======================================================================
-         NEW IN v0.0.12: GALACTIC SPACE MAP, PLANET MINING & TRAVIAN DEFENSE MODAL (🪐 星際戰略星圖)
+         NEW IN v0.0.13: GALACTIC SPACE MAP, PLANET MINING & TRAVIAN DEFENSE MODAL (🪐 星際戰略星圖)
          ====================================================================== -->
     <div class="modal-backdrop" id="modal-space-map">
       <div class="modal-card modal-wide">
@@ -537,33 +539,33 @@
         <div class="modal-body">
           <div id="space-map-summary-banner" style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;background:rgba(168,85,247,0.14);border:1.5px solid #c084fc;padding:10px 14px;border-radius:10px;"></div>
 
-          <!-- Interactive 2D Space Map Network Canvas -->
-          <div style="background:#050811;border:2px solid #38bdf8;border-radius:12px;padding:8px;text-align:center;">
-            <canvas id="space-map-canvas" width="900" height="320" style="width:100%;max-width:900px;height:auto;cursor:pointer;border-radius:8px;"></canvas>
-            <div style="font-size:0.75rem;color:#94a3b8;margin-top:4px;">
-              👆 Tap any Planet Node on the Space Map above (or inspect below) to upgrade Mines/Storage, build Travian Walls/Turrets, hire SEAF/Helldiver Garrisons, launch Pre-Emptive Troop Strikes, or start a <strong>10-Wave Capture Expedition</strong>!
+          <!-- PAGE 1: Interactive 2D Space Map Network Canvas ONLY (21 Planets: 10 Bug Lv.1-10 + 10 Bot Lv.1-10) -->
+          <div id="space-map-canvas-wrap" style="background:#050811;border:2px solid #38bdf8;border-radius:12px;padding:10px;text-align:center;">
+            <canvas id="space-map-canvas" width="1080" height="500" style="width:100%;max-width:1080px;height:auto;cursor:pointer;border-radius:8px;"></canvas>
+            <div style="font-size:0.78rem;color:#fde047;margin-top:6px;font-weight:700;">
+              👆 Click any Planet on the Space Map above to open its dedicated Planet Page (Ores ➔ Economy Page OR Defense Page)!
             </div>
           </div>
 
-          <!-- Selected Planet Deep Inspector -->
-          <div id="space-planet-inspector" style="background:rgba(15,23,42,0.95);border:2px solid #facc15;border-radius:12px;padding:12px;"></div>
+          <!-- PAGE 2 / 3A / 3B: Selected Planet Overview, EconomySub-Page, or Defense Sub-Page -->
+          <div id="space-planet-inspector" style="display:none;background:rgba(15,23,42,0.95);border:2px solid #facc15;border-radius:12px;padding:14px;"></div>
 
-          <!-- Travian-Style Planetary Defense Battle Reports -->
-          <h4 style="font-family:var(--font-display);color:#f97316;font-size:0.84rem;margin-top:6px;">
+          <!-- PAGE 3C: Travian-Style Planetary Defense Battle Reports Sub-Page -->
+          <h4 id="travian-battle-log-title" style="display:none;font-family:var(--font-display);color:#f97316;font-size:0.84rem;margin-top:6px;">
             📜 TRAVIAN-STYLE PLANETARY DEFENSE WAR CALCULATIONS &amp; INVASION LOG (自動防禦戰鬥結算報告)
           </h4>
-          <div id="travian-battle-log" style="max-height:160px;overflow-y:auto;background:rgba(9,13,20,0.9);border:1px solid #475569;border-radius:8px;padding:8px;font-size:0.78rem;color:#e2e8f0;"></div>
+          <div id="travian-battle-log" style="display:none;max-height:260px;overflow-y:auto;background:rgba(9,13,20,0.9);border:1px solid #475569;border-radius:8px;padding:10px;font-size:0.8rem;color:#e2e8f0;"></div>
 
-          <h4 style="font-family:var(--font-display);color:#38bdf8;font-size:0.84rem;margin-top:6px;">
+          <h4 id="space-planets-grid-title" style="display:none;font-family:var(--font-display);color:#38bdf8;font-size:0.84rem;margin-top:6px;">
             🪐 ALL GALACTIC SECTOR PLANETS (SINGLE FACTION PER PLANET: 🐛 BUGS OR 🤖 AUTOBOTS)
           </h4>
-          <div id="space-planets-grid" class="upgrade-grid"></div>
+          <div id="space-planets-grid" class="upgrade-grid" style="display:none;"></div>
         </div>
       </div>
     </div>
 
     <!-- ======================================================================
-         NEW IN v0.0.12: SHOP HELLDIVER TRAINING & RECRUITMENT ROOM MODAL (🏋️ 戰士訓練與招募室 — MAX Lv.100 & SKILLS)
+         NEW IN v0.0.13: SHOP HELLDIVER TRAINING & RECRUITMENT ROOM MODAL (🏋️ 戰士訓練與招募室 — MAX Lv.100 & SKILLS)
          ====================================================================== -->
     <div class="modal-backdrop" id="modal-training-room">
       <div class="modal-card modal-wide">
@@ -574,17 +576,17 @@
         <div class="modal-body">
           <div id="training-room-summary" style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;background:rgba(250,204,21,0.12);border:1.5px solid #facc15;padding:10px 14px;border-radius:10px;"></div>
 
-          <h4 style="font-family:var(--font-display);color:#4ade80;font-size:0.84rem;margin-top:4px;">
+          <h4 id="training-lineup-title" style="font-family:var(--font-display);color:#4ade80;font-size:0.84rem;margin-top:4px;">
             ⚔️ YOUR 4-HERO CAPYBARA GO! EXPEDITION LINEUP (3 ACTIVE SIMULTANEOUSLY + 1 ORBITAL SPARE REINFORCEMENT)
           </h4>
           <div class="upgrade-grid" id="training-lineup-grid"></div>
 
-          <h4 style="font-family:var(--font-display);color:#fde047;font-size:0.84rem;margin-top:6px;">
+          <h4 id="training-roster-title" style="font-family:var(--font-display);color:#fde047;font-size:0.84rem;margin-top:6px;">
             🎖️ YOUR HELLDIVER HERO ROSTER (TRAIN Lv.1–100, EQUIP 4-SLOT SHOP GEAR &amp; UNLOCK Lv.1/25/60 SKILLS — ⚠️ PERMADEATH IF KILLED!)
           </h4>
           <div class="upgrade-grid" id="training-roster-grid"></div>
 
-          <h4 style="font-family:var(--font-display);color:#38bdf8;font-size:0.84rem;margin-top:6px;">
+          <h4 id="training-recruit-title" style="font-family:var(--font-display);color:#38bdf8;font-size:0.84rem;margin-top:6px;">
             ➕ RECRUIT NEW HELLDIVER ARCHETYPES (6 CLASSES · MAX ABILITY 100 · 3 SIGNATURE SKILLS EACH)
           </h4>
           <div class="upgrade-grid" id="training-recruit-grid"></div>
@@ -670,7 +672,7 @@
     <div class="modal-backdrop" id="modal-save">
       <div class="modal-card">
         <div class="modal-header">
-          <div class="modal-title">💾 SAVE / EXPORT COMMAND PROGRESS (v0.0.12)</div>
+          <div class="modal-title">💾 SAVE / EXPORT COMMAND PROGRESS (v0.0.13)</div>
           <button class="modal-close-btn modal-close" id="btn-close-save">✕</button>
         </div>
         <div class="modal-body">
@@ -691,12 +693,12 @@
     <div class="modal-backdrop" id="modal-github">
       <div class="modal-card">
         <div class="modal-header">
-          <div class="modal-title">📦 GITHUB &amp; GITHUB PAGES REPOSITORY PACKAGER (v0.0.12)</div>
+          <div class="modal-title">📦 GITHUB &amp; GITHUB PAGES REPOSITORY PACKAGER (v0.0.13)</div>
           <button class="modal-close-btn modal-close" id="btn-close-github">✕</button>
         </div>
         <div class="modal-body">
           <p style="font-size:0.84rem; color:#cbd5e1; line-height:1.45;">
-            Download a clean, modular GitHub repository archive ready for <strong>GitHub Pages</strong> deployment. Includes <code>index.html</code>, <code>css/style.css</code>, <code>js/config.js</code>, <code>js/audio.js</code>, <code>js/world.js</code>, <code>js/game.js</code>, and <code>README.md</code> (with full <code>v0.0.00</code>–<code>v0.0.12</code> changelog history).
+            Download a clean, modular GitHub repository archive ready for <strong>GitHub Pages</strong> deployment. Includes <code>index.html</code>, <code>css/style.css</code>, <code>js/config.js</code>, <code>js/audio.js</code>, <code>js/world.js</code>, <code>js/game.js</code>, and <code>README.md</code> (with full <code>v0.0.00</code>–<code>v0.0.13</code> changelog history).
           </p>
           <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:4px;">
             <button class="upg-buy-btn hud-btn btn-primary" id="btn-ingame-dl-full">
