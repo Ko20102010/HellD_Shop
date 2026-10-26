@@ -5,8 +5,8 @@
 // ============================================================================
 
 window.GameConfig = {
-  VERSION: 'v0.0.10',
-  STORAGE_KEY: 'helldivers_please_save_v0010',
+  VERSION: 'v0.0.11',
+  STORAGE_KEY: 'helldivers_please_save_v0011',
   MAX_LEVEL: 10,
 
   // Expanded 4600 x 4000 2D Factorio + Carbot World for 7 Full Horizontal Lanes
@@ -1991,5 +1991,243 @@ window.GameConfig = {
       abilityName: 'Super-Stim Aura (+25% Squad SPD/HEAL)',
       desc: 'Boosts all allied Client Mercenaries & SEAF troops by +25% attack speed and heals them every wave!'
     }
+  ],
+
+  // --------------------------------------------------------------------------
+  // NEW IN v0.0.11: NIGHTFALL: KINGDOM FRONTIER TD × CASTLE DEFENSE & STRONGHOLD (據點) MAP
+  // 100% of $REQ money, 🧱 Turret Ammo, and 🦺/🔫/🎒/🚙/🤖 gear come from your Shop!
+  //Zero economy buildings in War Zone — focus on Castle Defense & Sally-Out Counter-Attack!
+  // --------------------------------------------------------------------------
+  NIGHTFALL_CASTLE: {
+    keep: {
+      x: -940,
+      z: -1020,
+      name: 'Super Earth Frontier Citadel Keep',
+      zhName: '超級地球王國邊境主堡'
+    },
+    // 6 Upgradable Frontier Watchtowers (Lv.1-10) around the Castle Perimeter & River Bridge
+    // Powered by 🧱 Turret Ammo stamped in your Shop's Munitions Press!
+    watchtowers: [
+      {
+        id: 'tw_1',
+        slot: 1,
+        name: 'Tower #1: North Bastion MG Sentry',
+        zhName: '1號北側城牆機槍塔',
+        icon: '🗼',
+        color: '#38bdf8',
+        x: -540,
+        z: -1430,
+        baseCost: 110,
+        costScale: 1.35,
+        baseDmg: 32,
+        fireRate: 0.34,
+        range: 520,
+        unlockedAtStart: true
+      },
+      {
+        id: 'tw_2',
+        slot: 2,
+        name: 'Tower #2: Upper East Gate Autocannon',
+        zhName: '2號東門北翼機砲塔',
+        icon: '🗼',
+        color: '#facc15',
+        x: -230,
+        z: -1210,
+        baseCost: 120,
+        costScale: 1.35,
+        baseDmg: 38,
+        fireRate: 0.32,
+        range: 540,
+        unlockedAtStart: true
+      },
+      {
+        id: 'tw_3',
+        slot: 3,
+        name: 'Tower #3: Lower East Gate Flak Tower',
+        zhName: '3號東門南翼高爆塔',
+        icon: '🗼',
+        color: '#facc15',
+        x: -230,
+        z: -820,
+        baseCost: 140,
+        costScale: 1.35,
+        baseDmg: 42,
+        fireRate: 0.32,
+        range: 540,
+        unlockedAtStart: true
+      },
+      {
+        id: 'tw_4',
+        slot: 4,
+        name: 'Tower #4: South Stone Bridge Bastion',
+        zhName: '4號南側石橋守衛塔',
+        icon: '🗼',
+        color: '#f97316',
+        x: -500,
+        z: -510,
+        baseCost: 160,
+        costScale: 1.36,
+        baseDmg: 48,
+        fireRate: 0.30,
+        range: 560,
+        unlockedAtStart: true
+      },
+      {
+        id: 'tw_5',
+        slot: 5,
+        name: 'Tower #5: West Bridgehead Rail-Tower',
+        zhName: '5號西橋頭電磁軌道塔',
+        icon: '⚡',
+        color: '#a855f7',
+        x: -860,
+        z: -510,
+        baseCost: 190,
+        costScale: 1.38,
+        baseDmg: 58,
+        fireRate: 0.28,
+        range: 580,
+        unlockedAtStart: false
+      },
+      {
+        id: 'tw_6',
+        slot: 6,
+        name: 'Tower #6: River Island Forward Outpost',
+        zhName: '6號河心前哨巨砲塔',
+        icon: '🚀',
+        color: '#4ade80',
+        x: 60,
+        z: -740,
+        baseCost: 240,
+        costScale: 1.40,
+        baseDmg: 72,
+        fireRate: 0.26,
+        range: 620,
+        unlockedAtStart: false
+      }
+    ],
+    // 3 Destructible Eastern Enemy Strongholds (據點) across the River Moat
+    // Players can command their Hero + Managed War Squads to Sally Out (出擊攻打據點) and raze them!
+    strongholds: [
+      {
+        id: 'sh_north_bot',
+        index: 1,
+        name: 'North Bot Cave Stronghold',
+        zhName: '北側機器人山洞據點 (據點 #1)',
+        icon: '🤖',
+        bossType: 'hulk',
+        color: '#ef4444',
+        x: 960,
+        z: -1420,
+        baseHp: 1400,
+        rewardCash: 480,
+        rewardMedals: 2,
+        desc: 'Spawns Automaton Troopers, Rocket Devastators & Flame-Saw Hulks marching toward the East Castle Gate.'
+      },
+      {
+        id: 'sh_mid_outpost',
+        index: 2,
+        name: 'Central River Iron Fortress',
+        zhName: '中路河岸重裝要塞 (據點 #2)',
+        icon: '🏴‍☠️',
+        bossType: 'strider',
+        color: '#f97316',
+        x: 1080,
+        z: -980,
+        baseHp: 1900,
+        rewardCash: 720,
+        rewardMedals: 3,
+        desc: 'Heavily armored river crossing stronghold guarded by Factory Striders. Raze it for massive $REQ & Forever Medals!'
+      },
+      {
+        id: 'sh_south_hive',
+        index: 3,
+        name: 'South Terminid Bio-Hive Cave',
+        zhName: '南側終結族超級蟲巢 (據點 #3)',
+        icon: '🪲',
+        bossType: 'titan',
+        color: '#a855f7',
+        x: 920,
+        z: -520,
+        baseHp: 2400,
+        rewardCash: 980,
+        rewardMedals: 4,
+        desc: 'Breeds Scavenger Hunters, Bile Spewers & Bile Titans that swarm across the South Stone Arch Bridge!'
+      }
+    ]
+  },
+
+  // --------------------------------------------------------------------------
+  // NEW IN v0.0.11: MANAGEABLE WAR SQUADS (🪖 戰術小隊管理 — JOINS CASTLE DEFENSE & STRONGHOLD ATTACK!)
+  // Visible in neat 2x4 troop formation grids (like Nightfall: Kingdom Frontier TD) both in
+  // Shop Sector D (Clone & Squad Muster Bay) and inside the Frontier Castle Compound!
+  // --------------------------------------------------------------------------
+  WAR_SQUADS: [
+    {
+      id: 'squad_alpha',
+      name: 'Alpha Vanguard Rifle Squad',
+      zhName: '阿爾法先鋒步槍小隊 (8人方陣)',
+      icon: '🪖',
+      color: '#38bdf8',
+      unitType: 'deploy_squad',
+      maxSize: 8,
+      initialSize: 4,
+      recruitCashCost: 65,
+      gearItemIds: ['cloth', 'gun'],
+      gearUpgradeBaseCost: 110,
+      baseUnitHp: 320,
+      baseUnitDmg: 30,
+      fireRate: 0.30,
+      range: 420,
+      speed: 150,
+      shopFormationPos: { x: -1020, z: -230 },
+      castleBarracksPos: { x: -640, z: -1240 },
+      bridgePostPos: { x: -110, z: -1020 },
+      desc: 'Frontline Helldiver infantry formation (up to 8 soldiers). Equipped with Shop 🦺 Armor & 🔫 Liberator Rifles!'
+    },
+    {
+      id: 'squad_bravo',
+      name: 'Bravo Jump-Pack & Heavy Squad',
+      zhName: '布拉沃噴射重裝小隊 (8人方陣)',
+      icon: '🚀',
+      color: '#facc15',
+      unitType: 'deploy_buggy',
+      maxSize: 8,
+      initialSize: 2,
+      recruitCashCost: 115,
+      gearItemIds: ['resource', 'equipment', 'vehicle'],
+      gearUpgradeBaseCost: 165,
+      baseUnitHp: 560,
+      baseUnitDmg: 52,
+      fireRate: 0.26,
+      range: 460,
+      speed: 175,
+      shopFormationPos: { x: -780, z: -230 },
+      castleBarracksPos: { x: -640, z: -920 },
+      bridgePostPos: { x: -580, z: -410 },
+      desc: 'Fast mobile strike platoon (up to 8 units). Uses Shop 📦 Grenades, 🎒 Jump Packs & 🚙 Recon Buggies to guard the Stone Bridge!'
+    },
+    {
+      id: 'squad_charlie',
+      name: 'Charlie Patriot Exosuit Squad',
+      zhName: '查理愛國者機甲小隊 (8人方陣)',
+      icon: '🤖',
+      color: '#f97316',
+      unitType: 'deploy_mech',
+      maxSize: 8,
+      initialSize: 1,
+      recruitCashCost: 220,
+      gearItemIds: ['mech', 'warship'],
+      gearUpgradeBaseCost: 260,
+      baseUnitHp: 1250,
+      baseUnitDmg: 98,
+      fireRate: 0.24,
+      range: 510,
+      speed: 125,
+      shopFormationPos: { x: -540, z: -230 },
+      castleBarracksPos: { x: -960, z: -720 },
+      bridgePostPos: { x: 80, z: -980 },
+      desc: 'Heavy armored walker formation (up to 8 Patriot Mechs). Crushes Enemy Strongholds (據點) when ordered to Sally Out!'
+    }
   ]
 };
+

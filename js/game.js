@@ -256,6 +256,369 @@
       return 1 + score * 0.015;
     }
 
+    // ========================================================================
+    // NEW IN v0.0.11: NIGHTFALL WATCHTOWERS, STRONGHOLDS (據點) & WAR SQUAD MANAGER
+    // ========================================================================
+    getTotalSquadTroops() {
+      let total = 0;
+      for (const sq of (CFG.WAR_SQUADS || [])) {
+        total += (this.warSquads?.[sq.id]?.count || 0);
+      }
+      return total;
+    }
+
+    getWatchtowerUpgradeCost(twId) {
+      const twCfg = (CFG.NIGHTFALL_CASTLE?.watchtowers || []).find((t) => t.id === twId);
+      if (!twCfg) return 120;
+      const lvl = this.watchtowers?.[twId]?.level || 0;
+      if (lvl === 0) return twCfg.baseCost;
+      return Math.round(twCfg.baseCost * Math.pow(twCfg.costScale || 1.35, lvl));
+    }
+
+    upgradeWatchtower(twId = null) {
+      const list = CFG.NIGHTFALL_CASTLE?.watchtowers || [];
+      let targetCfg = twId ? list.find((t) => t.id === twId) : null;
+      if (!targetCfg) {
+        // Pick lowest-level watchtower
+        targetCfg = [...list].sort((a, b) => (this.watchtowers?.[a.id]?.level || 0) - (this.watchtowers?.[b.id]?.level || 0))[0];
+      }
+      if (!targetCfg) return false;
+      const ts = this.watchtowers[targetCfg.id] || { level: 0, angle: 0, fireCooldown: 0, lastFireTime: -10 };
+      if ((ts.level || 0) >= 10) {
+        this.spawnFloatingText(targetCfg.x, targetCfg.z - 35, `✅ ${targetCfg.name} ALREADY MAX Lv.10!`, '#4ade80');
+        return false;
+      }
+      const cost = this.getWatchtowerUpgradeCost(targetCfg.id);
+      if (this.cash < cost) {
+        this.spawnFloatingText(targetCfg.x, targetCfg.z - 35, `⚠️ NEED $${cost} (FROM SHOP) FOR WATCHTOWER #${targetCfg.slot}`, '#ef4444');
+        return false;
+      }
+      this.cash -= cost;
+      ts.level = (ts.level || 0) + 1;
+      this.watchtowers[targetCfg.id] = ts;
+      this.audio.playUnlock();
+      this.saveGame();
+      this.updateHUD();
+      this.spawnFloatingText(
+        targetCfg.x,
+        targetCfg.z - 45,
+        ts.level === 1
+          ? `🗼 BUILT FRONTIER WATCHTOWER #${targetCfg.slot} (Lv.1/10)!`
+          : `⬆️ WATCHTOWER #${targetCfg.slot} UPGRADED Lv.${ts.level}/10!`,
+        targetCfg.color
+      );
+      return true;
+    }
+
+    syncWarSquadUnits() {
+      if (!this.warSquads) return;
+      const shopMult = this.getShopWarPowerMult();
+      const cmdLvl = this.getTechNodeLevel('tech_war_unit_command');
+      const shieldBonus = 1 + (this.roguelikePerks?.rk_shield_relay || 0) * 0.45;
+
+      // Preserve active Hero unit if alive
+      const existingHero = (this.alliedUnits || []).find((u) => u.isHero && u.hp > 0);
+      const synced = [];
+      if (existingHero) {
+        synced.push(existingHero);
+      } else {
+        const hCfg = (CFG.WAR_HEROES || []).find((h) => h.id === this.activeHeroId) || CFG.WAR_HEROES[0];
+        const hs = this.heroesState?.[hCfg?.id];
+        if (hCfg && hs && hs.unlocked && !hs.dead) {
+          const genMult = 1 + ((hs.gen || 1) - 1) * 0.35;
+          const maxHp = Math.round(hCfg.baseHp * genMult * shopMult * shieldBonus);
+          const dmg = Math.round(hCfg.baseDmg * genMult * shopMult);
+          synced.push({
+            id: 'hero_' + hCfg.id,
+            isHero: true,
+            heroId: hCfg.id,
+            gen: hs.gen || 1,
+            unitType: hCfg.id === 'hero_brasch' ? 'deploy_mech' : 'deploy_squad',
+            label: `${hCfg.icon} HERO: ${hCfg.name.toUpperCase()}`,
+            subTag: hs.gen === 1 ? '⚠️ GEN-1 (MAY DIE -> MARTYR NUKE!)' : `🧬 CLONE GEN-${hs.gen}`,
+            x: -360,
+            z: -1020,
+            homeX: -360,
+            homeZ: -1020,
+            hp: maxHp,
+            maxHp,
+            damage: dmg,
+            fireRate: hCfg.fireRate || 0.22,
+            fireCooldown: 0,
+            range: 490,
+            speed: 165,
+            color: hCfg.color,
+            patrolDir: 1
+          });
+        }
+      }
+
+      // Add troops from the 3 Manageable War Squads (Alpha, Bravo, Charlie) in neat 2x4 formation offsets!
+      for (const sq of (CFG.WAR_SQUADS || [])) {
+        const sqState = this.warSquads[sq.id] || { count: sq.initialSize, tier: 1 };
+        const count = Math.max(0, Math.min(sq.maxSize, sqState.count || 0));
+        const tier = sqState.tier || 1;
+        const tierHpMult = (1 + (tier - 1) * 0.35) * shopMult * (1 + cmdLvl * 0.30) * shieldBonus;
+        const tierDmgMult = (1 + (tier - 1) * 0.30) * shopMult * (1 + cmdLvl * 0.25);
+
+        for (let slot = 0; slot < count; slot++) {
+          const col = slot % 4;
+          const row = Math.floor(slot / 4);
+          const homeX = sq.castleBarracksPos.x - 54 + col * 36;
+          const homeZ = sq.castleBarracksPos.z - 10 + row * 34;
+          const unitId = `${sq.id}_slot_${slot}`;
+          const prevUnit = (this.alliedUnits || []).find((u) => u.id === unitId && u.hp > 0);
+          const maxHp = Math.round(sq.baseUnitHp * tierHpMult);
+          const dmg = Math.round(sq.baseUnitDmg * tierDmgMult);
+
+          synced.push({
+            id: unitId,
+            squadId: sq.id,
+            slotIndex: slot,
+            unitType: sq.unitType,
+            label: `${sq.icon} ${sq.name.split(' ')[0]} #${slot + 1} (T${tier})`,
+            x: prevUnit ? prevUnit.x : homeX,
+            z: prevUnit ? prevUnit.z : homeZ,
+            homeX,
+            homeZ,
+            bridgeX: sq.bridgePostPos.x + (col - 1.5) * 32,
+            bridgeZ: sq.bridgePostPos.z + (row - 0.5) * 32,
+            hp: prevUnit ? Math.min(maxHp, prevUnit.hp) : maxHp,
+            maxHp,
+            damage: dmg,
+            fireRate: sq.fireRate,
+            fireCooldown: 0,
+            range: sq.range,
+            speed: sq.speed,
+            color: sq.color,
+            patrolDir: 1
+          });
+        }
+      }
+
+      // Also include any SEAF Clones assigned to `⚔️ Pick War` (`workerJobs.war`)
+      const warClones = this.workerJobs?.war || 0;
+      for (let i = 0; i < warClones; i++) {
+        const cid = `seaf_war_clone_${i}`;
+        const prev = (this.alliedUnits || []).find((u) => u.id === cid && u.hp > 0);
+        const homeX = -420 + (i % 3) * 36;
+        const homeZ = -620 + Math.floor(i / 3) * 34;
+        const maxHp = Math.round(320 * shopMult);
+        synced.push({
+          id: cid,
+          unitType: 'deploy_squad',
+          label: `🧬 SEAF WAR CLONE #${i + 1}`,
+          x: prev ? prev.x : homeX,
+          z: prev ? prev.z : homeZ,
+          homeX,
+          homeZ,
+          bridgeX: homeX,
+          bridgeZ: homeZ,
+          hp: prev ? prev.hp : maxHp,
+          maxHp,
+          damage: Math.round(32 * shopMult),
+          fireRate: 0.30,
+          fireCooldown: 0,
+          range: 420,
+          speed: 150,
+          color: '#4ade80',
+          patrolDir: 1
+        });
+      }
+
+      this.alliedUnits = synced;
+    }
+
+    recruitSquadSoldier(squadId, useClientPool = false) {
+      const sq = (CFG.WAR_SQUADS || []).find((s) => s.id === squadId);
+      if (!sq) return false;
+      const sqState = this.warSquads[sq.id] || { count: 0, tier: 1 };
+      if (sqState.count >= sq.maxSize) {
+        this.spawnFloatingText(this.player.x, this.player.z - 35, `✅ ${sq.name} IS FULL (8/8 FORMATION)!`, '#4ade80');
+        return false;
+      }
+
+      let paidWay = '';
+      if (useClientPool && this.gearedClientsPool && this.gearedClientsPool.length > 0) {
+        this.gearedClientsPool.pop();
+        paidWay = '🫡 1x Geared Shop Client';
+      } else {
+        // Check if Shop has any matching finished item in Player Inventory, Factory Stock, or Counter Buffer
+        let usedItem = null;
+        for (const itemId of (sq.gearItemIds || [])) {
+          const invIdx = this.player.inventory.findIndex((it) => it.id === itemId);
+          if (invIdx !== -1) {
+            this.player.inventory.splice(invIdx, 1);
+            usedItem = itemId;
+            break;
+          } else if ((this.stations[itemId]?.stock || 0) > 0) {
+            this.stations[itemId].stock--;
+            usedItem = itemId;
+            break;
+          } else if ((this.counterBuffer[itemId] || 0) > 0) {
+            this.counterBuffer[itemId]--;
+            usedItem = itemId;
+            break;
+          }
+        }
+
+        if (usedItem) {
+          const icfg = this.getItemConfig(usedItem);
+          paidWay = `1x ${icfg ? icfg.icon + ' ' + icfg.shortName : usedItem} from Shop`;
+        } else {
+          if (this.cash < sq.recruitCashCost) {
+            this.spawnFloatingText(this.player.x, this.player.z - 35, `⚠️ NEED $${sq.recruitCashCost} OR SHOP GEAR TO RECRUIT!`, '#ef4444');
+            return false;
+          }
+          this.cash -= sq.recruitCashCost;
+          paidWay = `$${sq.recruitCashCost} Shop REQ`;
+        }
+      }
+
+      sqState.count = Math.min(sq.maxSize, (sqState.count || 0) + 1);
+      this.warSquads[sq.id] = sqState;
+      this.syncWarSquadUnits();
+      this.audio.playUnlock();
+      this.saveGame();
+      this.renderSquadModal();
+      this.updateHUD();
+      this.spawnFloatingText(
+        this.player.x,
+        this.player.z - 45,
+        `🪖 +1 ${sq.name.toUpperCase()} (${sqState.count}/8 · Used ${paidWay})!`,
+        sq.color
+      );
+      return true;
+    }
+
+    upgradeSquadGearTier(squadId) {
+      const sq = (CFG.WAR_SQUADS || []).find((s) => s.id === squadId);
+      if (!sq) return false;
+      const sqState = this.warSquads[sq.id] || { count: sq.initialSize, tier: 1 };
+      if ((sqState.tier || 1) >= 10) return false;
+      const cost = Math.round(sq.gearUpgradeBaseCost * Math.pow(1.38, (sqState.tier || 1) - 1));
+      if (this.cash < cost) {
+        this.spawnFloatingText(this.player.x, this.player.z - 35, `⚠️ NEED $${cost} TO UPGRADE SQUAD GEAR`, '#ef4444');
+        return false;
+      }
+      this.cash -= cost;
+      sqState.tier = (sqState.tier || 1) + 1;
+      this.warSquads[sq.id] = sqState;
+      this.syncWarSquadUnits();
+      this.audio.playUnlock();
+      this.saveGame();
+      this.renderSquadModal();
+      this.updateHUD();
+      this.spawnFloatingText(
+        this.player.x,
+        this.player.z - 45,
+        `⬆️ ${sq.name.toUpperCase()} GEAR TIER Lv.${sqState.tier}/10 (+30% ATK & +35% HP)!`,
+        '#fde047'
+      );
+      return true;
+    }
+
+    renderSquadModal() {
+      const titleEl = document.getElementById('squad-summary-title');
+      const squadsGrid = document.getElementById('war-squads-grid');
+      const shGrid = document.getElementById('strongholds-status-grid');
+      const totalTroops = this.getTotalSquadTroops();
+      const shopBonusPct = Math.round((this.getShopWarPowerMult() - 1) * 100);
+
+      if (titleEl) {
+        titleEl.textContent = `🪖 ACTIVE WAR SQUAD FORMATIONS: ${totalTroops} / 24 TROOPS · SHOP SCALE BONUS: +${shopBonusPct}% ATK/HP`;
+      }
+
+      if (squadsGrid) {
+        squadsGrid.innerHTML = '';
+        for (const sq of (CFG.WAR_SQUADS || [])) {
+          const sqState = this.warSquads?.[sq.id] || { count: sq.initialSize, tier: 1 };
+          const count = sqState.count || 0;
+          const tier = sqState.tier || 1;
+          const isFull = count >= sq.maxSize;
+          const isMaxTier = tier >= 10;
+          const upgCost = Math.round(sq.gearUpgradeBaseCost * Math.pow(1.38, tier - 1));
+          const clientPool = (this.gearedClientsPool || []).length;
+
+          let dots = '<span class="squad-dots-row">';
+          for (let i = 0; i < sq.maxSize; i++) {
+            dots += `<span class="squad-unit-dot ${i < count ? 'active' : ''}"></span>`;
+          }
+          dots += '</span>';
+
+          const unitHp = Math.round(sq.baseUnitHp * (1 + (tier - 1) * 0.35) * this.getShopWarPowerMult());
+          const unitDmg = Math.round(sq.baseUnitDmg * (1 + (tier - 1) * 0.30) * this.getShopWarPowerMult());
+
+          const card = document.createElement('div');
+          card.className = 'upgrade-item';
+          card.style.borderColor = sq.color;
+          card.innerHTML = `
+            <div class="upgrade-info">
+              <h4 style="color:${sq.color};">${sq.icon} ${sq.name} (${count}/${sq.maxSize}) ${dots}</h4>
+              <div style="font-size:0.74rem;color:#fde047;font-weight:700;margin:2px 0;">
+                Gear Tier Lv.${tier}/10 · Per-Unit HP: ${unitHp} · ATK: ${unitDmg} (${sq.zhName})
+              </div>
+              <p>${sq.desc}</p>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:5px;min-width:165px;">
+              <button class="buy-btn btn-sq-recruit" ${isFull ? 'disabled' : ''}>
+                ${isFull ? '✅ 8/8 FULL FORMATION' : `➕ +1 Soldier (Gear or $${sq.recruitCashCost})`}
+              </button>
+              <button class="hud-btn btn-sq-client" style="border-color:#38bdf8;color:#7dd3fc;justify-content:center;" ${(isFull || clientPool <= 0) ? 'disabled' : ''}>
+                🫡 Assign Geared Client (${clientPool} Ready)
+              </button>
+              <button class="buy-btn medal-btn btn-sq-tier" ${(isMaxTier || this.cash < upgCost) ? 'disabled' : ''}>
+                ${isMaxTier ? 'MAX TIER Lv.10' : `⬆️ Gear Tier Lv.${tier + 1} ($${upgCost})`}
+              </button>
+            </div>
+          `;
+          card.querySelector('.btn-sq-recruit')?.addEventListener('click', () => this.recruitSquadSoldier(sq.id, false));
+          card.querySelector('.btn-sq-client')?.addEventListener('click', () => this.recruitSquadSoldier(sq.id, true));
+          card.querySelector('.btn-sq-tier')?.addEventListener('click', () => this.upgradeSquadGearTier(sq.id));
+          squadsGrid.appendChild(card);
+        }
+      }
+
+      if (shGrid) {
+        shGrid.innerHTML = '';
+        for (const sh of (CFG.NIGHTFALL_CASTLE?.strongholds || [])) {
+          const st = this.strongholds?.[sh.id] || { hp: sh.baseHp, maxHp: sh.baseHp, level: 1, destroyedCount: 0 };
+          const isTarget = this.targetStrongholdId === sh.id && this.missionType === 'attack';
+          const card = document.createElement('div');
+          card.className = 'upgrade-item';
+          card.style.borderColor = isTarget ? '#facc15' : sh.color;
+          card.innerHTML = `
+            <div class="upgrade-info">
+              <h4 style="color:${sh.color};">${sh.icon} ${sh.name} (Lv.${st.level} · Razed ${st.destroyedCount || 0}x)</h4>
+              <div style="font-size:0.74rem;color:#fde047;font-weight:700;">
+                HP: ${Math.ceil(st.hp)} / ${st.maxHp} · Bounty: +$${sh.rewardCash * st.level} + ${sh.rewardMedals} ⭐ + 1 🧬
+              </div>
+              <p>${sh.desc}</p>
+            </div>
+            <button class="buy-btn ${isTarget ? 'medal-btn' : ''}">
+              ${isTarget ? '⚔️ ASSAULTING NOW!' : '⚔️ Sally Out & Attack 據點'}
+            </button>
+          `;
+          card.querySelector('button')?.addEventListener('click', () => {
+            this.targetStrongholdId = sh.id;
+            this.missionType = 'attack';
+            document.getElementById('modal-squad')?.classList.remove('open');
+            if (this.viewMode !== 'war') this.setViewMode('war');
+            if (this.waveState === 'rest') this.startNextWave(false);
+            this.audio.playStratagem();
+            this.spawnFloatingText(
+              sh.x,
+              sh.z - 60,
+              `⚔️ ALL SQUADS & HERO SALLYING OUT TO ATTACK ${sh.name.toUpperCase()}!`,
+              '#facc15'
+            );
+            this.updateHUD();
+          });
+          shGrid.appendChild(card);
+        }
+      }
+    }
+
     getAbilityLevel(targetType, targetId, abilityKey) {
       if (targetType === 'station') {
         const st = this.stations?.[targetId];
@@ -626,11 +989,53 @@
     // Direct Click/Tap on 2D Canvas Buildings to Upgrade (Idle Tycoon Style!)
     handleCanvasBuildingClick(wx, wz) {
       if (this.viewMode === 'war') {
-        for (const g of CFG.GATES) {
-          if (Math.hypot(wx - g.x, wz - g.z) < 160 || Math.hypot(wx - g.upgradePadX, wz - g.upgradePadZ) < 110) {
-            const gs = this.gates[g.id];
+        // A. Tap any of the 6 Frontier Watchtowers to Build/Upgrade it with Shop $REQ!
+        for (const tw of (CFG.NIGHTFALL_CASTLE?.watchtowers || [])) {
+          if (Math.hypot(wx - tw.x, wz - tw.z) < 85) {
+            this.upgradeWatchtower(tw.id);
+            return true;
+          }
+        }
+
+        // B. Tap any of the 3 Eastern Enemy Strongholds (據點) to command Hero + War Squads to Sally Out & Attack it!
+        for (const sh of (CFG.NIGHTFALL_CASTLE?.strongholds || [])) {
+          if (Math.hypot(wx - sh.x, wz - sh.z) < 175) {
+            this.targetStrongholdId = sh.id;
+            this.missionType = 'attack';
+            if (this.waveState === 'rest') this.startNextWave(false);
+            this.audio.playStratagem();
+            this.spawnFloatingText(
+              sh.x,
+              sh.z - 65,
+              `⚔️ SALLY OUT! HERO & WAR SQUADS MARCHING TO ATTACK ${sh.name.toUpperCase()}!`,
+              '#facc15'
+            );
+            this.updateHUD();
+            return true;
+          }
+        }
+
+        // C. Tap any of the 3 Castle Squad Barracks inside the compound to open the Squad Manager!
+        for (const sq of (CFG.WAR_SQUADS || [])) {
+          if (Math.hypot(wx - sq.castleBarracksPos.x, wz - sq.castleBarracksPos.z) < 120) {
+            this.audio.playPickup();
+            this.renderSquadModal();
+            document.getElementById('modal-squad')?.classList.add('open');
+            return true;
+          }
+        }
+
+        // D. Tap East Castle Gate (-220, -1020), South Stone Bridge Gate (-680, -480), or Keep (-1080, -1040) to Fortify!
+        const gateCoords = [
+          { id: 'gate_3', x: -220, z: -1020, name: 'East Castle Gate', color: '#f97316' },
+          { id: 'gate_2', x: -680, z: -480, name: 'South Bridge Gate', color: '#38bdf8' },
+          { id: 'gate_1', x: -1080, z: -1040, name: 'Citadel Keep', color: '#facc15' }
+        ];
+        for (const gc of gateCoords) {
+          if (Math.hypot(wx - gc.x, wz - gc.z) < 145) {
+            const gs = this.gates[gc.id];
             if ((gs.defenseLevel || 1) < 10) {
-              const cost = this.getGateUpgradeCost(g.id);
+              const cost = this.getGateUpgradeCost(gc.id);
               if (this.cash >= cost) {
                 this.cash -= cost;
                 gs.defenseLevel = (gs.defenseLevel || 1) + 1;
@@ -638,10 +1043,10 @@
                 gs.broken = false;
                 gs.hp = gs.maxHp;
                 this.audio.playUnlock();
-                this.spawnFloatingText(g.x, g.z - 45, `🛡️ ${g.shortName} FORTIFIED Lv.${gs.defenseLevel}/10!`, g.color);
+                this.spawnFloatingText(gc.x, gc.z - 50, `🏰 ${gc.name.toUpperCase()} FORTIFIED Lv.${gs.defenseLevel}/10!`, gc.color);
                 this.updateHUD();
               } else {
-                this.spawnFloatingText(wx, wz - 25, `⚠️ NEED $${cost} TO FORTIFY GATE`, '#ef4444');
+                this.spawnFloatingText(wx, wz - 25, `⚠️ NEED $${cost} TO FORTIFY ${gc.name.toUpperCase()}`, '#ef4444');
               }
             }
             return true;
@@ -650,16 +1055,24 @@
         return false;
       }
 
-      // 0. Check SEAF Clone Vat Room at (-1500, -95) -> Opens Clone Room & 6-Sector Job Assignment Modal!
-      if (Math.hypot(wx - (-1500), wz - (-95)) < 220) {
+      // 0A. Check Dedicated Shop Sector D Left Wing: SEAF Clone Vat Chamber (-2040..-1270, -410..-60)
+      if (wx >= -2050 && wx <= -1260 && wz >= -420 && wz <= -50) {
         this.audio.playPickup();
         this.renderCloneRoomModal();
         document.getElementById('modal-clone-room')?.classList.add('open');
         return true;
       }
 
-      // 1. Check Hellpod Departure Bay at (220, -100)
-      if (Math.hypot(wx - 220, wz - (-100)) < 190) {
+      // 0B. Check Dedicated Shop Sector D Right Wing: War Squad Muster Bay (-1250..-440, -410..-60)
+      if (wx >= -1255 && wx <= -435 && wz >= -420 && wz <= -50) {
+        this.audio.playPickup();
+        this.renderSquadModal();
+        document.getElementById('modal-squad')?.classList.add('open');
+        return true;
+      }
+
+      // 1. Check Hellpod Departure Bay at (920, -210)
+      if (Math.hypot(wx - 920, wz - (-210)) < 220) {
         this.selectedInspectTarget = { type: 'hellpod', id: 'hellpod' };
         this.audio.playPickup();
         this.spawnFloatingText(
@@ -839,14 +1252,15 @@
         shopBtn?.classList.remove('active-shop');
         warBtn?.classList.add('active-war');
         warDock?.classList.add('visible');
-        const fg = this.getActiveFrontGate();
-        this.player.x = 0;
-        this.player.z = fg.ammoPadZ;
+        this.player.x = -450;
+        this.player.z = -920;
         this.pointerTarget = null;
-        this.world.camX = 0;
-        this.world.camZ = fg.z + 80;
+        this.world.camX = -180;
+        this.world.camZ = -960;
         if (!this.warMatchActive) {
-          this.startNewWarGame(this.missionType || 'attack');
+          this.startNewWarGame(this.missionType || 'defense');
+        } else {
+          this.syncWarSquadUnits();
         }
       } else {
         warPanel?.classList.remove('visible');
@@ -867,6 +1281,16 @@
     }
 
     deployWarUnit(deployId) {
+      if (deployId === 'deploy_squad') {
+        return this.recruitSquadSoldier('squad_alpha', false);
+      }
+      if (deployId === 'deploy_buggy') {
+        return this.recruitSquadSoldier('squad_bravo', false);
+      }
+      if (deployId === 'deploy_mech') {
+        return this.recruitSquadSoldier('squad_charlie', false);
+      }
+
       const dCfg = (CFG.WAR_DEPLOYMENTS || []).find((d) => d.id === deployId);
       if (!dCfg) return;
 
@@ -875,13 +1299,22 @@
         if (curLvl >= 20) return;
         const cost = Math.round(160 * Math.pow(1.35, curLvl));
         if (this.cash < cost) {
-          this.spawnFloatingText(this.player.x, this.player.z - 35, `⚠️ NEED $${cost} FOR MEND TOWER`, '#ef4444');
+          this.spawnFloatingText(this.player.x, this.player.z - 35, `⚠️ NEED $${cost} FOR CASTLE MEND DOME`, '#ef4444');
           return;
         }
         this.cash -= cost;
         this.mendProjectorLevel = curLvl + 1;
+        for (const g of CFG.GATES) {
+          const gs = this.gates[g.id];
+          if (gs) {
+            gs.defenseLevel = Math.min(10, (gs.defenseLevel || 1) + 1);
+            gs.broken = false;
+            gs.hp = gs.maxHp;
+          }
+        }
+        this.recalcDerivedStats();
         this.audio.playUnlock();
-        this.spawnFloatingText(this.player.x, this.player.z - 45, `💚 MINDUSTRY MEND PROJECTOR Lv.${this.mendProjectorLevel}/10 ONLINE!`, '#4ade80');
+        this.spawnFloatingText(-1080, -1080, `🏰 CASTLE WALLS FORTIFIED & MEND DOME Lv.${this.mendProjectorLevel}/10!`, '#4ade80');
         this.updateHUD();
         return;
       }
@@ -1103,10 +1536,49 @@
       this.warRoguelikeLvl = 1;
       this.hellpodBayLevel = 1;
       this.totalHellpodDrops = 0;
-      this.missionType = 'attack';
+      this.missionType = 'defense'; // Default: Nightfall Castle Defense TD (can switch to 'attack' to Sally Out & Raze 據點!)
+      this.continuousSiege = this.continuousSiege || false;
+      this.targetStrongholdId = 'sh_north_bot';
       this.missionStage = 1;
-      this.attackOutpostMaxHp = 1200;
-      this.attackOutpostHp = 1200;
+      this.attackOutpostMaxHp = 1400;
+      this.attackOutpostHp = 1400;
+
+      // 6 Nightfall Frontier Watchtowers (tw_1..tw_4 start at Lv.1, tw_5..tw_6 buildable!)
+      if (!this.watchtowers) {
+        this.watchtowers = {};
+        for (const tw of (CFG.NIGHTFALL_CASTLE?.watchtowers || [])) {
+          this.watchtowers[tw.id] = {
+            level: tw.unlockedAtStart ? 1 : 0,
+            angle: 0,
+            fireCooldown: 0,
+            lastFireTime: -10
+          };
+        }
+      }
+
+      // 3 Destructible Eastern Enemy Strongholds (據點)
+      if (!this.strongholds) {
+        this.strongholds = {};
+        for (const sh of (CFG.NIGHTFALL_CASTLE?.strongholds || [])) {
+          this.strongholds[sh.id] = {
+            hp: sh.baseHp,
+            maxHp: sh.baseHp,
+            level: 1,
+            destroyedCount: 0
+          };
+        }
+      }
+
+      // 3 Manageable Helldiver Platoon Squads (Alpha, Bravo, Charlie)
+      if (!this.warSquads) {
+        this.warSquads = {};
+        for (const sq of (CFG.WAR_SQUADS || [])) {
+          this.warSquads[sq.id] = {
+            count: sq.initialSize,
+            tier: 1
+          };
+        }
+      }
       this.roguelikePerks = {};
       this.pendingPerkChoices = [];
       this.perkAutoPickTimer = 0;
@@ -1177,6 +1649,7 @@
 
       this.syncTotalCashOnGround();
       this.syncWorkers();
+      this.syncWarSquadUnits();
       this.recalcDerivedStats();
       this.buildSolidObstacles();
     }
@@ -1347,15 +1820,7 @@
       const cMaxX = W.corridorMaxX;
       const halfOpen = W.gateOpeningWidth * 0.5;
 
-      // Flanking canyon walls outside the Northern War Corridor
-      boxes.push({ minX: W.minX, maxX: cMinX, minZ: W.minZ, maxZ: W.wallZ });
-      boxes.push({ minX: cMaxX, maxX: W.maxX, minZ: W.minZ, maxZ: W.wallZ });
-
-      // 3 Gate Layer Blast Walls
-      for (const g of CFG.GATES) {
-        boxes.push({ minX: cMinX, maxX: -halfOpen - 10, minZ: g.z - 22, maxZ: g.z + 22 });
-        boxes.push({ minX: halfOpen + 10, maxX: cMaxX, minZ: g.z - 22, maxZ: g.z + 22 });
-      }
+      // Note: In v0.0.11 Nightfall Castle TD mode, the War Zone is an open Castle + River Bridge + Stronghold map!
 
       // Unlocked Raw Extractor Auto-Drill Rigs (Only solid when level > 0!)
       for (const raw of CFG.RAW_EXTRACTORS) {
@@ -1421,9 +1886,9 @@
       if (entity === this.player) {
         if (this.viewMode === 'war') {
           minZBound = W.minZ + 32;
-          maxZBound = -130;
+          maxZBound = -160;
         } else {
-          minZBound = -105;
+          minZBound = -425; // Allows walking freely into Dedicated Sector D (Clone Vat & Squad Muster Bay)!
           maxZBound = 1880;
         }
       }
@@ -1559,16 +2024,18 @@
         }
       }
 
-      // 3. Allied War-Front Units (`this.alliedUnits`) Patrol & Combat
-      const fg = this.getActiveFrontGate();
-      const targetZ = fg.z - 55;
+      // 3. Allied War Squads & Hero: Castle Garrison Defense OR Sally-Out Stronghold Counter-Attack (出擊攻打據點)!
+      const isSallyOut = (this.missionType === 'attack');
+      const shList = CFG.NIGHTFALL_CASTLE?.strongholds || [];
+      let targetSh = shList.find((s) => s.id === this.targetStrongholdId) || shList[0];
+
       for (let i = this.alliedUnits.length - 1; i >= 0; i--) {
         const u = this.alliedUnits[i];
         u.fireCooldown = Math.max(0, u.fireCooldown - dt);
 
-        // Find closest enemy
+        // Find closest enemy within range
         let closest = null;
-        let minDist = u.range || 380;
+        let minDist = u.range || 430;
         for (const e of this.enemies) {
           if (e.hp <= 0) continue;
           const d = Math.hypot(e.x - u.x, e.z - u.z);
@@ -1580,7 +2047,7 @@
 
         if (closest) {
           if (u.fireCooldown <= 0) {
-            u.fireCooldown = u.fireRate || 0.3;
+            u.fireCooldown = u.fireRate || 0.28;
             closest.hp -= u.damage;
             this.tracers.push({
               sx: u.x,
@@ -1600,15 +2067,34 @@
               this.handleEnemyKilled(closest);
             }
           }
+        }
+
+        // Movement & Stronghold Siege Behavior
+        if (isSallyOut && targetSh) {
+          const slot = u.slotIndex || 0;
+          const goalX = targetSh.x - 190 + (slot % 4) * 28;
+          const goalZ = targetSh.z - 40 + Math.floor(slot / 4) * 42;
+          const dx = goalX - u.x;
+          const dz = goalZ - u.z;
+          const distSh = Math.hypot(dx, dz);
+          if (distSh > 32) {
+            u.x += (dx / distSh) * u.speed * dt;
+            u.z += (dz / distSh) * u.speed * dt;
+          } else if (u.fireCooldown <= 0) {
+            // Directly bombard the Enemy Stronghold (據點)!
+            u.fireCooldown = u.fireRate || 0.30;
+            this.damageEnemyStronghold(targetSh.id, u.damage, u.x, u.z, u.color);
+          }
         } else {
-          // Patrol horizontally in front of the active Front Gate
-          const dz = targetZ - u.z;
-          if (Math.abs(dz) > 20) {
-            u.z += Math.sign(dz) * u.speed * dt;
-          } else {
-            u.x += u.patrolDir * u.speed * 0.65 * dt;
-            if (u.x > 260) u.patrolDir = -1;
-            if (u.x < -260) u.patrolDir = 1;
+          // Castle Garrison Stance: Hold formation at Castle Barracks / Gate Post
+          const goalX = u.bridgeX !== undefined ? u.bridgeX : (u.homeX || -420);
+          const goalZ = u.bridgeZ !== undefined ? u.bridgeZ : (u.homeZ || -960);
+          const dx = goalX - u.x;
+          const dz = goalZ - u.z;
+          const distHome = Math.hypot(dx, dz);
+          if (distHome > 14) {
+            u.x += (dx / distHome) * u.speed * dt;
+            u.z += (dz / distHome) * u.speed * dt;
           }
         }
       }
@@ -2416,8 +2902,8 @@
         this.workers.push({
           role: 'hauler',
           slotIndex: idx,
-          x: -1460 + (idx % 4) * 45,
-          z: -20 + Math.floor(idx / 4) * 35,
+          x: -1655 + (idx % 4) * 45,
+          z: -210 + Math.floor(idx / 4) * 35,
           walkPhase: idx,
           taskLabel: '🧬 Cloned',
           assistTimer: 0,
@@ -2995,7 +3481,7 @@
         this.gearedClientsPool.push(tier);
       }
 
-      const tubeX = 220 - 150 + (cust.podTubeIndex || 0) * 100;
+      const tubeX = 920 - 150 + (cust.podTubeIndex || 0) * 100;
       this.spawnArc(tubeX, -95, tubeX, -230, '🚀', '#38bdf8');
       this.spawnFloatingText(
         tubeX,
@@ -3066,12 +3552,21 @@
         ? this.gearedClientsPool.pop()
         : Math.max(1, Object.keys(this.unlocked).filter((k) => this.unlocked[k]).length);
 
+      // Also reinforce the first non-full War Squad if space is available!
+      for (const sq of (CFG.WAR_SQUADS || [])) {
+        const st = this.warSquads?.[sq.id];
+        if (st && st.count < sq.maxSize) {
+          st.count++;
+          break;
+        }
+      }
+      this.syncWarSquadUnits();
       this.spawnClientWarUnit(tier, false);
       this.audio.playUnlock();
       this.spawnFloatingText(
         this.player.x,
         this.player.z - 48,
-        `🫡 HIRED TIER-${tier} SHOP CLIENT FOR WAR ($${hireCost})!`,
+        `🫡 HIRED TIER-${tier} SHOP CLIENT INTO WAR SQUAD ($${hireCost})!`,
         '#38bdf8'
       );
       this.updateHUD();
@@ -3178,30 +3673,9 @@
       // 1) Active Named Hero (if alive)
       // 2) SEAF Clones assigned to `⚔️ Pick War` (`workerJobs.war`)
       // 3) Free Volunteer Clients from `gearedClientsPool` (30% volunteer rate!)
-      this.alliedUnits = [];
-      this.deployActiveHeroToWar();
-
-      const warClones = this.workerJobs?.war || 0;
       const shopMult = this.getShopWarPowerMult();
-      const fg = this.getActiveFrontGate();
-      for (let i = 0; i < warClones; i++) {
-        this.alliedUnits.push({
-          id: Math.random(),
-          unitType: 'deploy_squad',
-          label: `⚔️ SEAF WAR CLONE #${i + 1}`,
-          x: (Math.random() - 0.5) * 240,
-          z: (this.missionType === 'attack') ? -940 : (fg.z - 50),
-          hp: Math.round(300 * shopMult),
-          maxHp: Math.round(300 * shopMult),
-          damage: Math.round(30 * shopMult),
-          fireRate: 0.30,
-          fireCooldown: 0,
-          range: 390,
-          speed: 140,
-          color: '#4ade80',
-          patrolDir: i % 2 === 0 ? 1 : -1
-        });
-      }
+      this.alliedUnits = [];
+      this.syncWarSquadUnits();
 
       let volunteers = 0;
       if (this.gearedClientsPool && this.gearedClientsPool.length > 0) {
@@ -3281,8 +3755,8 @@
       for (let i = this.customers.length - 1; i >= 0; i--) {
         const c = this.customers[i];
         if (c.state === 'to_hellpod' || c.state === 'leaving') {
-          const tubeX = 220 - 150 + ((c.podTubeIndex || 0) % 4) * 100;
-          const tubeZ = -92;
+          const tubeX = 920 - 150 + ((c.podTubeIndex || 0) % 4) * 100;
+          const tubeZ = -200;
           const dx = tubeX - c.x;
           const dz = tubeZ - c.z;
           const dist = Math.hypot(dx, dz);
@@ -3425,35 +3899,88 @@
       this.saveGame();
     }
 
-    // Spawns All-Episode Carbot Enemies (Ep1–Ep10+: hunter, bug, spewer, titan, trooper, devastator, hulk, strider)
+    damageEnemyStronghold(shId, dmg, attackerX, attackerZ, tracerColor = '#facc15') {
+      const shCfg = (CFG.NIGHTFALL_CASTLE?.strongholds || []).find((s) => s.id === shId);
+      if (!shCfg || !this.strongholds?.[shId]) return;
+      const st = this.strongholds[shId];
+      st.hp = Math.max(0, st.hp - dmg);
+      this.tracers.push({
+        sx: attackerX,
+        sz: attackerZ - 12,
+        tx: shCfg.x + (Math.random() - 0.5) * 60,
+        tz: shCfg.z + (Math.random() - 0.5) * 40,
+        color: tracerColor,
+        width: 4,
+        t: 0,
+        duration: 0.09
+      });
+      if (st.hp <= 0) {
+        // Stronghold (據點) Razed! Award massive bounty & level up Stronghold!
+        const lvl = st.level || 1;
+        const spoilsMult = 1 + (this.roguelikePerks?.rk_war_spoils || 0) * 0.50;
+        const cashReward = Math.round(shCfg.rewardCash * lvl * this.getPrestigeMultiplier() * spoilsMult);
+        const medalReward = shCfg.rewardMedals + Math.floor(lvl / 2);
+        this.cash += cashReward;
+        this.medals += medalReward;
+        this.superSamples = (this.superSamples || 0) + 1;
+        st.destroyedCount = (st.destroyedCount || 0) + 1;
+        st.level = lvl + 1;
+        st.maxHp = Math.round(shCfg.baseHp * Math.pow(1.42, st.level - 1));
+        st.hp = st.maxHp;
+
+        // Cycle target to next Stronghold
+        const allSh = CFG.NIGHTFALL_CASTLE?.strongholds || [];
+        const idx = allSh.findIndex((s) => s.id === shId);
+        this.targetStrongholdId = allSh[(idx + 1) % allSh.length].id;
+
+        this.audio.playStratagem();
+        this.world.triggerCameraShake(16, 0.5);
+        this.explosions.push({ x: shCfg.x, z: shCfg.z, maxR: 165, t: 0, duration: 0.55 });
+        this.spawnFloatingText(
+          shCfg.x,
+          shCfg.z - 65,
+          `🏴‍☠️ RAZED ${shCfg.name.toUpperCase()}! +$${cashReward} · +${medalReward} ⭐ · +1 🧬 SAMPLE!`,
+          '#fde047'
+        );
+        this.triggerRoguelikePerkDraft();
+        this.saveGame();
+        this.updateHUD();
+      }
+    }
+
+    // Spawns Nightfall Siege Enemies directly from the 3 Eastern Strongholds (據點) marching toward East Gate or South Stone Bridge!
     spawnWaveEnemy() {
       const planet = this.getCurrentPlanet();
       const waveScale = (1 + (this.waveNumber - 1) * 0.28 + ((this.missionStage || 1) - 1) * 0.18) * (planet.enemyHpMult || 1.0);
       const isBossWave = (this.waveNumber % CFG.WAVE_CONFIG.bossWaveEvery) === 0;
       const roll = Math.random();
 
-      let type = 'trooper';
+      const strongholds = CFG.NIGHTFALL_CASTLE?.strongholds || [];
+      const spawnSh = strongholds[Math.floor(Math.random() * strongholds.length)] || { id: 'sh_north_bot', x: 960, z: -1420 };
+      const lane = spawnSh.id === 'sh_south_hive' ? 'south_bridge' : 'east_gate';
+
+      let type = spawnSh.id === 'sh_south_hive' ? 'hunter' : 'trooper';
       let hp = Math.round(90 * waveScale);
       let dmg = Math.round(11 * (1 + (this.waveNumber - 1) * 0.08));
-      let speed = 84;
+      let speed = 88;
 
       if ((isBossWave && roll > 0.72) || (this.waveNumber >= 8 && roll > 0.90)) {
-        type = Math.random() > 0.5 ? 'strider' : 'titan';
+        type = spawnSh.id === 'sh_south_hive' ? 'titan' : 'strider';
         hp = Math.round(420 * waveScale);
         dmg = Math.round(28 * (1 + (this.waveNumber - 1) * 0.08));
-        speed = 48;
+        speed = 52;
       } else if ((isBossWave && roll > 0.45) || (this.waveNumber >= 3 && roll > 0.78)) {
         type = 'hulk';
         hp = Math.round(280 * waveScale);
         dmg = Math.round(22 * (1 + (this.waveNumber - 1) * 0.08));
-        speed = 58;
+        speed = 62;
       } else if (this.waveNumber >= 2 && roll > 0.60) {
-        type = Math.random() > 0.5 ? 'devastator' : 'spewer';
+        type = spawnSh.id === 'sh_south_hive' ? 'spewer' : 'devastator';
         hp = Math.round(150 * waveScale);
         dmg = Math.round(15 * (1 + (this.waveNumber - 1) * 0.08));
-        speed = 68;
+        speed = 72;
       } else if (roll > 0.35) {
-        type = Math.random() > 0.45 ? 'bug' : 'hunter';
+        type = spawnSh.id === 'sh_south_hive' ? 'bug' : 'hunter';
         hp = Math.round((type === 'hunter' ? 62 : 82) * waveScale);
         dmg = Math.round(9 * (1 + (this.waveNumber - 1) * 0.08));
         speed = type === 'hunter' ? 128 : 110;
@@ -3461,8 +3988,9 @@
 
       this.enemies.push({
         type,
-        x: (Math.random() - 0.5) * 520,
-        z: CFG.WORLD.minZ + 80 + Math.random() * 120,
+        lane,
+        x: spawnSh.x - 60 + (Math.random() - 0.5) * 70,
+        z: spawnSh.z + (Math.random() - 0.5) * 70,
         hp,
         maxHp: hp,
         dmg,
@@ -3523,16 +4051,16 @@
         }
       }
 
-      // 2. Wave & Rest Phase State Machine
+      // 2. Wave & Rest Phase State Machine (with Continuous Siege Toggle!)
       if (this.waveState === 'rest') {
-        this.waveTimer -= dt;
+        this.waveTimer -= dt * (this.continuousSiege ? 6.0 : 1.0);
         if (this.waveTimer <= 0) {
           this.startNextWave(false);
         }
       } else if (this.waveState === 'combat') {
         if (this.waveEnemiesToSpawn > 0) {
           this.waveSpawnCooldown -= dt;
-          if (this.waveSpawnCooldown <= 0 && this.enemies.length < 18) {
+          if (this.waveSpawnCooldown <= 0 && this.enemies.length < 20) {
             this.waveSpawnCooldown = CFG.WAVE_CONFIG.spawnIntervalInWave;
             this.waveEnemiesToSpawn--;
             this.spawnWaveEnemy();
@@ -3542,30 +4070,58 @@
         }
       }
 
-      // 3. Enemies march toward the outermost unbroken Gate Layer (Gate 3 -> Gate 2 -> Gate 1)
-      const activeGateCfg = this.getActiveFrontGate();
-      const activeGateState = this.gates[activeGateCfg.id];
-
+      // 3. Nightfall Enemies march across the Central River Causeway (to East Gate) or South Stone Bridge (to South Gate)!
       for (let i = this.enemies.length - 1; i >= 0; i--) {
         const e = this.enemies[i];
-        const targetX = Math.max(-140, Math.min(140, e.x * 0.6));
-        const targetZ = activeGateCfg.z - 28;
+        let targetGateId = 'gate_3';
+        let targetX = -190;
+        let targetZ = -1020;
+
+        if (e.lane === 'south_bridge') {
+          // Follow South Stone Bridge path: first to (x: -680, z: -320), then up to South Gate (-680, -470)
+          if (e.x > -620 && e.z < -380) {
+            targetX = -680;
+            targetZ = -330;
+          } else {
+            targetGateId = (this.gates.gate_2 && !this.gates.gate_2.broken && this.gates.gate_2.hp > 0) ? 'gate_2' : 'gate_1';
+            targetX = targetGateId === 'gate_2' ? -680 : -1020;
+            targetZ = targetGateId === 'gate_2' ? -455 : -1020;
+          }
+        } else {
+          // East Gate Causeway path: march to East Gate (-200, -1020), or Citadel Keep (-1020, -1020) if East Gate is broken
+          if (this.gates.gate_3 && !this.gates.gate_3.broken && this.gates.gate_3.hp > 0) {
+            targetGateId = 'gate_3';
+            targetX = -195;
+            targetZ = -1020;
+          } else if (this.gates.gate_2 && !this.gates.gate_2.broken && this.gates.gate_2.hp > 0) {
+            targetGateId = 'gate_2';
+            targetX = -680;
+            targetZ = -480;
+          } else {
+            targetGateId = 'gate_1';
+            targetX = -1020;
+            targetZ = -1020;
+          }
+        }
+
         const dx = targetX - e.x;
         const dz = targetZ - e.z;
         const dist = Math.hypot(dx, dz);
 
-        if (dist > 34) {
+        if (dist > 36) {
           e.x += (dx / dist) * e.speed * dt;
           e.z += (dz / dist) * e.speed * dt;
-        } else if (activeGateState) {
+        } else {
+          const activeGateState = this.gates[targetGateId] || this.gates.gate_1;
+          const activeGateCfg = CFG.GATES.find((g) => g.id === targetGateId) || CFG.GATES[0];
           e.attackCooldown -= dt;
-          if (e.attackCooldown <= 0) {
+          if (e.attackCooldown <= 0 && activeGateState) {
             e.attackCooldown = 1.05;
-            // Frontline Hero / Allied Squad intercepts enemy fire first!
+            // Nearby Allied War Squad / Hero intercepts enemy damage first!
             if (this.alliedUnits && this.alliedUnits.length > 0) {
               const frontUnit = this.alliedUnits[0];
-              frontUnit.hp -= e.dmg * 1.35;
-              this.spawnFloatingText(frontUnit.x, frontUnit.z - 32, `-${Math.round(e.dmg * 1.35)} 💥`, '#fca5a5');
+              frontUnit.hp -= e.dmg * 1.25;
+              this.spawnFloatingText(frontUnit.x, frontUnit.z - 32, `-${Math.round(e.dmg * 1.25)} 💥`, '#fca5a5');
               if (frontUnit.hp <= 0) {
                 this.alliedUnits.shift();
                 if (frontUnit.isHero) {
@@ -3576,23 +4132,24 @@
               }
               continue;
             }
+
             const prevHp = activeGateState.hp;
             activeGateState.hp = Math.max(0, activeGateState.hp - e.dmg);
             activeGateState.lastHitTime = this.world.time;
-            this.spawnFloatingText(activeGateCfg.x, activeGateCfg.z - 38, `-${e.dmg} 🛡️ ${activeGateCfg.shortName}`, '#ef4444');
+            this.spawnFloatingText(targetX, targetZ - 38, `-${e.dmg} 🏰 ${activeGateCfg.shortName}`, '#ef4444');
 
             if (prevHp > 0 && activeGateState.hp <= 0) {
               activeGateState.hp = 0;
               activeGateState.broken = true;
               this.world.triggerCameraShake(14, 0.45);
-              if (activeGateCfg.id === 'gate_1') {
+              if (targetGateId === 'gate_1') {
                 this.triggerGateDefeat(activeGateCfg);
                 return;
               } else {
                 this.spawnFloatingText(
-                  activeGateCfg.x,
-                  activeGateCfg.z - 65,
-                  `💥 ${activeGateCfg.shortName.toUpperCase()} BROKEN! (NO AUTO-HEAL — REPAIR ON PAD!)`,
+                  targetX,
+                  targetZ - 65,
+                  `💥 CASTLE GATE BREACHED! FALL BACK TO CITADEL KEEP OR REBUILD!`,
                   '#f97316'
                 );
               }
@@ -3601,65 +4158,56 @@
         }
       }
 
-      // 4. Dual Sentry Turrets on all 3 Gate Layers
+      // 4. All 6 Nightfall Frontier Watchtowers (Fed by Shop 🧱 Turret Ammo!)
       const turretPwrLvl = this.foreverSkills.perm_turret_power || 0;
       const freeAmmoChance = Math.min(0.65, turretPwrLvl * 0.025);
+      const shopMult = this.getShopWarPowerMult();
 
-      for (const g of CFG.GATES) {
-        const gs = this.gates[g.id];
-        if (!gs) continue;
-        gs.fireCooldown = Math.max(0, gs.fireCooldown - dt);
-        if (gs.ammo <= 0 || gs.fireCooldown > 0) continue;
+      for (const tw of (CFG.NIGHTFALL_CASTLE?.watchtowers || [])) {
+        const ts = this.watchtowers?.[tw.id];
+        if (!ts || (ts.level || 0) <= 0) continue;
+        ts.fireCooldown = Math.max(0, (ts.fireCooldown || 0) - dt);
+        if (ts.fireCooldown > 0) continue;
 
-        const defLvl = gs.defenseLevel || 1;
-        const turretDmgMult = (1 + turretPwrLvl * 0.25) * (1 + (defLvl - 1) * 0.22);
+        // Check total Castle Ammo pool (supplied by Shop Munitions Press & Ammo Belts!)
+        const ammoGate = (this.gates.gate_3?.ammo > 0) ? this.gates.gate_3 : ((this.gates.gate_2?.ammo > 0) ? this.gates.gate_2 : this.gates.gate_1);
+        if (!ammoGate || ammoGate.ammo <= 0) continue;
 
-        const mounts = [
-          { x: g.leftTurretX, z: g.turretZ },
-          { x: g.rightTurretX, z: g.turretZ }
-        ];
-        let firedThisTick = false;
-
-        for (const m of mounts) {
-          let closest = null;
-          let bestDist = g.turretRange;
-          for (const e of this.enemies) {
-            if (e.hp <= 0) continue;
-            const d = Math.hypot(e.x - m.x, e.z - m.z);
-            if (d < bestDist) {
-              bestDist = d;
-              closest = e;
-            }
-          }
-
-          if (closest) {
-            gs.turretAngle = Math.atan2(closest.z - m.z, closest.x - m.x);
-            firedThisTick = true;
-            const dmg = Math.round(g.turretDamage * turretDmgMult);
-            closest.hp -= dmg;
-            this.tracers.push({
-              sx: m.x,
-              sz: m.z,
-              tx: closest.x,
-              tz: closest.z,
-              color: g.color,
-              width: 4,
-              t: 0,
-              duration: 0.09
-            });
-            if (closest.hp <= 0) {
-              this.handleEnemyKilled(closest);
-            }
+        let closest = null;
+        let bestDist = tw.range + (ts.level - 1) * 18;
+        for (const e of this.enemies) {
+          if (e.hp <= 0) continue;
+          const d = Math.hypot(e.x - tw.x, e.z - tw.z);
+          if (d < bestDist) {
+            bestDist = d;
+            closest = e;
           }
         }
 
-        if (firedThisTick) {
-          gs.fireCooldown = Math.max(0.12, g.turretFireRate / (1 + (defLvl - 1) * 0.05));
-          gs.lastFireTime = this.world.time;
+        if (closest) {
+          ts.angle = Math.atan2(closest.z - tw.z, closest.x - tw.x);
+          ts.fireCooldown = Math.max(0.11, tw.fireRate / (1 + (ts.level - 1) * 0.07));
+          ts.lastFireTime = this.world.time;
+
+          const dmg = Math.round(tw.baseDmg * (1 + (ts.level - 1) * 0.28) * (1 + turretPwrLvl * 0.25) * shopMult);
+          closest.hp -= dmg;
+          this.tracers.push({
+            sx: tw.x,
+            sz: tw.z - 10,
+            tx: closest.x,
+            tz: closest.z,
+            color: tw.color,
+            width: 4,
+            t: 0,
+            duration: 0.09
+          });
           if (Math.random() > freeAmmoChance) {
-            gs.ammo = Math.max(0, gs.ammo - 1);
+            ammoGate.ammo = Math.max(0, ammoGate.ammo - 1);
           }
           this.audio.playLaser();
+          if (closest.hp <= 0) {
+            this.handleEnemyKilled(closest);
+          }
         }
       }
 
@@ -4021,6 +4569,16 @@
         if (cloneCountEl) {
           cloneCountEl.textContent = `${this.hiredClonesCount || 0}/${this.getMaxWorkerCap()}`;
         }
+
+        const totalSquadTroops = this.getTotalSquadTroops();
+        const squadTopEl = document.getElementById('hud-squad-count');
+        if (squadTopEl) squadTopEl.textContent = `${totalSquadTroops}/24`;
+        const squadWarEl = document.getElementById('war-panel-squad-count');
+        if (squadWarEl) squadWarEl.textContent = `${totalSquadTroops}/24`;
+
+        const totalAmmo = (this.gates.gate_3?.ammo || 0) + (this.gates.gate_2?.ammo || 0) + (this.gates.gate_1?.ammo || 0);
+        const ammoHudEl = document.getElementById('war-hud-ammo-stock');
+        if (ammoHudEl) ammoHudEl.textContent = `${totalAmmo}`;
 
         const missionTypeEl = document.getElementById('label-mission-type');
         const missionStageEl = document.getElementById('sub-mission-stage');
@@ -4679,6 +5237,11 @@
         missionStage: this.missionStage,
         roguelikePerks: this.roguelikePerks,
         superSamples: this.superSamples,
+        watchtowers: this.watchtowers,
+        strongholds: this.strongholds,
+        warSquads: this.warSquads,
+        continuousSiege: this.continuousSiege,
+        targetStrongholdId: this.targetStrongholdId,
         ownedEquipment: this.ownedEquipment,
         equipped: this.equipped,
         waveNumber: this.waveNumber,
@@ -4739,6 +5302,11 @@
         if (typeof data.missionStage === 'number') this.missionStage = data.missionStage;
         if (data.roguelikePerks) Object.assign(this.roguelikePerks, data.roguelikePerks);
         if (typeof data.superSamples === 'number') this.superSamples = data.superSamples;
+        if (data.watchtowers) Object.assign(this.watchtowers, data.watchtowers);
+        if (data.strongholds) Object.assign(this.strongholds, data.strongholds);
+        if (data.warSquads) Object.assign(this.warSquads, data.warSquads);
+        if (typeof data.continuousSiege === 'boolean') this.continuousSiege = data.continuousSiege;
+        if (typeof data.targetStrongholdId === 'string') this.targetStrongholdId = data.targetStrongholdId;
         if (data.ownedEquipment) Object.assign(this.ownedEquipment, data.ownedEquipment);
         if (data.equipped) Object.assign(this.equipped, data.equipped);
         if (typeof data.cash === 'number') this.cash = Math.max(40, data.cash);
@@ -4926,15 +5494,72 @@
       document.getElementById('btn-upgrade-clone-room')?.addEventListener('click', () => this.upgradeCloneRoom());
       document.getElementById('btn-auto-balance-jobs')?.addEventListener('click', () => this.autoBalanceWorkerJobs());
 
-      // Game-by-Game War Operations Panel Controls (Attack vs Defense, Start Match, Auto-Pilot, Hire Client, Hero)
+      // Nightfall Castle Defense vs. Sally-Out Stronghold Counter-Attack & Squad Manager Bindings (v0.0.11)
+      document.getElementById('btn-open-squad-top')?.addEventListener('click', () => {
+        this.renderSquadModal();
+        document.getElementById('modal-squad')?.classList.add('open');
+      });
+      document.getElementById('btn-war-open-squad')?.addEventListener('click', () => {
+        this.renderSquadModal();
+        document.getElementById('modal-squad')?.classList.add('open');
+      });
+      document.getElementById('btn-close-squad')?.addEventListener('click', () => {
+        document.getElementById('modal-squad')?.classList.remove('open');
+      });
+      document.getElementById('btn-squad-order-defend')?.addEventListener('click', () => {
+        this.missionType = 'defense';
+        document.getElementById('modal-squad')?.classList.remove('open');
+        this.audio.playPickup();
+        this.spawnFloatingText(this.player.x, this.player.z - 45, '🏰 ALL WAR SQUADS ORDERED TO GARRISON NIGHTFALL CASTLE!', '#38bdf8');
+        this.updateHUD();
+      });
+      document.getElementById('btn-squad-order-sally')?.addEventListener('click', () => {
+        this.missionType = 'attack';
+        document.getElementById('modal-squad')?.classList.remove('open');
+        if (this.viewMode !== 'war') this.setViewMode('war');
+        if (this.waveState === 'rest') this.startNextWave(false);
+        this.audio.playStratagem();
+        this.spawnFloatingText(this.player.x, this.player.z - 45, '⚔️ SALLY OUT! HERO & ALL 3 WAR SQUADS ASSAULTING ENEMY STRONGHOLDS (據點)!', '#facc15');
+        this.updateHUD();
+      });
+      document.getElementById('btn-war-continuous')?.addEventListener('click', () => {
+        this.continuousSiege = !this.continuousSiege;
+        const cBtn = document.getElementById('btn-war-continuous');
+        if (cBtn) {
+          cBtn.textContent = this.continuousSiege ? '🔥 Continuous Siege: ON' : '🔥 Continuous Siege: OFF';
+          cBtn.style.borderColor = this.continuousSiege ? '#ef4444' : '#f97316';
+          cBtn.style.color = this.continuousSiege ? '#fca5a5' : '#fdba74';
+        }
+        if (this.continuousSiege && this.waveState === 'rest') {
+          this.startNextWave(false);
+        }
+        this.audio.playPickup();
+      });
+      document.getElementById('btn-upgrade-watchtower')?.addEventListener('click', () => {
+        this.upgradeWatchtower();
+      });
+
       document.getElementById('btn-war-sec-attack')?.addEventListener('click', () => {
-        this.startNewWarGame('attack');
+        this.missionType = 'attack';
+        if (this.waveState === 'rest') this.startNextWave(false);
+        this.syncWarSquadUnits();
+        this.audio.playStratagem();
+        this.spawnFloatingText(this.player.x, this.player.z - 50, '⚔️ SALLY OUT! HERO & WAR SQUADS MARCHING TO RAZE ENEMY 據點!', '#facc15');
+        this.updateHUD();
       });
       document.getElementById('btn-war-sec-defense')?.addEventListener('click', () => {
-        this.startNewWarGame('defense');
+        this.missionType = 'defense';
+        this.syncWarSquadUnits();
+        this.audio.playPickup();
+        this.spawnFloatingText(this.player.x, this.player.z - 50, '🏰 HOLDING NIGHTFALL CASTLE GATES & STONE BRIDGE!', '#38bdf8');
+        this.updateHUD();
       });
       document.getElementById('btn-war-start-match')?.addEventListener('click', () => {
-        this.startNewWarGame(this.missionType || 'attack');
+        if (this.waveState === 'rest') {
+          this.startNextWave(true);
+        } else {
+          this.startNewWarGame(this.missionType || 'defense');
+        }
       });
       document.getElementById('btn-war-autopilot')?.addEventListener('click', () => {
         this.warAutoPilot = !this.warAutoPilot;

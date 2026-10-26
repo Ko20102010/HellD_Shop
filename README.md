@@ -1,4 +1,4 @@
-# HELLDIVERS PLEASE! — SES Super Destroyer Warship, 3-Counter Expansion & Capybara Go! Roguelike War Tycoon (`v0.0.10`)
+# HELLDIVERS PLEASE! — Nightfall: Kingdom Frontier TD Castle Defense, Dedicated Shop Clone Sector & Tactical War Squad Manager (`v0.0.11`)
 
 An arcade factory-automation, Mindustry multi-base logistics, and *Capybara Go!* / Tower-Defense Roguelike War-Front web game inspired by **Burger Please!**, **Whiteout Survival Playable Ads**, **Capybara Go!**, **Factorio**, **Mindustry**, and **CarbotAnimations' Helldivers 2 cartoons** (across **all episodes Ep1–Ep10+**, including [Pro vs Noobs | Helldivers 2 Ep7](http://www.youtube.com/watch?v=bn0GTO_zvAg)), built from the [Modular Game Prompt Library](https://docs.google.com/document/d/1ZoW7Oou5QpTyvwD6vrczKuXv0nW42JgLJC-au62H7Pw/edit?usp=drivesdk&ouid=114024991701964609548).
 
@@ -29,6 +29,15 @@ An arcade factory-automation, Mindustry multi-base logistics, and *Capybara Go!*
 ---
 
 ## 📜 Complete Version History & Changelog (`v0.0.00` – `v0.0.09`)
+
+### `v0.0.11` — *Nightfall: Kingdom Frontier TD* Castle Defense & Stronghold Counter-Attack (`據點`), Zero War Econ Buildings (100% Shop Funded), Dedicated Shop Clone Sector D & Manageable War Squads
+- **Removed Old 3-Gate Corridor War Setting ➔ Replaced with *Nightfall: Kingdom Frontier TD* Castle & River Bridge Map (`image_97ae56.jpg`)**:
+  - **Western Super Earth Frontier Castle Compound (`x = -1440..-220, z = -1520..-480`)**: Features the **Super Earth Citadel Keep**, **Curved Perimeter Castle Walls (`Lv.1–10`)**, **East Frontier Gate (`gate_3`)**, **South Stone Arch Bridge Gate (`gate_2`)** over the winding **River Moat**, **6 Upgradable Circular Watchtowers (`tw_1`–`tw_6`, `Lv.1–10`)**, and **3 Squad Barracks with 2x4 Troop Formation Grids**.
+  - **Zero Economy Buildings in the War Zone**: 100% of `$REQ` money, `🧱 Turret Ammo`, and `🦺/🔫/🎒/🚙/🤖` equipment come from your **Super Destroyer Shop**.
+  - **Hybrid Wave Pace (`🌙 Nightfall Wave` + `🔥 Continuous Siege: OFF/ON` Toggle)**: Choose between *Nightfall*'s **Day/Prep Phase + Nightfall Wave** rhythm or toggle **`🔥 Continuous Siege: ON`** for non-stop enemy waves.
+  - **Castle Defense + Sally-Out Counter-Attack on 3 Eastern Enemy Strongholds (`⚔️ 出擊攻打據點`)**: Switch between **`🏰 固守王國城堡 (Hold Castle TD)`** and **`⚔️ 出擊攻打據點 (Sally Out & Raze 據點)`** (or tap any of the 3 Eastern Strongholds—`North Bot Cave`, `Central River Iron Fortress`, `South Terminid Bio-Hive`) to send your Hero and Managed War Squads across the River Bridge to destroy enemy `據點` for massive `$REQ`, `⭐ Forever Medals`, and `🧬 Super Samples`!
+- **Dedicated Physical Area in Shop for the Clone Room & Squad Muster (`🧬 SECTOR D`, `x = -2080..-420, z = -435..-42`)**: Expanded the northern Super Destroyer deck with a full walled **Bio-Clone Vat Chamber (6 Vats + 6-Sector Job Roster Board)** on the Left Wing and a **War Squad Formation Muster Bay** on the Right Wing.
+- **Manageable War Squad System (`🪖 小隊 Squad` & `#modal-squad`)**: Manage **Alpha Vanguard Rifle Squad (`8/8`)**, **Bravo Jump-Pack & Heavy Squad (`8/8`)**, and **Charlie Patriot Exosuit Squad (`8/8`)** (up to `24` formation troops + Named Hero), recruit soldiers using Shop `$REQ`, `🫡 Geared Shop Clients`, or `🔫/🚙/🤖` Shop stock, upgrade Squad Gear Tiers (`Lv.1–10`), and issue real-time Castle Garrison or Stronghold Sally-Out orders.
 
 ### `v0.0.10` — Idle Building Multi-Ability Pop-Up Window, SEAF Clone Vat Room & 6-Sector Job Board, Pure Departure Hellpods & Game-by-Game Roguelike War Operations (Attack/Defense, Shop Power Bonus, Client Volunteers/Mercenaries & Gen-1 Martyrdom Heroes)
 - **Idle Tap Pop-Up Multi-Ability Upgrade Window (`#building-upgrade-popover`)**: Tapping any Shop Machine, Counter Desk, Quarry Auto-Drill, or Ammo Press opens a compact Idle-Tycoon Pop-Up Window to independently upgrade **💰 Unit Sale Price (`priceLvl`)**, **⚡ Crafting/Drill Speed (`speedLvl`)**, **📦 1 Raw ➔ More Goods (`yieldLvl`, up to `4x` items per raw ore!)**, and **🏪 Counter Desk Expansion (`counterLvl`, `1 -> 2 -> 3` physical counters)**.

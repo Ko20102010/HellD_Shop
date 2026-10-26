@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>HELLDIVERS PLEASE! — Super Destroyer Warship &amp; Mindustry War-Zone Tycoon (v0.0.10)</title>
+  <title>HELLDIVERS PLEASE! — Super Destroyer Warship &amp; Mindustry War-Zone Tycoon (v0.0.11)</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
@@ -52,16 +52,19 @@
             </div>
           </div>
 
-          <!-- Center: True Split Scene Switcher (Warship Shop vs. Planetary War Front) -->
+          <!-- Center: True Split Scene Switcher (Warship Shop, Clone Sector, Squad Manager & Nightfall Castle War Front) -->
           <div id="mode-switcher-bar">
             <button class="mode-tab-btn active-shop" id="btn-mode-shop" title="SES Super Destroyer Orbital Warship Shop &amp; 7 Production Lanes">
-              🏪 工廠 Shop Base
+              🏪 工廠 Shop
             </button>
-            <button class="mode-tab-btn" id="btn-open-clone-top" style="border-color:#22c55e;color:#86efac;" title="Open SEAF Clone Vat Room &amp; 6-Sector Worker Job Assignment">
+            <button class="mode-tab-btn" id="btn-open-clone-top" style="border-color:#22c55e;color:#86efac;" title="Open Sector D SEAF Clone Vat Room &amp; 6-Sector Worker Job Assignment">
               🧬 克隆室 (<span id="hud-clone-count">0/6</span>)
             </button>
-            <button class="mode-tab-btn" id="btn-mode-war" title="Play Game-by-Game Attack &amp; Defense Roguelike War Missions">
-              ⚔️ 戰場 War Front (<span id="hud-war-units-count">0</span>)
+            <button class="mode-tab-btn" id="btn-open-squad-top" style="border-color:#38bdf8;color:#7dd3fc;" title="Manage Your 3 Tactical War Squad Formations (Alpha/Bravo/Charlie) &amp; Hero">
+              🪖 小隊 (<span id="hud-squad-count">7/24</span>)
+            </button>
+            <button class="mode-tab-btn" id="btn-mode-war" title="Enter Nightfall: Kingdom Frontier TD Castle Defense &amp; Stronghold Counter-Attack">
+              🏰 戰場 Castle War (<span id="hud-war-units-count">7</span>)
             </button>
           </div>
 
@@ -77,7 +80,7 @@
             <div class="brand-badge">
               <span>🚀</span>
               <span class="brand-title">SES SUPER DESTROYER COMMAND</span>
-              <span class="version-pill" id="hud-version">v0.0.10</span>
+              <span class="version-pill" id="hud-version">v0.0.11</span>
             </div>
 
             <div class="stat-pill gate-pill" title="Wave &amp; Rest Timer">
@@ -183,7 +186,7 @@
         <button class="buy-btn medal-btn" id="btn-idle-belt-upgrade">🔗 Belt Lv.0 ($150)</button>
       </div>
 
-      <!-- NEW IN v0.0.10: IDLE GAME FLOATING LITTLE POP-UP WINDOW FOR MULTI-ABILITY UPGRADES -->
+      <!-- NEW IN v0.0.11: IDLE GAME FLOATING LITTLE POP-UP WINDOW FOR MULTI-ABILITY UPGRADES -->
       <div id="building-upgrade-popover" class="building-popover">
         <div class="popover-header">
           <div>
@@ -195,23 +198,26 @@
         <div class="popover-abilities-list" id="popover-abilities-list"></div>
       </div>
 
-      <!-- NEW IN v0.0.10: GAME-BY-GAME ROGUELIKE WAR OPERATIONS BAR (ATTACK VS DEFENSE, SHOP POWER, CLIENT HIRE & HERO) -->
+      <!-- NEW IN v0.0.11: GAME-BY-GAME ROGUELIKE WAR OPERATIONS BAR (ATTACK VS DEFENSE, SHOP POWER, CLIENT HIRE & HERO) -->
       <div id="war-game-panel">
         <div class="war-panel-top">
           <div class="war-mode-tabs">
-            <button class="war-sec-btn active-sec" id="btn-war-sec-attack" title="Forward Roguelike Expedition: March 0% -> 100% &amp; Destroy Enemy Command Outpost!">
-              ⚔️ 進攻模式 Attack Op
+            <button class="war-sec-btn active-sec" id="btn-war-sec-defense" title="Nightfall: Kingdom Frontier TD Mode — Garrison Castle Walls, 6 Watchtowers &amp; Stone Bridge (100% Funded by Shop!)">
+              🏰 固守王國城堡 (Nightfall Castle TD)
             </button>
-            <button class="war-sec-btn" id="btn-war-sec-defense" title="Fortress Holdout: Defend Perimeter Gates across 5 Siege Waves!">
-              🛡️ 防守模式 Defense Op
+            <button class="war-sec-btn" id="btn-war-sec-attack" title="Sally Out Counter-Attack: Send Hero &amp; Managed War Squads across the River Bridge to raze the 3 Enemy Strongholds (據點)!">
+              ⚔️ 出擊攻打據點 (Sally Out &amp; Raze 據點)
             </button>
           </div>
-          <div class="war-shop-synergy" id="war-shop-synergy-badge" title="Your Shop's unlocked lines &amp; ability levels grant permanent ATK &amp; HP bonuses in War Games!">
-            🏪 Shop Scale Bonus: <strong>+25% ATK/HP</strong>
+          <div class="war-shop-synergy" id="war-shop-synergy-badge" title="Zero Econ Buildings in War Zone — 100% of $REQ, 🧱 Ammo &amp; Gear come from your Shop!">
+            🏪 Shop Supply: <strong>+25% ATK/HP · 🧱 Ammo: <span id="war-hud-ammo-stock">9</span></strong>
           </div>
           <div class="war-match-controls">
-            <button class="buy-btn" id="btn-war-start-match" title="Start or Restart a 5-Wave Game-by-Game Battle Run!">
-              🎮 Start Battle #<span id="war-match-num">1</span>
+            <button class="buy-btn" id="btn-war-start-match" title="Call Next Nightfall Enemy Wave Immediately (+25% Early Bonus $REQ)!">
+              🌙 Call Nightfall Wave #<span id="war-match-num">1</span>
+            </button>
+            <button class="hud-btn" id="btn-war-continuous" style="border-color:#f97316;color:#fdba74;" title="Toggle Continuous Endless Enemy Siege vs. Day/Prep + Nightfall Wave Rhythm">
+              🔥 Continuous Siege: OFF
             </button>
             <button class="hud-btn" id="btn-war-autopilot" style="border-color:#4ade80;color:#4ade80;" title="Low-Control Mode: Commander auto-positions, auto-dodges &amp; auto-fires!">
               🤖 Auto-Pilot: ON
@@ -220,22 +226,25 @@
         </div>
         <div class="war-panel-bottom">
           <div class="war-xp-wrap">
-            <span id="war-roguelike-lvl">🎲 Roguelike Lv.1</span>
+            <span id="war-roguelike-lvl">🎲 Perk Lv.1</span>
             <div class="war-xp-bar"><div class="war-xp-fill" id="war-xp-fill" style="width:20%;"></div></div>
-            <span id="war-stage-progress-text">Wave 1/5 · March 0%</span>
+            <span id="war-stage-progress-text">🏰 Castle 100% · 🏴‍☠️ Strongholds: 3/3 Active</span>
           </div>
           <div class="war-hero-client-bar">
-            <button class="hud-btn" id="btn-war-hire-client" style="border-color:#38bdf8;color:#7dd3fc;" title="Pay a Geared Shop Client from your pool to join this War Game with the weapon/mech they bought!">
-              🫡 Pay Client to Join (<span id="war-client-pool-count">2</span> Ready · $60)
+            <button class="hud-btn" id="btn-war-open-squad" style="border-color:#22c55e;color:#86efac;" title="Open Tactical War Squad Formation Manager (Alpha/Bravo/Charlie Squads)">
+              🪖 Manage Squads (<span id="war-panel-squad-count">7/24</span>)
             </button>
-            <button class="hud-btn" id="btn-war-hero-action" style="border-color:#facc15;color:#fde047;" title="Recruit, Switch, or Clone-Revive your Named War Hero (Gen-1 Heroes can die in action for Martyr Rewards!)">
+            <button class="hud-btn" id="btn-war-hire-client" style="border-color:#38bdf8;color:#7dd3fc;" title="Recruit a Geared Shop Client into your War Squad ($60)">
+              🫡 Hire Client (<span id="war-client-pool-count">2</span> Ready · $60)
+            </button>
+            <button class="hud-btn" id="btn-war-hero-action" style="border-color:#facc15;color:#fde047;" title="Recruit, Switch, or Clone-Revive your Named War Hero">
               🦅 Hero: <span id="war-hero-status-text">General Brasch (Gen-1)</span>
             </button>
           </div>
         </div>
       </div>
 
-      <!-- NEW IN v0.0.10: CAPYBARA GO! × ROGUELIKE 3-CARD PERK DRAFT & MISSION VICTORY CHEST OVERLAY -->
+      <!-- NEW IN v0.0.11: CAPYBARA GO! × ROGUELIKE 3-CARD PERK DRAFT & MISSION VICTORY CHEST OVERLAY -->
       <div id="roguelike-draft-bar">
         <div class="rk-header">
           <span id="rk-draft-title">🎲 ROGUELIKE TACTICAL PERK DRAFT — CHOOSE 1 OF 3 UPGRADES!</span>
@@ -246,24 +255,28 @@
 
       <!-- DEDICATED WAR-FRONT COMMAND DEPLOYMENT DOCK (Visible ONLY in ⚔️ War Front Mode) -->
       <div id="war-command-dock">
-        <button class="war-deploy-btn" id="btn-toggle-mission-type" style="border-color:#38bdf8;" title="Switch between Capybara Go! Attack Expedition &amp; 3-Gate Tower Defense">
-          <span id="label-mission-type">⚔️ Attack Op</span>
-          <span class="sub-cost" id="sub-mission-stage">Stage 1/5</span>
+        <button class="war-deploy-btn" id="btn-toggle-mission-type" style="border-color:#38bdf8;" title="Toggle Squad Order: Hold Castle Perimeter vs. Sally Out &amp; Attack Enemy Strongholds (據點)!">
+          <span id="label-mission-type">🏰 固守城堡 Hold</span>
+          <span class="sub-cost" id="sub-mission-stage">Tap to Sally Out ⚔️</span>
         </button>
-        <button class="war-deploy-btn" id="btn-deploy-squad" title="Deploy Autonomous SEAF Rifleman (Uses 1x 🔫 Gun or $80)">
-          <span>🪖 +SEAF Squad</span>
-          <span class="sub-cost" id="cost-deploy-squad">1x🔫 or $80</span>
+        <button class="war-deploy-btn" id="btn-deploy-squad" title="Recruit +1 Helldiver to Alpha Rifle Squad (Uses 1x 🔫 Gun or $65)">
+          <span>🪖 +Alpha Squad</span>
+          <span class="sub-cost" id="cost-deploy-squad">1x🔫 or $65</span>
         </button>
-        <button class="war-deploy-btn" id="btn-deploy-buggy" title="Deploy Autonomous FRV Recon Buggy (Uses 1x 🚙 Vehicle or $180)">
-          <span>🚙 +Recon Buggy</span>
-          <span class="sub-cost" id="cost-deploy-buggy">1x🚙 or $180</span>
+        <button class="war-deploy-btn" id="btn-deploy-buggy" title="Recruit +1 Heavy/Buggy Unit to Bravo Squad (Uses 1x 🚙 Vehicle or $115)">
+          <span>🚀 +Bravo Squad</span>
+          <span class="sub-cost" id="cost-deploy-buggy">1x🚙 or $115</span>
         </button>
-        <button class="war-deploy-btn" id="btn-deploy-mech" title="Deploy Autonomous EXO-45 Patriot Mech (Uses 1x 🤖 Mech or $320)">
-          <span>🤖 +Patriot Mech</span>
-          <span class="sub-cost" id="cost-deploy-mech">1x🤖 or $320</span>
+        <button class="war-deploy-btn" id="btn-deploy-mech" title="Recruit +1 Patriot Mech to Charlie Squad (Uses 1x 🤖 Mech or $220)">
+          <span>🤖 +Charlie Mech</span>
+          <span class="sub-cost" id="cost-deploy-mech">1x🤖 or $220</span>
         </button>
-        <button class="war-deploy-btn" id="btn-build-mender" style="border-color:#4ade80;" title="Build/Upgrade Mindustry Mend Projector behind all 3 Gates">
-          <span>💚 Mend Tower</span>
+        <button class="war-deploy-btn" id="btn-upgrade-watchtower" style="border-color:#facc15;" title="Build or Upgrade Next Frontier Watchtower (Powered by Shop 🧱 Ammo!)">
+          <span>🗼 +Watchtower</span>
+          <span class="sub-cost" id="cost-upgrade-watchtower">Upgrade ($110)</span>
+        </button>
+        <button class="war-deploy-btn" id="btn-build-mender" style="border-color:#4ade80;" title="Upgrade Castle Walls &amp; Mindustry Mend Projector">
+          <span>🏰 Castle &amp; Mend</span>
           <span class="sub-cost" id="cost-build-mender">Lv.0 ($160)</span>
         </button>
       </div>
@@ -345,14 +358,14 @@
         </div>
         <div class="modal-body">
           <p style="font-size:0.82rem; color:#cbd5e1; line-height:1.4;">
-            Live 60FPS animated preview of all <strong>17 CarbotAnimations Helldivers 2 (Ep1–Ep10+) 2D vector characters, Smart SEAF Staff, Terminids (Scavenger Hunter, Charger, Bile Spewer, Bile Titan), Automatons (Trooper, Rocket Devastator, Flame-Saw Hulk, Factory Strider), Vehicles, Mechs, and Sentries</strong> in <code>v0.0.10</code>.
+            Live 60FPS animated preview of all <strong>17 CarbotAnimations Helldivers 2 (Ep1–Ep10+) 2D vector characters, Smart SEAF Staff, Terminids (Scavenger Hunter, Charger, Bile Spewer, Bile Titan), Automatons (Trooper, Rocket Devastator, Flame-Saw Hulk, Factory Strider), Vehicles, Mechs, and Sentries</strong> in <code>v0.0.11</code>.
           </p>
           <div class="char-showcase-grid" id="char-showcase-grid"></div>
         </div>
       </div>
     </div>
 
-    <!-- NEW IN v0.0.10: SEAF CLONE VAT ROOM & 6-SECTOR JOB ASSIGNMENT MODAL (🧬 克隆室與工作分配) -->
+    <!-- NEW IN v0.0.11: SEAF CLONE VAT ROOM & 6-SECTOR JOB ASSIGNMENT MODAL (🧬 克隆室與工作分配) -->
     <div class="modal-backdrop" id="modal-clone-room">
       <div class="modal-card modal-wide">
         <div class="modal-header">
@@ -385,6 +398,46 @@
             🦸 HERO CLONE DNA BAY &amp; WALL OF MARTYRS (英雄招募與陣亡基因重塑 — Gen-1 可陣亡觸發烈士核爆!)
           </h4>
           <div class="upgrade-grid" id="hero-clone-grid"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- NEW IN v0.0.11: TACTICAL WAR SQUAD & FORMATION MANAGER MODAL (🪖 戰術小隊編制與據點出擊管理) -->
+    <div class="modal-backdrop" id="modal-squad">
+      <div class="modal-card modal-wide">
+        <div class="modal-header">
+          <div class="modal-title">🪖 TACTICAL WAR SQUAD &amp; NIGHTFALL CASTLE FORMATION MANAGER (戰術小隊管理與出擊據點指揮部)</div>
+          <button class="modal-close-btn modal-close" id="btn-close-squad">✕</button>
+        </div>
+        <div class="modal-body">
+          <div id="squad-modal-summary" style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;background:rgba(56,189,248,0.12);border:1.5px solid #38bdf8;padding:10px 14px;border-radius:10px;">
+            <div>
+              <div style="font-family:var(--font-display);font-weight:900;color:#fde047;font-size:0.92rem;" id="squad-summary-title">
+                🪖 ACTIVE WAR SQUAD FORMATIONS: 7 / 24 TROOPS · 100% FUNDED &amp; ARMED BY YOUR SHOP!
+              </div>
+              <div style="font-size:0.76rem;color:#cbd5e1;" id="squad-summary-sub">
+                Recruit Helldivers using Shop <strong>$REQ</strong>, <strong>🫡 Geared Shop Clients</strong>, or <strong>🔫/🚙/🤖 Shop Inventory</strong>. In War Mode, order them to <strong>🏰 Garrison Castle</strong> or <strong>⚔️ Sally Out &amp; Destroy Enemy Strongholds (據點)</strong>!
+              </div>
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+              <button class="buy-btn" id="btn-squad-order-defend" title="Order all 3 Squads to garrison inside the Nightfall Frontier Castle &amp; Stone Bridge">
+                🏰 Order: Hold Castle
+              </button>
+              <button class="buy-btn medal-btn" id="btn-squad-order-sally" title="Order Hero &amp; All 3 Squads to march out across the River Bridge and attack Enemy Strongholds (據點)!">
+                ⚔️ Order: Sally Out &amp; Attack 據點!
+              </button>
+            </div>
+          </div>
+
+          <h4 style="font-family:var(--font-display);color:#38bdf8;font-size:0.84rem;margin-top:4px;">
+            🪖 3 MANAGEABLE HELLDIVER PLATOON SQUADS (2x4 FORMATION GRIDS IN SHOP SECTOR D &amp; CASTLE BARRACKS)
+          </h4>
+          <div class="upgrade-grid" id="war-squads-grid"></div>
+
+          <h4 style="font-family:var(--font-display);color:#fde047;font-size:0.84rem;margin-top:6px;">
+            🏴‍☠️ EASTERN ENEMY STRONGHOLDS (敵方三大據點 — DESTROY FOR MASSIVE $REQ, ⭐ MEDALS &amp; 🧬 SAMPLES!)
+          </h4>
+          <div class="upgrade-grid" id="strongholds-status-grid"></div>
         </div>
       </div>
     </div>
@@ -467,7 +520,7 @@
     <div class="modal-backdrop" id="modal-save">
       <div class="modal-card">
         <div class="modal-header">
-          <div class="modal-title">💾 SAVE / EXPORT COMMAND PROGRESS (v0.0.10)</div>
+          <div class="modal-title">💾 SAVE / EXPORT COMMAND PROGRESS (v0.0.11)</div>
           <button class="modal-close-btn modal-close" id="btn-close-save">✕</button>
         </div>
         <div class="modal-body">
@@ -488,12 +541,12 @@
     <div class="modal-backdrop" id="modal-github">
       <div class="modal-card">
         <div class="modal-header">
-          <div class="modal-title">📦 GITHUB &amp; GITHUB PAGES REPOSITORY PACKAGER (v0.0.10)</div>
+          <div class="modal-title">📦 GITHUB &amp; GITHUB PAGES REPOSITORY PACKAGER (v0.0.11)</div>
           <button class="modal-close-btn modal-close" id="btn-close-github">✕</button>
         </div>
         <div class="modal-body">
           <p style="font-size:0.84rem; color:#cbd5e1; line-height:1.45;">
-            Download a clean, modular GitHub repository archive ready for <strong>GitHub Pages</strong> deployment. Includes <code>index.html</code>, <code>css/style.css</code>, <code>js/config.js</code>, <code>js/audio.js</code>, <code>js/world.js</code>, <code>js/game.js</code>, and <code>README.md</code> (with full <code>v0.0.00</code>–<code>v0.0.10</code> changelog history).
+            Download a clean, modular GitHub repository archive ready for <strong>GitHub Pages</strong> deployment. Includes <code>index.html</code>, <code>css/style.css</code>, <code>js/config.js</code>, <code>js/audio.js</code>, <code>js/world.js</code>, <code>js/game.js</code>, and <code>README.md</code> (with full <code>v0.0.00</code>–<code>v0.0.11</code> changelog history).
           </p>
           <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:4px;">
             <button class="upg-buy-btn hud-btn btn-primary" id="btn-ingame-dl-full">
