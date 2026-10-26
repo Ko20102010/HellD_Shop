@@ -219,10 +219,319 @@
     }
 
     getUnlockedCounterCount(itemId) {
-      const lvl = this.stations?.[itemId]?.level || 1;
+      const st = this.stations?.[itemId];
+      const lvl = Math.max(st?.level || 1, st?.counterLvl || 1);
       if (lvl >= 8) return 3;
       if (lvl >= 4) return 2;
       return 1;
+    }
+
+    getMaxWorkerCap() {
+      const cLvl = this.cloneRoomLevel || 1;
+      return 3 + cLvl * 3; // Lv.1 = 6 workers, Lv.10 = 33 workers
+    }
+
+    getCloneRoomUpgradeCost() {
+      const cLvl = this.cloneRoomLevel || 1;
+      return Math.round(140 * Math.pow(1.42, cLvl - 1));
+    }
+
+    getCloneHireCost() {
+      const count = (this.workers || []).length;
+      return Math.round(70 * Math.pow(1.18, count));
+    }
+
+    getShopWarPowerMult() {
+      let score = 0;
+      for (const item of CFG.ITEMS) {
+        if (this.unlocked?.[item.id]) {
+          const st = this.stations?.[item.id] || {};
+          score += 12 + ((st.level || 1) - 1) * 4 + ((st.priceLvl || 1) - 1) * 2 + ((st.speedLvl || 1) - 1) * 2 + ((st.yieldLvl || 1) - 1) * 3;
+        }
+      }
+      for (const raw of CFG.RAW_EXTRACTORS) {
+        const rs = this.rawExtractors?.[raw.id];
+        if (rs && rs.level > 0) score += rs.level * 4;
+      }
+      return 1 + score * 0.015;
+    }
+
+    getAbilityLevel(targetType, targetId, abilityKey) {
+      if (targetType === 'station') {
+        const st = this.stations?.[targetId];
+        return st ? (st[abilityKey] || 1) : 1;
+      } else if (targetType === 'raw') {
+        const rs = this.rawExtractors?.[targetId];
+        return rs ? (rs[abilityKey] || Math.max(1, rs.level || 1)) : 1;
+      } else if (targetType === 'ammo') {
+        return this.ammoPress ? (this.ammoPress[abilityKey] || Math.max(1, this.ammoPress.level || 1)) : 1;
+      }
+      return 1;
+    }
+
+    getAbilityUpgradeCost(targetType, targetId, abilityDef) {
+      const curLvl = this.getAbilityLevel(targetType, targetId, abilityDef.key);
+      let base = 90;
+      if (targetType === 'station') {
+        const itemCfg = this.getItemConfig(targetId);
+        base = (itemCfg?.baseUpgradeCost || 80) * (abilityDef.baseCostMult || 1.0);
+      } else if (targetType === 'raw') {
+        const rawCfg = CFG.RAW_EXTRACTORS.find((r) => r.id === targetId);
+        base = (rawCfg?.baseUpgradeCost || 110) * (abilityDef.baseCostMult || 1.0);
+      } else if (targetType === 'ammo') {
+        base = (CFG.AMMO_PRESS.baseUpgradeCost || 120) * (abilityDef.baseCostMult || 1.0);
+      }
+      return Math.round(base * Math.pow(abilityDef.costScale || 1.35, curLvl - 1));
+    }
+
+    upgradeBuildingAbility(targetType, targetId, abilityKey) {
+      const abilities = CFG.BUILDING_ABILITIES?.[targetType] || [];
+      const abDef = abilities.find((a) => a.key === abilityKey);
+      if (!abDef) return;
+      const curLvl = this.getAbilityLevel(targetType, targetId, abilityKey);
+      if (curLvl >= 10) return;
+      const cost = this.getAbilityUpgradeCost(targetType, targetId, abDef);
+      if (this.cash < cost) {
+        this.spawnFloatingText(this.player.x, this.player.z - 35, `⚠️ NEED $${cost} FOR ${abDef.icon}`, '#ef4444');
+        return;
+      }
+      this.cash -= cost;
+
+      if (targetType === 'station') {
+        const st = this.stations[targetId];
+        const prevDesks = this.getUnlockedCounterCount(targetId);
+        st[abilityKey] = curLvl + 1;
+        // Keep overall station level synced to highest sub-ability
+        st.level = Math.max(
+          st.level || 1,
+          st.priceLvl || 1,
+          st.speedLvl || 1,
+          st.yieldLvl || 1,
+          st.counterLvl || 1
+        );
+        const newDesks = this.getUnlockedCounterCount(targetId);
+        const itemCfg = this.getItemConfig(targetId);
+        if (newDesks > prevDesks) {
+          this.spawnFloatingText(
+            itemCfg.counterPos.x + (newDesks - 1) * 320,
+            itemCfg.counterPos.z - 55,
+            `🎉 EXPANDED TO ${newDesks}/3 COUNTERS (${itemCfg.shortName})!`,
+            '#4ade80'
+          );
+        } else {
+          this.spawnFloatingText(
+            itemCfg.stationPos.x,
+            itemCfg.stationPos.z - 45,
+            `${abDef.icon} ${abDef.name} Lv.${st[abilityKey]}/10!`,
+            '#fde047'
+          );
+        }
+      } else if (targetType === 'raw') {
+        const rs = this.rawExtractors[targetId];
+        if ((rs.level || 0) === 0) rs.level = 1;
+        rs[abilityKey] = curLvl + 1;
+        rs.level = Math.max(rs.level || 1, rs.speedLvl || 1, rs.yieldLvl || 1, rs.bufferLvl || 1);
+      } else if (targetType === 'ammo') {
+        if ((this.ammoPress.level || 0) === 0) this.ammoPress.level = 1;
+        this.ammoPress[abilityKey] = curLvl + 1;
+        this.ammoPress.level = Math.max(
+          this.ammoPress.level || 1,
+          this.ammoPress.speedLvl || 1,
+          this.ammoPress.yieldLvl || 1,
+          this.ammoPress.bufferLvl || 1
+        );
+      }
+
+      this.recalcDerivedStats();
+      this.buildSolidObstacles();
+      this.audio.playUnlock();
+      this.saveGame();
+      this.renderBuildingPopover();
+      this.updateHUD();
+    }
+
+    openBuildingPopover(type, id) {
+      this.selectedInspectTarget = { type, id };
+      const pop = document.getElementById('building-upgrade-popover');
+      if (pop) pop.classList.add('open');
+      this.renderBuildingPopover();
+      this.updateHUD();
+    }
+
+    closeBuildingPopover() {
+      document.getElementById('building-upgrade-popover')?.classList.remove('open');
+    }
+
+    renderBuildingPopover() {
+      const pop = document.getElementById('building-upgrade-popover');
+      if (!pop || !pop.classList.contains('open')) return;
+      const titleEl = document.getElementById('popover-building-title');
+      const statsEl = document.getElementById('popover-building-stats');
+      const listEl = document.getElementById('popover-abilities-list');
+      if (!titleEl || !statsEl || !listEl) return;
+
+      const sel = this.selectedInspectTarget || { type: 'station', id: 'cloth' };
+      listEl.innerHTML = '';
+
+      if (sel.type === 'station') {
+        const item = this.getItemConfig(sel.id) || CFG.ITEMS[0];
+        const isUnlocked = !!this.unlocked[item.id];
+        const st = this.stations[item.id];
+
+        if (!isUnlocked) {
+          const rem = this.unlockRemaining[item.id] ?? item.unlockCost;
+          titleEl.textContent = `🔒 ${item.icon} ${item.name} (Locked Lv.0)`;
+          statsEl.textContent = `Recipe: ${item.recipeText} · Base Price: $${item.sellPrice}`;
+          const row = document.createElement('div');
+          row.className = 'popover-ability-row';
+          row.innerHTML = `
+            <div class="popover-ability-meta">
+              <div class="popover-ability-name">🔓 Construct ${item.shortName} &amp; Counter #${item.tier}</div>
+              <div class="popover-ability-desc">Unlocks this production lane and its dedicated Sales Counter Bay.</div>
+            </div>
+            <button class="buy-btn" ${this.cash < rem ? 'disabled' : ''}>🔓 Unlock ($${rem})</button>
+          `;
+          row.querySelector('button').addEventListener('click', () => {
+            this.triggerSelectedInspectorUpgrade();
+            this.renderBuildingPopover();
+          });
+          listEl.appendChild(row);
+          return;
+        }
+
+        const batchOut = 1 + Math.floor(((st.yieldLvl || 1)) / 3);
+        const desks = this.getUnlockedCounterCount(item.id);
+        titleEl.textContent = `${item.icon} ${item.name} (Lv.${st.level || 1}/10)`;
+        statsEl.textContent = `💵 Price: $${this.getItemSellPrice(item)} · ⚡ Cycle: ${st.cycleTime.toFixed(2)}s · 📦 1 Raw ➔ ${batchOut}x Goods · 🏪 ${desks}/3 Desks`;
+
+        for (const ab of (CFG.BUILDING_ABILITIES.station || [])) {
+          const curLvl = this.getAbilityLevel('station', item.id, ab.key);
+          const isMax = curLvl >= 10;
+          const cost = this.getAbilityUpgradeCost('station', item.id, ab);
+          let dotsHtml = '<span class="popover-level-dots">';
+          for (let d = 1; d <= 10; d++) {
+            dotsHtml += `<span class="popover-dot ${d <= curLvl ? 'filled' : ''}"></span>`;
+          }
+          dotsHtml += '</span>';
+
+          const row = document.createElement('div');
+          row.className = 'popover-ability-row';
+          row.innerHTML = `
+            <div class="popover-ability-meta">
+              <div class="popover-ability-name">${ab.icon} ${ab.name} (Lv.${curLvl}/10) ${dotsHtml}</div>
+              <div class="popover-ability-desc">${ab.desc}</div>
+            </div>
+            <button class="buy-btn" ${(isMax || this.cash < cost) ? 'disabled' : ''}>
+              ${isMax ? 'MAX Lv.10' : `⬆️ $${cost}`}
+            </button>
+          `;
+          row.querySelector('button').addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.upgradeBuildingAbility('station', item.id, ab.key);
+          });
+          listEl.appendChild(row);
+        }
+      } else if (sel.type === 'raw') {
+        const rawCfg = CFG.RAW_EXTRACTORS.find((r) => r.id === sel.id) || CFG.RAW_EXTRACTORS[0];
+        const rs = this.rawExtractors[rawCfg.id];
+        const isUnlocked = (rs.level || 0) > 0;
+
+        if (!isUnlocked) {
+          const cost = this.getRawUpgradeCost(rawCfg.id);
+          titleEl.textContent = `🔒 ${rawCfg.icon} ${rawCfg.name} (Locked Lv.0)`;
+          statsEl.textContent = `Build Auto-Rig to extract ${rawCfg.itemIcon} automatically!`;
+          const row = document.createElement('div');
+          row.className = 'popover-ability-row';
+          row.innerHTML = `
+            <div class="popover-ability-meta">
+              <div class="popover-ability-name">🔓 Build Auto-${rawCfg.shortName}</div>
+              <div class="popover-ability-desc">${rawCfg.desc}</div>
+            </div>
+            <button class="buy-btn" ${this.cash < cost ? 'disabled' : ''}>🔓 Build ($${cost})</button>
+          `;
+          row.querySelector('button').addEventListener('click', () => {
+            this.triggerSelectedInspectorUpgrade();
+            this.renderBuildingPopover();
+          });
+          listEl.appendChild(row);
+          return;
+        }
+
+        const batchYield = 1 + Math.floor(((rs.yieldLvl || 1)) / 2);
+        titleEl.textContent = `${rawCfg.icon} ${rawCfg.name} (Lv.${rs.level}/10)`;
+        statsEl.textContent = `⚡ Cycle: ${rs.cycleTime.toFixed(2)}s · 📦 Yield: ${batchYield}x ${rawCfg.itemIcon}/cycle · 🗄️ Cap: ${rs.stock}/${rs.maxBuffer}`;
+
+        for (const ab of (CFG.BUILDING_ABILITIES.raw || [])) {
+          const curLvl = this.getAbilityLevel('raw', rawCfg.id, ab.key);
+          const isMax = curLvl >= 10;
+          const cost = this.getAbilityUpgradeCost('raw', rawCfg.id, ab);
+          const row = document.createElement('div');
+          row.className = 'popover-ability-row';
+          row.innerHTML = `
+            <div class="popover-ability-meta">
+              <div class="popover-ability-name">${ab.icon} ${ab.name} (Lv.${curLvl}/10)</div>
+              <div class="popover-ability-desc">${ab.desc}</div>
+            </div>
+            <button class="buy-btn" ${(isMax || this.cash < cost) ? 'disabled' : ''}>
+              ${isMax ? 'MAX Lv.10' : `⬆️ $${cost}`}
+            </button>
+          `;
+          row.querySelector('button').addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.upgradeBuildingAbility('raw', rawCfg.id, ab.key);
+          });
+          listEl.appendChild(row);
+        }
+      } else if (sel.type === 'ammo') {
+        const AP = CFG.AMMO_PRESS;
+        const isUnlocked = (this.ammoPress.level || 0) > 0;
+        if (!isUnlocked) {
+          const cost = this.getAmmoPressUpgradeCost();
+          titleEl.textContent = `🔒 🧱 ${AP.name} (Locked Lv.0)`;
+          statsEl.textContent = `Consumes 1x ⛏️ Iron to stamp 🧱 Turret Ammo!`;
+          const row = document.createElement('div');
+          row.className = 'popover-ability-row';
+          row.innerHTML = `
+            <div class="popover-ability-meta">
+              <div class="popover-ability-name">🔓 Build Munitions Ammo Press</div>
+              <div class="popover-ability-desc">${AP.desc}</div>
+            </div>
+            <button class="buy-btn" ${this.cash < cost ? 'disabled' : ''}>🔓 Build ($${cost})</button>
+          `;
+          row.querySelector('button').addEventListener('click', () => {
+            this.triggerSelectedInspectorUpgrade();
+            this.renderBuildingPopover();
+          });
+          listEl.appendChild(row);
+          return;
+        }
+
+        const outAmmo = 3 + ((this.ammoPress.yieldLvl || 1) - 1);
+        titleEl.textContent = `🧱 ${AP.name} (Lv.${this.ammoPress.level}/10)`;
+        statsEl.textContent = `⚡ Cycle: ${this.ammoPress.cycleTime.toFixed(2)}s · 🧱 1 Iron ➔ ${outAmmo}x Ammo · 🗄️ Cap: ${this.ammoPress.stock}/${this.ammoPress.maxBuffer}`;
+
+        for (const ab of (CFG.BUILDING_ABILITIES.ammo || [])) {
+          const curLvl = this.getAbilityLevel('ammo', 'ammo', ab.key);
+          const isMax = curLvl >= 10;
+          const cost = this.getAbilityUpgradeCost('ammo', 'ammo', ab);
+          const row = document.createElement('div');
+          row.className = 'popover-ability-row';
+          row.innerHTML = `
+            <div class="popover-ability-meta">
+              <div class="popover-ability-name">${ab.icon} ${ab.name} (Lv.${curLvl}/10)</div>
+              <div class="popover-ability-desc">${ab.desc}</div>
+            </div>
+            <button class="buy-btn" ${(isMax || this.cash < cost) ? 'disabled' : ''}>
+              ${isMax ? 'MAX Lv.10' : `⬆️ $${cost}`}
+            </button>
+          `;
+          row.querySelector('button').addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.upgradeBuildingAbility('ammo', 'ammo', ab.key);
+          });
+          listEl.appendChild(row);
+        }
+      }
     }
 
     getHellpodUpgradeCost() {
@@ -230,10 +539,8 @@
       return Math.round(140 * Math.pow(1.45, lvl - 1));
     }
 
-    getHellpodDropFee(tierBonus = 1) {
-      const lvl = this.hellpodBayLevel || 1;
-      const spoilsMult = 1 + (this.roguelikePerks?.rk_war_spoils || 0) * 0.50;
-      return Math.round((45 + (lvl - 1) * 25 + tierBonus * 18) * this.getPrestigeMultiplier() * spoilsMult);
+    getHellpodDropFee() {
+      return 0; // v0.0.10: Hellpods are pure departure exits with no drop fee!
     }
 
     triggerRoguelikePerkDraft() {
@@ -343,66 +650,41 @@
         return false;
       }
 
-      // 1. Check Hellpod Launch Bay at (220, -100)
-      if (Math.hypot(wx - 220, wz - (-100)) < 190) {
-        this.selectedInspectTarget = { type: 'hellpod', id: 'hellpod' };
-        if (this.hellpodBayLevel < 10) {
-          const cost = this.getHellpodUpgradeCost();
-          if (this.cash >= cost) {
-            this.cash -= cost;
-            this.hellpodBayLevel++;
-            this.audio.playUnlock();
-            this.spawnFloatingText(220, -140, `🚀 HELLPOD BAY UPGRADED Lv.${this.hellpodBayLevel}/10!`, '#facc15');
-            this.updateHUD();
-            return true;
-          }
-        }
-        this.updateHUD();
+      // 0. Check SEAF Clone Vat Room at (-1500, -95) -> Opens Clone Room & 6-Sector Job Assignment Modal!
+      if (Math.hypot(wx - (-1500), wz - (-95)) < 220) {
+        this.audio.playPickup();
+        this.renderCloneRoomModal();
+        document.getElementById('modal-clone-room')?.classList.add('open');
         return true;
       }
 
-      // 2. Check Raw Quarry Auto-Drills
+      // 1. Check Hellpod Departure Bay at (220, -100)
+      if (Math.hypot(wx - 220, wz - (-100)) < 190) {
+        this.selectedInspectTarget = { type: 'hellpod', id: 'hellpod' };
+        this.audio.playPickup();
+        this.spawnFloatingText(
+          220,
+          -140,
+          `🚀 ${this.totalHellpodDrops || 0} HELLDIVERS SENT TO ORBIT (${(this.gearedClientsPool || []).length} READY FOR WAR)!`,
+          '#38bdf8'
+        );
+        return true;
+      }
+
+      // 2. Check Raw Quarry Auto-Drills -> Open Idle Multi-Ability Pop-Up Window!
       for (const raw of CFG.RAW_EXTRACTORS) {
         if (Math.hypot(wx - raw.x, wz - raw.z) < 135) {
-          this.selectedInspectTarget = { type: 'raw', id: raw.id };
-          const rs = this.rawExtractors[raw.id];
-          if ((rs.level || 0) < 10) {
-            const cost = this.getRawUpgradeCost(raw.id);
-            if (this.cash >= cost) {
-              this.cash -= cost;
-              rs.level = (rs.level || 0) + 1;
-              if (rs.level === 1) rs.stock = 4;
-              this.recalcDerivedStats();
-              this.buildSolidObstacles();
-              this.audio.playUnlock();
-              this.spawnFloatingText(raw.x, raw.z - 45, `⬆️ ${raw.shortName} Lv.${rs.level}/10!`, raw.color);
-              this.updateHUD();
-              return true;
-            }
-          }
-          this.updateHUD();
+          this.audio.playPickup();
+          this.openBuildingPopover('raw', raw.id);
           return true;
         }
       }
 
-      // 3. Check Munitions Ammo Press
+      // 3. Check Munitions Ammo Press -> Open Idle Multi-Ability Pop-Up Window!
       const AP = CFG.AMMO_PRESS;
       if (Math.hypot(wx - AP.x, wz - AP.z) < 120) {
-        this.selectedInspectTarget = { type: 'ammo', id: 'ammo' };
-        if ((this.ammoPress.level || 0) < 10) {
-          const cost = this.getAmmoPressUpgradeCost();
-          if (this.cash >= cost) {
-            this.cash -= cost;
-            this.ammoPress.level = (this.ammoPress.level || 0) + 1;
-            this.recalcDerivedStats();
-            this.buildSolidObstacles();
-            this.audio.playUnlock();
-            this.spawnFloatingText(AP.x, AP.z - 45, `⬆️ AMMO PRESS Lv.${this.ammoPress.level}/10!`, '#f97316');
-            this.updateHUD();
-            return true;
-          }
-        }
-        this.updateHUD();
+        this.audio.playPickup();
+        this.openBuildingPopover('ammo', 'ammo');
         return true;
       }
 
@@ -428,8 +710,8 @@
         const nearCounter3 = item.counter3Pos && Math.hypot(wx - item.counter3Pos.x, wz - item.counter3Pos.z) < 125;
 
         if (nearStation || nearCounter1 || nearCounter2 || nearCounter3) {
-          this.selectedInspectTarget = { type: 'station', id: item.id };
-          this.triggerSelectedInspectorUpgrade();
+          this.audio.playPickup();
+          this.openBuildingPopover('station', item.id);
           return true;
         }
       }
@@ -548,7 +830,12 @@
       const warBtn = document.getElementById('btn-mode-war');
       const warDock = document.getElementById('war-command-dock');
 
+      const warPanel = document.getElementById('war-game-panel');
+      const idleBar = document.getElementById('idle-inspector-bar');
       if (this.viewMode === 'war') {
+        this.closeBuildingPopover();
+        idleBar?.classList.add('hidden-bar');
+        warPanel?.classList.add('visible');
         shopBtn?.classList.remove('active-shop');
         warBtn?.classList.add('active-war');
         warDock?.classList.add('visible');
@@ -558,8 +845,12 @@
         this.pointerTarget = null;
         this.world.camX = 0;
         this.world.camZ = fg.z + 80;
-        this.spawnFloatingText(this.player.x, this.player.z - 40, '⚔️ WAR FRONT COMMAND ACTIVE — DEPLOY UNITS BELOW!', '#ef4444');
+        if (!this.warMatchActive) {
+          this.startNewWarGame(this.missionType || 'attack');
+        }
       } else {
+        warPanel?.classList.remove('visible');
+        idleBar?.classList.remove('hidden-bar');
         warBtn?.classList.remove('active-war');
         shopBtn?.classList.add('active-shop');
         warDock?.classList.remove('visible');
@@ -686,6 +977,9 @@
       for (const raw of CFG.RAW_EXTRACTORS) {
         this.rawExtractors[raw.id] = {
           level: raw.unlockedAtStart ? 1 : 0,
+          speedLvl: 1,
+          yieldLvl: 1,
+          bufferLvl: 1,
           stock: 0,
           maxBuffer: raw.baseBuffer,
           progress: 0,
@@ -696,6 +990,9 @@
       // Munitions Ammo Press starts at Lv.0 (Locked — Unlock for $130!)
       this.ammoPress = {
         level: CFG.AMMO_PRESS.unlockedAtStart ? 1 : 0,
+        speedLvl: 1,
+        yieldLvl: 1,
+        bufferLvl: 1,
         inputStock: {
           raw_iron: (CFG.AMMO_PRESS.initialInput?.raw_iron || 6) + grantLvl * 2
         },
@@ -753,6 +1050,10 @@
         this.unlockRemaining[item.id] = item.unlockCost;
         this.stations[item.id] = {
           level: isStart ? 1 : 0,
+          priceLvl: 1,
+          speedLvl: 1,
+          yieldLvl: 1,
+          counterLvl: 1,
           inputStock: {
             raw_iron: (item.initialInput?.raw_iron || 0) + (item.recipe.raw_iron ? grantLvl * 2 : 0),
             raw_e710: (item.initialInput?.raw_e710 || 0) + (item.recipe.raw_e710 ? grantLvl * 2 : 0)
@@ -774,6 +1075,32 @@
 
       this.viewMode = 'shop';
       this.selectedInspectTarget = { type: 'station', id: 'cloth' };
+      this.cloneRoomLevel = this.cloneRoomLevel || 1;
+      this.hiredClonesCount = this.hiredClonesCount || 0;
+      this.workerJobs = this.workerJobs || {
+        miner: 0,
+        hauler: 0,
+        sales: 0,
+        cash: 0,
+        ammo: 0,
+        war: 0
+      };
+      this.gearedClientsPool = this.gearedClientsPool || [1, 2];
+      this.activeHeroId = this.activeHeroId || 'hero_brasch';
+      this.heroesState = this.heroesState || {
+        hero_brasch: { unlocked: true, gen: 1, dead: false, deaths: 0 },
+        hero_john:   { unlocked: false, gen: 1, dead: false, deaths: 0 },
+        hero_eagle:  { unlocked: false, gen: 1, dead: false, deaths: 0 },
+        hero_viper:  { unlocked: false, gen: 1, dead: false, deaths: 0 }
+      };
+      this.martyrMemorials = this.martyrMemorials || [];
+      this.warAutoPilot = true;
+      this.warMatchNumber = this.warMatchNumber || 1;
+      this.warMatchActive = false;
+      this.warMarchProgress = 0;
+      this.warXp = 0;
+      this.warXpNext = 100;
+      this.warRoguelikeLvl = 1;
       this.hellpodBayLevel = 1;
       this.totalHellpodDrops = 0;
       this.missionType = 'attack';
@@ -868,8 +1195,10 @@
     getItemSellPrice(item) {
       const itemCfg = typeof item === 'object' ? item : this.getItemConfig(item);
       const base = itemCfg?.sellPrice || 30;
-      const stLvl = this.stations[itemCfg?.id]?.level || 1;
-      const machineQualityMult = 1 + (stLvl - 1) * 0.12;
+      const st = this.stations[itemCfg?.id] || {};
+      const stLvl = st.level || 1;
+      const priceAbLvl = st.priceLvl || 1;
+      const machineQualityMult = (1 + (stLvl - 1) * 0.10) * (1 + (priceAbLvl - 1) * 0.25);
       const permLvl = this.foreverSkills.perm_gun_value || 0;
       const eq = this.getEquippedItems();
       const armorBonus = eq.armor?.sellBonus || 0;
@@ -947,43 +1276,49 @@
       const stratBonus = this.stratagemBuffTimer > 0 ? 2.0 : 1.0;
       const prestigeMult = this.getPrestigeMultiplier();
 
-      // 1. Raw Quarry Extractors (Lv.0 = Off, Lv.1..20 = Active)
+      // 1. Raw Quarry Extractors (with Sub-Abilities: speedLvl, yieldLvl, bufferLvl)
       for (const rawCfg of CFG.RAW_EXTRACTORS) {
         const rs = this.rawExtractors[rawCfg.id];
         if (!rs) continue;
         const lvl = rs.level || 0;
-        rs.maxBuffer = rawCfg.baseBuffer + lvl * 4 + rawUpgLvl * 3;
+        const spdAb = rs.speedLvl || 1;
+        const bufAb = rs.bufferLvl || 1;
+        rs.maxBuffer = rawCfg.baseBuffer + lvl * 4 + (bufAb - 1) * 6 + rawUpgLvl * 3;
         if (lvl > 0) {
           const baseDepositMult = rawCfg.id === 'raw_e710' ? (activeBaseCfg.e710Mult || 1.0) : (activeBaseCfg.ironMult || 1.0);
-          const speedMult = (1 + (lvl - 1) * 0.22) * (1 + rawUpgLvl * 0.25) * (1 + permRawLvl * 0.25) * baseDepositMult * stratBonus * prestigeMult;
-          rs.cycleTime = Math.max(0.16, rawCfg.baseCycleTime / speedMult);
+          const speedMult = (1 + (lvl - 1) * 0.15) * (1 + (spdAb - 1) * 0.25) * (1 + rawUpgLvl * 0.25) * (1 + permRawLvl * 0.25) * baseDepositMult * stratBonus * prestigeMult;
+          rs.cycleTime = Math.max(0.15, rawCfg.baseCycleTime / speedMult);
         } else {
           rs.cycleTime = rawCfg.baseCycleTime;
         }
       }
 
-      // 2. Munitions Ammo Press (Lv.0 = Off, Lv.1..20 = Active)
+      // 2. Munitions Ammo Press (with Sub-Abilities: speedLvl, yieldLvl, bufferLvl)
       const apLvl = this.ammoPress.level || 0;
+      const apSpd = this.ammoPress.speedLvl || 1;
+      const apBuf = this.ammoPress.bufferLvl || 1;
       const ironBeltBonus = ironBeltLvl > 0 ? (1 + ironBeltLvl * 0.08) : 1.0;
-      this.ammoPress.maxBuffer = CFG.AMMO_PRESS.maxBuffer + apLvl * 4;
+      this.ammoPress.maxBuffer = CFG.AMMO_PRESS.maxBuffer + apLvl * 4 + (apBuf - 1) * 8;
       if (apLvl > 0) {
-        const ammoSpeedMult = (1 + (apLvl - 1) * 0.20) * (1 + rawUpgLvl * 0.20) * (1 + permRawLvl * 0.25) * ironBeltBonus * stratBonus;
-        this.ammoPress.cycleTime = Math.max(0.18, CFG.AMMO_PRESS.baseCycleTime / ammoSpeedMult);
+        const ammoSpeedMult = (1 + (apLvl - 1) * 0.14) * (1 + (apSpd - 1) * 0.25) * (1 + rawUpgLvl * 0.20) * (1 + permRawLvl * 0.25) * ironBeltBonus * stratBonus;
+        this.ammoPress.cycleTime = Math.max(0.16, CFG.AMMO_PRESS.baseCycleTime / ammoSpeedMult);
       } else {
         this.ammoPress.cycleTime = CFG.AMMO_PRESS.baseCycleTime;
       }
 
-      // 3. Arsenal Factory Stations (Lv.1..20)
+      // 3. Arsenal Factory Stations (with Sub-Abilities: speedLvl, counterLvl)
       for (const item of CFG.ITEMS) {
         const st = this.stations[item.id];
         if (!st) continue;
         const stLvl = Math.max(1, st.level || 1);
-        st.maxBuffer = item.maxBuffer + (stLvl - 1) * 2;
+        const spdLvl = st.speedLvl || 1;
+        const cntLvl = st.counterLvl || 1;
+        st.maxBuffer = item.maxBuffer + (stLvl - 1) * 2 + (cntLvl - 1) * 3;
         const linkedRawLvl = this.rawExtractors[item.rawType]?.level || 0;
         const beltLvlForStation = item.rawType === 'raw_e710' ? e710BeltLvl : ironBeltLvl;
         const stationBeltBonus = beltLvlForStation > 0 ? (1 + beltLvlForStation * 0.08) : 1.0;
-        const prodSpeed = (1 + (stLvl - 1) * 0.15) * (1 + factoryLvl * 0.15) * (1 + linkedRawLvl * 0.08) * stationBeltBonus * stratBonus;
-        st.cycleTime = Math.max(0.22, item.cycleTime / prodSpeed);
+        const prodSpeed = (1 + (stLvl - 1) * 0.12) * (1 + (spdLvl - 1) * 0.22) * (1 + factoryLvl * 0.15) * (1 + linkedRawLvl * 0.08) * stationBeltBonus * stratBonus;
+        st.cycleTime = Math.max(0.18, item.cycleTime / prodSpeed);
       }
 
       // 4. 3-Layer Defense Gates (Lv.1..20 — Broken gates NEVER auto-gain HP!)
@@ -1328,6 +1663,24 @@
         }
       }
 
+      // Low-Control War Mode Auto-Pilot: If in War Mode and player isn't steering manually, auto-maneuver & collect drops!
+      if (vx === 0 && vz === 0 && !this.pointerTarget && this.viewMode === 'war' && this.warAutoPilot) {
+        let targetX = Math.sin(this.playTimeSeconds * 1.3) * 180;
+        const fg = this.getActiveFrontGate();
+        let targetZ = (this.missionType === 'attack') ? Math.max(-1350, fg.z - 120) : (fg.z + 55);
+        if (this.warDrops && this.warDrops.length > 0) {
+          targetX = this.warDrops[0].x;
+          targetZ = this.warDrops[0].z;
+        }
+        const dx = targetX - this.player.x;
+        const dz = targetZ - this.player.z;
+        const dist = Math.hypot(dx, dz);
+        if (dist > 24) {
+          vx = dx / dist;
+          vz = dz / dist;
+        }
+      }
+
       if (vx !== 0 || vz !== 0) {
         const speed = this.getPlayerMoveSpeed();
         this.moveWithCollision(this.player, vx * speed * dt, vz * speed * dt, 20);
@@ -1346,7 +1699,7 @@
           rs.progress += dt;
           if (rs.progress >= rs.cycleTime) {
             rs.progress = 0;
-            const batch = 1 + Math.floor((rs.level - 1) / 4);
+            const batch = 1 + Math.floor((rs.yieldLvl || rs.level || 1) / 2);
             rs.stock = Math.min(rs.maxBuffer, rs.stock + batch);
           }
         }
@@ -1363,7 +1716,7 @@
             if (Math.random() > saveChance) {
               apIn.raw_iron = Math.max(0, apIn.raw_iron - reqIron);
             }
-            const outBatch = (CFG.AMMO_PRESS.outputBatch || 3) + Math.floor((this.ammoPress.level - 1) / 5);
+            const outBatch = (CFG.AMMO_PRESS.outputBatch || 3) + ((this.ammoPress.yieldLvl || 1) - 1);
             this.ammoPress.stock = Math.min(this.ammoPress.maxBuffer, this.ammoPress.stock + outBatch);
           }
         }
@@ -1389,7 +1742,14 @@
                 st.inputStock.raw_e710 = Math.max(0, (st.inputStock.raw_e710 || 0) - item.recipe.raw_e710);
               }
             }
-            st.stock++;
+            // Multi-Output Yield Ability (`yieldLvl`): 1 raw batch produces up to 4x goods + raw-save chance!
+            const yieldAb = st.yieldLvl || 1;
+            if (Math.random() < (yieldAb - 1) * 0.07) {
+              if (item.recipe.raw_iron) st.inputStock.raw_iron = (st.inputStock.raw_iron || 0) + 1;
+              if (item.recipe.raw_e710) st.inputStock.raw_e710 = (st.inputStock.raw_e710 || 0) + 1;
+            }
+            const outGoods = 1 + Math.floor(yieldAb / 3);
+            st.stock = Math.min(maxBuf, st.stock + outGoods);
           }
         }
       }
@@ -2011,26 +2371,7 @@
         }
       }
 
-      // 17. Thaw Cryo-Frozen Helldivers in the War Zone
-      for (const pod of this.cryoPods) {
-        if (pod.rescued) continue;
-        const dPod = Math.hypot(p.x - pod.x, p.z - pod.z);
-        if (dPod < 95 && p.inventory.length > 0) {
-          const dropped = p.inventory.pop();
-          pod.fed++;
-          this.transferCooldown = 0.12;
-          this.spawnArc(p.x, p.z - 20, pod.x, pod.z, dropped.icon, dropped.color);
-          if (pod.fed >= pod.needed) {
-            pod.rescued = true;
-            pod.cooldown = 40;
-            this.upgrades.seaf_carrier = Math.min(20, (this.upgrades.seaf_carrier || 0) + 1);
-            this.syncWorkers();
-            this.audio.playUnlock();
-            this.spawnFloatingText(pod.x, pod.z - 40, `🥶 HELLDIVER THAWED -> +1 FREE SEAF!`, '#38bdf8');
-          }
-          return;
-        }
-      }
+// 17. SEAF Hiring is now handled via the Shop's SEAF Clone Vat Room!
     }
 
     // ========================================================================
@@ -2041,57 +2382,285 @@
     //  - Engineers: Prioritize broken/damaged Gate repair, then non-belted Gate ammo,
     //               then Munitions Press Iron assistance!
     // ========================================================================
+    // ========================================================================
+    // SEAF CLONE VAT ROOM & 6-SECTOR WORK ASSIGNMENT SYSTEM (v0.0.10)
+    // Jobs: miner (Pick Raw), hauler (Haul Goods), sales (Sales Cashier),
+    //       cash (Pick Money), ammo (Pick Ammo & Repair), war (Pick War)
+    // ========================================================================
+    getTotalAssignedJobs() {
+      const j = this.workerJobs || {};
+      return (j.miner || 0) + (j.hauler || 0) + (j.sales || 0) + (j.cash || 0) + (j.ammo || 0) + (j.war || 0);
+    }
+
     syncWorkers() {
-      const targetMiners = Math.min(8, this.upgrades.seaf_miner || 0);
-      const targetLogistics = Math.min(8, this.upgrades.seaf_carrier || 0);
-      const targetAmmo = Math.min(8, this.upgrades.seaf_ammo_hauler || 0);
+      if (!this.workerJobs) {
+        this.workerJobs = { miner: 0, hauler: 0, sales: 0, cash: 0, ammo: 0, war: 0 };
+      }
+      // Migrate legacy upgrades if hiredClonesCount is 0
+      const legacySum = (this.upgrades?.seaf_miner || 0) + (this.upgrades?.seaf_carrier || 0) + (this.upgrades?.seaf_ammo_hauler || 0);
+      if ((this.hiredClonesCount || 0) < legacySum) {
+        this.hiredClonesCount = Math.min(this.getMaxWorkerCap(), legacySum);
+        if (this.getTotalAssignedJobs() === 0 && legacySum > 0) {
+          this.workerJobs.miner = this.upgrades?.seaf_miner || 0;
+          this.workerJobs.hauler = Math.ceil((this.upgrades?.seaf_carrier || 0) * 0.5);
+          this.workerJobs.cash = Math.floor((this.upgrades?.seaf_carrier || 0) * 0.5);
+          this.workerJobs.ammo = this.upgrades?.seaf_ammo_hauler || 0;
+        }
+      }
 
-      const curMiners = this.workers.filter((w) => w.role === 'miner').length;
-      const curLogistics = this.workers.filter((w) => w.role === 'logistics').length;
-      const curAmmo = this.workers.filter((w) => w.role === 'ammo').length;
+      const maxCap = this.getMaxWorkerCap();
+      const targetTotal = Math.min(maxCap, this.hiredClonesCount || 0);
 
-      for (let i = curMiners; i < targetMiners; i++) {
+      while (this.workers.length < targetTotal) {
+        const idx = this.workers.length;
         this.workers.push({
-          role: 'miner',
-          slotIndex: i,
-          x: -1150 + (i % 3) * 45,
-          z: 420 + i * 30,
-          walkPhase: i,
-          taskLabel: '⛏️ Ready',
+          role: 'hauler',
+          slotIndex: idx,
+          x: -1460 + (idx % 4) * 45,
+          z: -20 + Math.floor(idx / 4) * 35,
+          walkPhase: idx,
+          taskLabel: '🧬 Cloned',
           assistTimer: 0,
           inventory: []
         });
       }
-
-      for (let i = curLogistics; i < targetLogistics; i++) {
-        this.workers.push({
-          role: 'logistics',
-          slotIndex: i,
-          x: 240 + (i % 3) * 45,
-          z: 220 + i * 45,
-          walkPhase: i,
-          taskLabel: '🪖 Ready',
-          assistTimer: 0,
-          inventory: []
-        });
+      if (this.workers.length > targetTotal) {
+        this.workers.length = targetTotal;
       }
 
-      for (let i = curAmmo; i < targetAmmo; i++) {
-        this.workers.push({
-          role: 'ammo',
-          slotIndex: i,
-          x: -480 + (i % 3) * 45,
-          z: -140,
-          walkPhase: i,
-          taskLabel: '🧱 Ready',
-          assistTimer: 0,
-          inventory: []
-        });
+      // Assign roles according to `this.workerJobs`
+      const roleQueue = [];
+      for (const jobCfg of (CFG.CLONE_JOBS || [])) {
+        const count = Math.max(0, this.workerJobs[jobCfg.id] || 0);
+        for (let k = 0; k < count; k++) roleQueue.push(jobCfg.id);
+      }
+
+      for (let i = 0; i < this.workers.length; i++) {
+        const w = this.workers[i];
+        const newRole = roleQueue[i] || 'cash';
+        if (w.role !== newRole) {
+          w.role = newRole;
+          w.inventory = [];
+        }
+        w.slotIndex = i;
+      }
+    }
+
+    hireSeafClone() {
+      const maxCap = this.getMaxWorkerCap();
+      if ((this.hiredClonesCount || 0) >= maxCap) {
+        this.spawnFloatingText(-1500, -130, `⚠️ CLONE ROOM FULL (${maxCap}/${maxCap}) — UPGRADE CLONE ROOM!`, '#ef4444');
+        return;
+      }
+      const cost = this.getCloneHireCost();
+      if (this.cash < cost) {
+        this.spawnFloatingText(-1500, -130, `⚠️ NEED $${cost} TO CLONE SEAF`, '#ef4444');
+        return;
+      }
+      this.cash -= cost;
+      this.hiredClonesCount = (this.hiredClonesCount || 0) + 1;
+
+      // Auto-assign the newly cloned SEAF worker to the job with the lowest count
+      const jobOrder = ['miner', 'hauler', 'sales', 'cash', 'ammo', 'war'];
+      let bestJob = 'miner';
+      let minVal = 999;
+      for (const jId of jobOrder) {
+        const val = this.workerJobs[jId] || 0;
+        if (val < minVal) {
+          minVal = val;
+          bestJob = jId;
+        }
+      }
+      this.workerJobs[bestJob] = (this.workerJobs[bestJob] || 0) + 1;
+
+      this.syncWorkers();
+      this.audio.playUnlock();
+      this.saveGame();
+      this.renderCloneRoomModal();
+      this.updateHUD();
+      this.spawnFloatingText(-1500, -135, `🧬 CLONED SEAF WORKER #${this.hiredClonesCount} (ASSIGNED: ${bestJob.toUpperCase()})!`, '#4ade80');
+    }
+
+    upgradeCloneRoom() {
+      if ((this.cloneRoomLevel || 1) >= 10) return;
+      const cost = this.getCloneRoomUpgradeCost();
+      if (this.cash < cost) {
+        this.spawnFloatingText(-1500, -130, `⚠️ NEED $${cost} TO UPGRADE CLONE ROOM`, '#ef4444');
+        return;
+      }
+      this.cash -= cost;
+      this.cloneRoomLevel = (this.cloneRoomLevel || 1) + 1;
+      this.syncWorkers();
+      this.audio.playUnlock();
+      this.saveGame();
+      this.renderCloneRoomModal();
+      this.updateHUD();
+      this.spawnFloatingText(-1500, -140, `🧬 CLONE ROOM Lv.${this.cloneRoomLevel}/10! MAX WORKERS: ${this.getMaxWorkerCap()}!`, '#4ade80');
+    }
+
+    adjustWorkerJob(jobId, delta) {
+      if (!this.workerJobs) return;
+      const cur = this.workerJobs[jobId] || 0;
+      if (delta > 0) {
+        const totalAssigned = this.getTotalAssignedJobs();
+        if (totalAssigned >= (this.hiredClonesCount || 0)) {
+          // Steal 1 worker from another job with the highest count so "+" always works smoothly!
+          let donor = null;
+          let maxCount = 0;
+          for (const k of Object.keys(this.workerJobs)) {
+            if (k !== jobId && (this.workerJobs[k] || 0) > maxCount) {
+              maxCount = this.workerJobs[k];
+              donor = k;
+            }
+          }
+          if (donor && maxCount > 0) {
+            this.workerJobs[donor]--;
+            this.workerJobs[jobId] = cur + 1;
+          } else {
+            return;
+          }
+        } else {
+          this.workerJobs[jobId] = cur + 1;
+        }
+      } else if (delta < 0 && cur > 0) {
+        this.workerJobs[jobId] = cur - 1;
+      }
+      this.syncWorkers();
+      this.audio.playPickup();
+      this.saveGame();
+      this.renderCloneRoomModal();
+      this.updateHUD();
+    }
+
+    autoBalanceWorkerJobs() {
+      const total = this.hiredClonesCount || 0;
+      const keys = ['miner', 'hauler', 'sales', 'cash', 'ammo', 'war'];
+      for (const k of keys) this.workerJobs[k] = 0;
+      for (let i = 0; i < total; i++) {
+        const k = keys[i % keys.length];
+        this.workerJobs[k]++;
+      }
+      this.syncWorkers();
+      this.audio.playUnlock();
+      this.saveGame();
+      this.renderCloneRoomModal();
+      this.updateHUD();
+    }
+
+    renderCloneRoomModal() {
+      const titleStat = document.getElementById('clone-room-title-stat');
+      const hireBtn = document.getElementById('btn-hire-seaf-clone');
+      const upgBtn = document.getElementById('btn-upgrade-clone-room');
+      const unassEl = document.getElementById('clone-unassigned-count');
+      const jobsGrid = document.getElementById('clone-jobs-grid');
+      const heroGrid = document.getElementById('hero-clone-grid');
+
+      const cLvl = this.cloneRoomLevel || 1;
+      const maxCap = this.getMaxWorkerCap();
+      const totalClones = this.hiredClonesCount || 0;
+      const assigned = this.getTotalAssignedJobs();
+      const unassigned = Math.max(0, totalClones - assigned);
+
+      if (titleStat) {
+        titleStat.textContent = `🧬 CLONE VAT ROOM Lv.${cLvl}/10 — CLONED SEAF WORKERS: ${totalClones} / ${maxCap} MAX`;
+      }
+      if (unassEl) {
+        unassEl.textContent = `${unassigned}`;
+      }
+      if (hireBtn) {
+        const hCost = this.getCloneHireCost();
+        hireBtn.textContent = totalClones >= maxCap ? `MAX ${maxCap} WORKERS` : `➕ Clone +1 SEAF ($${hCost})`;
+        hireBtn.disabled = totalClones >= maxCap || this.cash < hCost;
+      }
+      if (upgBtn) {
+        const uCost = this.getCloneRoomUpgradeCost();
+        upgBtn.textContent = cLvl >= 10 ? '✅ CLONE ROOM MAX Lv.10' : `⬆️ Upgrade Room Lv.${cLvl + 1}/10 ($${uCost} · +3 Cap)`;
+        upgBtn.disabled = cLvl >= 10 || this.cash < uCost;
+      }
+
+      if (jobsGrid) {
+        jobsGrid.innerHTML = '';
+        for (const jCfg of (CFG.CLONE_JOBS || [])) {
+          const count = this.workerJobs?.[jCfg.id] || 0;
+          const card = document.createElement('div');
+          card.className = 'upgrade-item';
+          card.style.borderColor = jCfg.color;
+          card.innerHTML = `
+            <div class="upgrade-info">
+              <h4 style="color:${jCfg.color};">${jCfg.icon} ${jCfg.name}: <span style="color:#fde047;">${count} Assigned</span></h4>
+              <p>${jCfg.desc}</p>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <button class="hud-btn btn-job-minus" style="padding:6px 11px;font-size:0.85rem;" ${count <= 0 ? 'disabled' : ''}>➖</button>
+              <span style="font-family:var(--font-display);font-weight:900;font-size:0.9rem;min-width:22px;text-align:center;">${count}</span>
+              <button class="buy-btn btn-job-plus" style="padding:6px 11px;font-size:0.85rem;" ${totalClones <= 0 ? 'disabled' : ''}>➕</button>
+            </div>
+          `;
+          card.querySelector('.btn-job-minus').addEventListener('click', () => this.adjustWorkerJob(jCfg.id, -1));
+          card.querySelector('.btn-job-plus').addEventListener('click', () => this.adjustWorkerJob(jCfg.id, 1));
+          jobsGrid.appendChild(card);
+        }
+      }
+
+      if (heroGrid) {
+        heroGrid.innerHTML = '';
+        for (const hCfg of (CFG.WAR_HEROES || [])) {
+          const hs = this.heroesState?.[hCfg.id] || { unlocked: false, gen: 1, dead: false, deaths: 0 };
+          const isSelected = this.activeHeroId === hCfg.id;
+          const legacyBonus = (hs.gen - 1) * 35;
+          const curHp = Math.round(hCfg.baseHp * (1 + (hs.gen - 1) * 0.35));
+          const curDmg = Math.round(hCfg.baseDmg * (1 + (hs.gen - 1) * 0.35));
+          const actionCost = !hs.unlocked ? hCfg.hireCost : (hs.dead ? hCfg.reviveCloneCost : 0);
+
+          const card = document.createElement('div');
+          card.className = 'upgrade-item';
+          card.style.borderColor = isSelected ? '#facc15' : hCfg.color;
+          if (isSelected) card.style.background = 'rgba(250, 204, 21, 0.14)';
+          card.innerHTML = `
+            <div class="upgrade-info">
+              <div style="font-size:0.68rem;color:${hs.dead ? '#ef4444' : hCfg.color};font-weight:800;">
+                ${hs.dead ? `🪦 KIA IN ACTION (Martyr Deaths: ${hs.deaths}) — READY FOR GEN-${hs.gen + 1} CLONE REBIRTH!` : (hs.gen === 1 ? '⚠️ GEN-1 DESIGN (May Die in Battle -> Triggers Martyr Nuke!)' : `🧬 CLONE GEN-${hs.gen} (+${legacyBonus}% Martyr Legacy Stats)`)}
+              </div>
+              <h4>${hCfg.icon} ${hCfg.name} <span style="font-size:0.75rem;color:#fde047;">(${hCfg.zhName})</span></h4>
+              <p>HP: ${curHp} · ATK: ${curDmg} · ${hCfg.desc}</p>
+            </div>
+            <button class="buy-btn ${isSelected && !hs.dead ? 'medal-btn' : ''}" ${(actionCost > 0 && this.cash < actionCost) ? 'disabled' : ''}>
+              ${!hs.unlocked ? `🔓 Recruit ($${hCfg.hireCost})` : (hs.dead ? `🧬 Clone Gen-${hs.gen + 1} ($${hCfg.reviveCloneCost})` : (isSelected ? '✅ ACTIVE HERO' : '🦸 Deploy Hero'))}
+            </button>
+          `;
+          card.querySelector('button').addEventListener('click', () => {
+            if (!hs.unlocked) {
+              if (this.cash < hCfg.hireCost) return;
+              this.cash -= hCfg.hireCost;
+              hs.unlocked = true;
+              hs.gen = 1;
+              hs.dead = false;
+              this.activeHeroId = hCfg.id;
+              this.audio.playUnlock();
+            } else if (hs.dead) {
+              if (this.cash < hCfg.reviveCloneCost) return;
+              this.cash -= hCfg.reviveCloneCost;
+              hs.gen = (hs.gen || 1) + 1;
+              hs.dead = false;
+              this.activeHeroId = hCfg.id;
+              this.audio.playUnlock();
+              this.spawnFloatingText(this.player.x, this.player.z - 45, `🧬 ${hCfg.name} RE-CLONED AS GEN-${hs.gen} (+${(hs.gen - 1) * 35}% POWER)!`, '#4ade80');
+            } else {
+              this.activeHeroId = hCfg.id;
+              this.audio.playPickup();
+            }
+            this.saveGame();
+            this.renderCloneRoomModal();
+            this.updateHUD();
+          });
+          heroGrid.appendChild(card);
+        }
       }
     }
 
     updateWorkers(dt) {
       const eliteBonus = 1 + (this.foreverSkills.perm_commander_elite || 0) * 0.10;
+      const cloneSpdBonus = 1 + ((this.cloneRoomLevel || 1) - 1) * 0.08;
       const AP = CFG.AMMO_PRESS;
       const reservedHoppers = new Set();
       const reservedOutputLanes = new Set();
@@ -2100,56 +2669,30 @@
       for (const w of this.workers) {
         w.walkPhase += dt * 10;
         const slotIdx = w.slotIndex || 0;
+        const speed = 215 * cloneSpdBonus * eliteBonus;
+        const carryCap = 3 + Math.floor((this.cloneRoomLevel || 1) / 2);
 
-        // --------------------------------------------------------------------
-        // 1. ⛏️ SEAF QUARRY MINERS (Belt-Aware + Unique Hopper Reservation)
-        // --------------------------------------------------------------------
+        // 1. ⛏️ MINER (Pick Raw -> Feed Hoppers)
         if (w.role === 'miner') {
-          const minerLvl = this.upgrades.seaf_miner || 1;
-          const speed = 205 * (1 + (minerLvl - 1) * 0.10) * eliteBonus;
-          const carryCap = 3 + Math.floor(minerLvl / 3);
-
           if (w.inventory.length === 0) {
-            // Find which hoppers currently have the lowest stock
             const needyHoppers = [];
             if ((this.ammoPress.level || 0) > 0) {
-              needyHoppers.push({
-                rawId: 'raw_iron',
-                stock: this.ammoPress.inputStock.raw_iron || 0,
-                label: '🧱 Ammo Press'
-              });
+              needyHoppers.push({ rawId: 'raw_iron', stock: this.ammoPress.inputStock.raw_iron || 0 });
             }
             for (const item of CFG.ITEMS) {
               if (!this.unlocked[item.id]) continue;
               const st = this.stations[item.id];
-              if (item.recipe.raw_e710) {
-                needyHoppers.push({
-                  rawId: 'raw_e710',
-                  stock: st.inputStock.raw_e710 || 0,
-                  label: item.shortName
-                });
-              }
-              if (item.recipe.raw_iron) {
-                needyHoppers.push({
-                  rawId: 'raw_iron',
-                  stock: st.inputStock.raw_iron || 0,
-                  label: item.shortName
-                });
-              }
+              if (item.recipe.raw_e710) needyHoppers.push({ rawId: 'raw_e710', stock: st.inputStock.raw_e710 || 0 });
+              if (item.recipe.raw_iron) needyHoppers.push({ rawId: 'raw_iron', stock: st.inputStock.raw_iron || 0 });
             }
             needyHoppers.sort((a, b) => a.stock - b.stock);
             const chosenNeed = needyHoppers[slotIdx % Math.max(1, needyHoppers.length)] || { rawId: 'raw_e710' };
             const rawCfg = CFG.RAW_EXTRACTORS.find((r) => r.id === chosenNeed.rawId) || CFG.RAW_EXTRACTORS[0];
             const rs = this.rawExtractors[rawCfg.id];
-            const beltId = rawCfg.id === 'raw_e710' ? 'conv_raw_e710' : 'conv_raw_iron';
-            const isBeltAutomated = (this.conveyorLevels?.[beltId] || 0) > 0;
-
-            // BELT-AWARE RULE: If the raw belt is ALREADY automated (Lv.1+), the belt moves auto-drill output!
-            // So the Miner walks to the Manual Vein (`harvestPos`) to hand-mine bonus ore instead of duplicating the belt!
-            const useAutoPickup = !isBeltAutomated && rs && rs.level > 0 && rs.stock > 0;
+            const useAutoPickup = rs && rs.level > 0 && rs.stock > 0;
             const targetX = useAutoPickup ? rawCfg.pickupX : rawCfg.harvestPos.x + Math.cos(slotIdx * 1.7) * 35;
             const targetZ = useAutoPickup ? rawCfg.pickupZ : rawCfg.harvestPos.z + Math.sin(slotIdx * 1.7) * 35;
-            w.taskLabel = useAutoPickup ? `📤 Pickup ${rawCfg.itemIcon}` : `⛏️ Vein Mining ${rawCfg.itemIcon}`;
+            w.taskLabel = `⛏️ Pick ${rawCfg.itemIcon}`;
 
             const dx = targetX - w.x;
             const dz = targetZ - w.z;
@@ -2161,52 +2704,27 @@
               if (useAutoPickup && rs.stock > 0) {
                 const take = Math.min(carryCap, rs.stock);
                 rs.stock -= take;
-                for (let k = 0; k < take; k++) {
-                  w.inventory.push({ id: rawCfg.id, icon: rawCfg.itemIcon, color: rawCfg.color });
-                }
+                for (let k = 0; k < take; k++) w.inventory.push({ id: rawCfg.id, icon: rawCfg.itemIcon, color: rawCfg.color });
               } else {
-                const handYield = Math.min(3, carryCap);
-                for (let k = 0; k < handYield; k++) {
-                  w.inventory.push({ id: rawCfg.id, icon: rawCfg.itemIcon, color: rawCfg.color });
-                }
+                for (let k = 0; k < Math.min(3, carryCap); k++) w.inventory.push({ id: rawCfg.id, icon: rawCfg.itemIcon, color: rawCfg.color });
               }
             }
           } else {
             const heldId = w.inventory[0].id;
             const candidates = [];
-
             if (heldId === 'raw_iron' && (this.ammoPress.level || 0) > 0) {
-              candidates.push({
-                key: 'ammo_press',
-                pos: AP.inputPos,
-                hopper: this.ammoPress.inputStock,
-                count: this.ammoPress.inputStock.raw_iron || 0,
-                name: 'Ammo Hopper'
-              });
+              candidates.push({ key: 'ammo_press', pos: AP.inputPos, hopper: this.ammoPress.inputStock, count: this.ammoPress.inputStock.raw_iron || 0, name: 'Ammo Hopper' });
             }
-
             for (const item of CFG.ITEMS) {
               if (!this.unlocked[item.id] || !item.recipe[heldId]) continue;
               const st = this.stations[item.id];
-              candidates.push({
-                key: item.id,
-                pos: item.inputPos,
-                hopper: st.inputStock,
-                count: st.inputStock[heldId] || 0,
-                name: `${item.icon} Hopper`
-              });
+              candidates.push({ key: item.id, pos: item.inputPos, hopper: st.inputStock, count: st.inputStock[heldId] || 0, name: `${item.icon} Hopper` });
             }
-
-            if (candidates.length === 0) {
-              w.inventory = [];
-              continue;
-            }
-
+            if (candidates.length === 0) { w.inventory = []; continue; }
             candidates.sort((a, b) => a.count - b.count);
-            let chosen = candidates.find((c) => !reservedHoppers.has(`${c.key}_${heldId}`)) || candidates[0];
+            const chosen = candidates.find((c) => !reservedHoppers.has(`${c.key}_${heldId}`)) || candidates[0];
             reservedHoppers.add(`${chosen.key}_${heldId}`);
             w.taskLabel = `📥 Feed ${chosen.name}`;
-
             const dx = chosen.pos.x - w.x;
             const dz = chosen.pos.z - w.z;
             const dist = Math.hypot(dx, dz);
@@ -2219,136 +2737,12 @@
             }
           }
         }
-
-        // --------------------------------------------------------------------
-        // 2. 🧱 SEAF GATE ENGINEERS (Priority: Broken/Damaged Gate Repair -> Unbelted Gate Ammo -> Ammo Press Assist)
-        // --------------------------------------------------------------------
-        else if (w.role === 'ammo') {
-          const engLvl = this.upgrades.seaf_ammo_hauler || 1;
-          const speed = 205 * (1 + (engLvl - 1) * 0.10) * eliteBonus;
-
-          // Check if any Gate Layer is broken or damaged (< 90% HP)
-          let damagedGate = null;
-          for (const g of CFG.GATES) {
-            const gs = this.gates[g.id];
-            if (gs && (gs.broken || gs.hp < gs.maxHp * 0.90)) {
-              damagedGate = g;
-              break;
-            }
-          }
-
-          // Check if any Gate Layer lacks an automated belt (or is low on ammo)
-          let ammoNeedyGate = null;
-          for (const g of CFG.GATES) {
-            const gs = this.gates[g.id];
-            if (!gs) continue;
-            const beltLvl = this.conveyorLevels?.[g.conveyorId] || 0;
-            const maxAmmo = gs.maxAmmo || g.maxAmmo;
-            if ((beltLvl === 0 && gs.ammo < maxAmmo * 0.85) || gs.ammo < maxAmmo * 0.35) {
-              ammoNeedyGate = g;
-              break;
-            }
-          }
-
-          if (damagedGate && w.inventory.length === 0) {
-            // Priority 1: Walk straight to the damaged/broken Gate's Repair Pad!
-            w.taskLabel = `🔧 Repair ${damagedGate.shortName}`;
-            const dx = damagedGate.ammoPadX - w.x;
-            const dz = damagedGate.ammoPadZ - w.z;
-            const dist = Math.hypot(dx, dz);
-            if (dist > 28) {
-              w.x += (dx / dist) * speed * dt;
-              w.z += (dz / dist) * speed * dt;
-            } else {
-              const gs = this.gates[damagedGate.id];
-              if (gs && gs.hp < gs.maxHp) {
-                gs.hp = Math.min(gs.maxHp, gs.hp + (32 + engLvl * 6) * dt);
-                if (gs.hp > 0) gs.broken = false;
-              }
-            }
-          } else if (w.inventory.length === 0 && ammoNeedyGate && (this.ammoPress.level || 0) > 0 && this.ammoPress.stock > 0) {
-            // Priority 2: Pick up 🧱 Ammo from Munitions Press for non-belted/low gate
-            w.taskLabel = `📤 Pickup 🧱 Ammo`;
-            const dx = AP.padX - w.x;
-            const dz = AP.padZ - w.z;
-            const dist = Math.hypot(dx, dz);
-            if (dist > 26) {
-              w.x += (dx / dist) * speed * dt;
-              w.z += (dz / dist) * speed * dt;
-            } else {
-              const take = Math.min(4 + Math.floor(engLvl / 4), this.ammoPress.stock);
-              this.ammoPress.stock -= take;
-              for (let k = 0; k < take; k++) {
-                w.inventory.push({ id: 'ammo', icon: '🧱', color: '#f97316' });
-              }
-            }
-          } else if (w.inventory.length > 0) {
-            const targetGate = ammoNeedyGate || damagedGate || this.getActiveFrontGate();
-            w.taskLabel = `🧱 Load ${targetGate.shortName}`;
-            const dx = targetGate.ammoPadX - w.x;
-            const dz = targetGate.ammoPadZ - w.z;
-            const dist = Math.hypot(dx, dz);
-            if (dist > 28) {
-              w.x += (dx / dist) * speed * dt;
-              w.z += (dz / dist) * speed * dt;
-            } else {
-              const gs = this.gates[targetGate.id];
-              if (gs) {
-                gs.ammo = Math.min(gs.maxAmmo || targetGate.maxAmmo, gs.ammo + w.inventory.length * 3);
-                w.inventory = [];
-                if (gs.hp < gs.maxHp) {
-                  gs.hp = Math.min(gs.maxHp, gs.hp + (28 + engLvl * 5) * dt);
-                  if (gs.hp > 0) gs.broken = false;
-                }
-              }
-            }
-          } else {
-            // Priority 3: All gates healthy & belted -> Assist at Munitions Press or Patrol Front Gate!
-            if ((this.ammoPress.level || 0) > 0) {
-              w.taskLabel = `⚙️ Assist Ammo Press`;
-              const tx = AP.inputPos.x + Math.cos(slotIdx * 2) * 28;
-              const tz = AP.inputPos.z + Math.sin(slotIdx * 2) * 28;
-              const dx = tx - w.x;
-              const dz = tz - w.z;
-              const dist = Math.hypot(dx, dz);
-              if (dist > 26) {
-                w.x += (dx / dist) * speed * dt;
-                w.z += (dz / dist) * speed * dt;
-              } else {
-                w.assistTimer = (w.assistTimer || 0) + dt;
-                if (w.assistTimer >= 3.2) {
-                  w.assistTimer = 0;
-                  this.ammoPress.inputStock.raw_iron = Math.min(30, (this.ammoPress.inputStock.raw_iron || 0) + 1);
-                }
-              }
-            } else {
-              const fg = this.getActiveFrontGate();
-              w.taskLabel = `🛡️ Patrol ${fg.shortName}`;
-              const dx = fg.ammoPadX - w.x;
-              const dz = fg.ammoPadZ - w.z;
-              const dist = Math.hypot(dx, dz);
-              if (dist > 28) {
-                w.x += (dx / dist) * speed * dt;
-                w.z += (dz / dist) * speed * dt;
-              }
-            }
-          }
-        }
-
-        // --------------------------------------------------------------------
-        // 3. 🪖 SEAF LOGISTICS TROOPERS (Belt-Aware: Haul to Dedicated Counter OR Cashier & Cash Vault Patrol!)
-        // --------------------------------------------------------------------
-        else {
-          const logLvl = this.upgrades.seaf_carrier || 1;
-          const speed = 210 * (1 + (logLvl - 1) * 0.10) * eliteBonus;
-          const carryCap = 3 + Math.floor(logLvl / 3);
-          const counterBeltAutomated = (this.conveyorLevels?.conv_counter_auto || 0) > 0;
-
+        // 2. 📦 HAULER (Haul Finished Goods from Factory Output -> Counters)
+        else if (w.role === 'hauler') {
           if (w.inventory.length > 0) {
-            // Deliver held finished items to their SPECIFIC Dedicated Item Counter!
             const heldId = w.inventory[0].id;
             const itemCfg = this.getItemConfig(heldId) || CFG.ITEMS[0];
-            w.taskLabel = `🛒 Stock Counter #${itemCfg.tier}`;
+            w.taskLabel = `📦 Stock #${itemCfg.tier}`;
             const dx = itemCfg.counterDropPos.x - w.x;
             const dz = itemCfg.counterDropPos.z - w.z;
             const dist = Math.hypot(dx, dz);
@@ -2361,22 +2755,10 @@
               }
               w.inventory = [];
             }
-            continue;
-          }
-
-          // When `conv_counter_auto` is Lv.0 (NOT automated), haul finished goods from factory output pads!
-          let chosenLane = null;
-          if (!counterBeltAutomated) {
-            const readyItems = CFG.ITEMS.filter(
-              (it) => this.unlocked[it.id] && (this.stations[it.id]?.stock || 0) > 0 && !reservedOutputLanes.has(it.id)
-            );
-            if (readyItems.length > 0) {
-              chosenLane = readyItems[slotIdx % readyItems.length];
-              reservedOutputLanes.add(chosenLane.id);
-            }
-          }
-
-          if (chosenLane) {
+          } else {
+            const readyItems = CFG.ITEMS.filter((it) => this.unlocked[it.id] && (this.stations[it.id]?.stock || 0) > 0 && !reservedOutputLanes.has(it.id));
+            const chosenLane = readyItems.length > 0 ? readyItems[slotIdx % readyItems.length] : CFG.ITEMS[0];
+            reservedOutputLanes.add(chosenLane.id);
             w.taskLabel = `📤 Pickup ${chosenLane.icon}`;
             const dx = chosenLane.pickupPos.x - w.x;
             const dz = chosenLane.pickupPos.z - w.z;
@@ -2386,52 +2768,94 @@
               w.z += (dz / dist) * speed * dt;
             } else {
               const st = this.stations[chosenLane.id];
-              const take = Math.min(carryCap, st.stock);
+              const take = Math.min(carryCap, st?.stock || 0);
               if (take > 0) {
                 st.stock -= take;
-                for (let k = 0; k < take; k++) {
-                  w.inventory.push({ id: chosenLane.id, icon: chosenLane.icon, color: chosenLane.color });
-                }
+                for (let k = 0; k < take; k++) w.inventory.push({ id: chosenLane.id, icon: chosenLane.icon, color: chosenLane.color });
               }
             }
+          }
+        }
+        // 3. 🫡 SALES CASHIER (Staffs Counters & Speeds Up Checkout)
+        else if (w.role === 'sales') {
+          const unlockedItems = CFG.ITEMS.filter((it) => this.unlocked[it.id]);
+          const targetLane = unlockedItems[slotIdx % Math.max(1, unlockedItems.length)] || CFG.ITEMS[0];
+          const deskCount = this.getUnlockedCounterCount(targetLane.id);
+          const deskIdx = slotIdx % deskCount;
+          const tx = deskIdx === 2 ? targetLane.counter3Pos.x : (deskIdx === 1 ? targetLane.counter2Pos.x : targetLane.counterPos.x);
+          const tz = targetLane.counterPos.z - 52;
+          w.taskLabel = `🫡 Sales #${targetLane.tier}-${deskIdx + 1}`;
+          const dx = tx - w.x;
+          const dz = tz - w.z;
+          const dist = Math.hypot(dx, dz);
+          if (dist > 20) {
+            w.x += (dx / dist) * speed * dt;
+            w.z += (dz / dist) * speed * dt;
+          }
+        }
+        // 4. 💵 CASH COLLECTOR (Pick Money from Counter Cash Vaults)
+        else if (w.role === 'cash') {
+          const unlockedItems = CFG.ITEMS.filter((it) => this.unlocked[it.id]);
+          const cashLanes = unlockedItems.filter((it) => (this.counterCash[it.id] || 0) > 0 && !reservedCounters.has(it.id));
+          const target = cashLanes.length > 0 ? cashLanes[0] : unlockedItems[slotIdx % Math.max(1, unlockedItems.length)];
+          if (target) {
+            reservedCounters.add(target.id);
+            w.taskLabel = `💵 Pick Cash #${target.tier}`;
+            const dx = target.cashPos.x - w.x;
+            const dz = target.cashPos.z - w.z;
+            const dist = Math.hypot(dx, dz);
+            if (dist > 26) {
+              w.x += (dx / dist) * speed * dt;
+              w.z += (dz / dist) * speed * dt;
+            } else {
+              const cVal = this.counterCash[target.id] || 0;
+              if (cVal > 0) {
+                this.cash += cVal;
+                this.counterCash[target.id] = 0;
+                this.syncTotalCashOnGround();
+                this.audio.playCash();
+                this.spawnFloatingText(target.cashPos.x, target.cashPos.z - 28, `+$${cVal} COLLECTED!`, '#4ade80');
+              }
+            }
+          }
+        }
+        // 5. 🧱 AMMO & GATE TECH (Pick Ammo & Supply Gates)
+        else if (w.role === 'ammo') {
+          w.taskLabel = `🧱 Supply Ammo`;
+          const tx = (this.ammoPress.level || 0) > 0 ? AP.padX : -1500;
+          const tz = (this.ammoPress.level || 0) > 0 ? AP.padZ : 1200;
+          const dx = tx - w.x;
+          const dz = tz - w.z;
+          const dist = Math.hypot(dx, dz);
+          if (dist > 32) {
+            w.x += (dx / dist) * speed * dt;
+            w.z += (dz / dist) * speed * dt;
           } else {
-            // BELT-AWARE CASHIER & CASH COLLECTOR PATROL:
-            // When `conv_counter_auto` is active (Lv.1+) or no output pads have stock,
-            // Logistics Troopers patrol the 7 Dedicated Counters to auto-collect `$REQ` cash stacks!
-            const unlockedCounters = CFG.ITEMS.filter((it) => this.unlocked[it.id]);
-            const cashCounters = unlockedCounters.filter((it) => (this.counterCash[it.id] || 0) > 0 && !reservedCounters.has(it.id));
-            const targetCounter = cashCounters.length > 0
-              ? cashCounters[0]
-              : unlockedCounters[slotIdx % Math.max(1, unlockedCounters.length)];
-
-            if (targetCounter) {
-              reservedCounters.add(targetCounter.id);
-              const hasCash = (this.counterCash[targetCounter.id] || 0) > 0;
-              w.taskLabel = hasCash ? `💵 Collect Cash #${targetCounter.tier}` : `🫡 Cashier #${targetCounter.tier}`;
-              const tx = hasCash ? targetCounter.cashPos.x : targetCounter.counterPos.x;
-              const tz = hasCash ? targetCounter.cashPos.z : targetCounter.counterPos.z + 55;
-              const dx = tx - w.x;
-              const dz = tz - w.z;
-              const dist = Math.hypot(dx, dz);
-              if (dist > 26) {
-                w.x += (dx / dist) * speed * dt;
-                w.z += (dz / dist) * speed * dt;
-              } else if (hasCash) {
-                const collected = this.counterCash[targetCounter.id] || 0;
-                if (collected > 0) {
-                  this.cash += collected;
-                  this.counterCash[targetCounter.id] = 0;
-                  this.syncTotalCashOnGround();
-                  this.audio.playCash();
-                  this.spawnFloatingText(
-                    targetCounter.cashPos.x,
-                    targetCounter.cashPos.z - 28,
-                    `+$${collected} SEAF COLLECTED!`,
-                    '#4ade80'
-                  );
+            w.assistTimer = (w.assistTimer || 0) + dt;
+            if (w.assistTimer >= 2.5) {
+              w.assistTimer = 0;
+              this.ammoPress.inputStock.raw_iron = Math.min(30, (this.ammoPress.inputStock.raw_iron || 0) + 1);
+              for (const g of CFG.GATES) {
+                const gs = this.gates[g.id];
+                if (gs) {
+                  gs.ammo = Math.min(gs.maxAmmo || g.maxAmmo, gs.ammo + 2);
+                  if (!gs.broken && gs.hp < gs.maxHp) gs.hp = Math.min(gs.maxHp, gs.hp + 25);
                 }
               }
             }
+          }
+        }
+        // 6. ⚔️ WAR RESERVE (Stands near Bridge Barracks & deploys in War Games)
+        else if (w.role === 'war') {
+          w.taskLabel = `⚔️ War Reserve`;
+          const tx = -950 + (slotIdx % 4) * 55;
+          const tz = -85;
+          const dx = tx - w.x;
+          const dz = tz - w.z;
+          const dist = Math.hypot(dx, dz);
+          if (dist > 22) {
+            w.x += (dx / dist) * speed * dt;
+            w.z += (dz / dist) * speed * dt;
           }
         }
       }
@@ -2525,7 +2949,7 @@
 
       const unitPrice = this.getItemSellPrice(activeItem);
       const itemId = activeItem.id;
-      if (directToWallet || (this.upgrades.seaf_cashier || 0) > 0) {
+      if (directToWallet || (this.upgrades.seaf_cashier || 0) > 0 || (this.workerJobs?.sales || 0) > 0) {
         this.cash += unitPrice;
         this.audio.playCash();
         this.spawnFloatingText(cust.x, cust.z - 48, `+$${unitPrice} ${activeItem.icon} SOLD!`, '#4ade80');
@@ -2561,79 +2985,249 @@
     }
 
     launchCustomerInHellpod(cust) {
+      // v0.0.10 Rule #3: Hellpods on the Shop page do NOT auto-send to War Zone and earn NO money.
+      // They simply send the geared customer out into orbit and add their loadout tier to `gearedClientsPool`
+      // so they can volunteer or be hired by the player during War Games!
       const tier = cust.highestTierBought || cust.item?.tier || 1;
-      const dropFee = this.getHellpodDropFee(tier);
-      this.cash += dropFee;
       this.totalHellpodDrops = (this.totalHellpodDrops || 0) + 1;
-      this.audio.playCash();
+      if (!this.gearedClientsPool) this.gearedClientsPool = [];
+      if (this.gearedClientsPool.length < 30) {
+        this.gearedClientsPool.push(tier);
+      }
 
       const tubeX = 220 - 150 + (cust.podTubeIndex || 0) * 100;
       this.spawnArc(tubeX, -95, tubeX, -230, '🚀', '#38bdf8');
       this.spawnFloatingText(
         tubeX,
         -135,
-        `🚀 HELLPOD LAUNCHED! +$${dropFee} DROP FEE (+1 WAR REINFORCEMENT!)`,
-        '#fde047'
+        `🚀 CLIENT DEPARTED IN HELLPOD (STANDBY POOL: ${this.gearedClientsPool.length})`,
+        '#93c5fd'
       );
+    }
 
-      // Spawn this geared Helldiver in the War Zone (up to 18 active squad members)!
-      if ((this.alliedUnits || []).length < 18) {
-        const fg = this.getActiveFrontGate();
-        const cmdLvl = this.getTechNodeLevel('tech_war_unit_command');
-        const shieldBonus = 1 + (this.roguelikePerks?.rk_shield_relay || 0) * 0.45;
-        const hpMult = (1 + cmdLvl * 0.35) * shieldBonus;
-        const dmgMult = (1 + cmdLvl * 0.30) * (1 + (this.superSamples || 0) * 0.15);
+    // ========================================================================
+    // GAME-BY-GAME ROGUELIKE WAR OPERATIONS, CLIENT VOLUNTEERS/HIRE & HEROES
+    // ========================================================================
+    spawnClientWarUnit(tier = 1, isVolunteer = false) {
+      const fg = this.getActiveFrontGate();
+      const shopMult = this.getShopWarPowerMult();
+      const cmdLvl = this.getTechNodeLevel('tech_war_unit_command');
+      const shieldBonus = 1 + (this.roguelikePerks?.rk_shield_relay || 0) * 0.45;
+      const hpMult = shopMult * (1 + cmdLvl * 0.30) * shieldBonus;
+      const dmgMult = shopMult * (1 + cmdLvl * 0.25) * (1 + (this.superSamples || 0) * 0.15);
 
-        let unitType = 'deploy_squad';
-        let label = '🪖 HELLPOD DIVER';
-        let baseHp = 280 + tier * 65;
-        let baseDmg = 26 + tier * 9;
-        let color = '#38bdf8';
+      let unitType = 'deploy_squad';
+      let label = isVolunteer ? '🫡 VOLUNTEER CLIENT' : '💵 HIRED CLIENT';
+      let baseHp = 310 + tier * 75;
+      let baseDmg = 28 + tier * 11;
+      let color = '#38bdf8';
 
-        if (tier >= 6) {
-          unitType = 'deploy_mech';
-          label = '🤖 HELLPOD PATRIOT MECH';
-          baseHp = 1250;
-          baseDmg = 98;
-          color = '#f97316';
-        } else if (tier === 5) {
-          unitType = 'deploy_buggy';
-          label = '🚙 HELLPOD RECON BUGGY';
-          baseHp = 640;
-          baseDmg = 52;
-          color = '#eab308';
-        }
+      if (tier >= 6) {
+        unitType = 'deploy_mech';
+        label = isVolunteer ? '🤖 VOLUNTEER MECH CLIENT' : '🤖 HIRED MECH CLIENT';
+        baseHp = 1350;
+        baseDmg = 105;
+        color = '#f97316';
+      } else if (tier === 5) {
+        unitType = 'deploy_buggy';
+        label = isVolunteer ? '🚙 VOLUNTEER BUGGY CLIENT' : '🚙 HIRED BUGGY CLIENT';
+        baseHp = 680;
+        baseDmg = 56;
+        color = '#eab308';
+      }
 
-        const dropZ = (this.missionType === 'attack') ? -980 : (fg.z - 55);
-        this.alliedUnits.push({
-          id: Math.random(),
-          unitType,
-          label,
-          x: (Math.random() - 0.5) * 260,
-          z: dropZ,
-          hp: Math.round(baseHp * hpMult),
-          maxHp: Math.round(baseHp * hpMult),
-          damage: Math.round(baseDmg * dmgMult),
-          fireRate: 0.30,
-          fireCooldown: 0,
-          range: 420,
-          speed: 145,
-          color,
-          patrolDir: Math.random() > 0.5 ? 1 : -1
-        });
+      const dropZ = (this.missionType === 'attack') ? -960 : (fg.z - 55);
+      this.alliedUnits.push({
+        id: Math.random(),
+        unitType,
+        label,
+        x: (Math.random() - 0.5) * 260,
+        z: dropZ,
+        hp: Math.round(baseHp * hpMult),
+        maxHp: Math.round(baseHp * hpMult),
+        damage: Math.round(baseDmg * dmgMult),
+        fireRate: 0.28,
+        fireCooldown: 0,
+        range: 430,
+        speed: 148,
+        color,
+        patrolDir: Math.random() > 0.5 ? 1 : -1
+      });
+    }
 
-        // If player has `rk_hellpod_crush` Roguelike Perk, slam nearby War Zone enemies for 450 AoE DMG!
-        const crushLvl = this.roguelikePerks?.rk_hellpod_crush || 0;
-        if (crushLvl > 0 && this.enemies.length > 0) {
-          const crushDmg = 450 * crushLvl;
-          for (const e of this.enemies) {
-            e.hp -= crushDmg;
-            this.explosions.push({ x: e.x, z: e.z, maxR: 68, t: 0, duration: 0.35 });
-            if (e.hp <= 0) this.handleEnemyKilled(e);
-          }
-          this.enemies = this.enemies.filter((e) => e.hp > 0);
+    hireGearedClientForWar() {
+      const hireCost = 60;
+      if (this.cash < hireCost) {
+        this.spawnFloatingText(this.player.x, this.player.z - 35, `⚠️ NEED $${hireCost} TO HIRE CLIENT FOR WAR`, '#ef4444');
+        return;
+      }
+      this.cash -= hireCost;
+      const tier = (this.gearedClientsPool && this.gearedClientsPool.length > 0)
+        ? this.gearedClientsPool.pop()
+        : Math.max(1, Object.keys(this.unlocked).filter((k) => this.unlocked[k]).length);
+
+      this.spawnClientWarUnit(tier, false);
+      this.audio.playUnlock();
+      this.spawnFloatingText(
+        this.player.x,
+        this.player.z - 48,
+        `🫡 HIRED TIER-${tier} SHOP CLIENT FOR WAR ($${hireCost})!`,
+        '#38bdf8'
+      );
+      this.updateHUD();
+    }
+
+    deployActiveHeroToWar() {
+      const hCfg = (CFG.WAR_HEROES || []).find((h) => h.id === this.activeHeroId) || CFG.WAR_HEROES[0];
+      if (!hCfg) return;
+      const hs = this.heroesState?.[hCfg.id];
+      if (!hs || !hs.unlocked || hs.dead) return;
+
+      // Remove existing hero instance before spawning fresh for this match
+      this.alliedUnits = (this.alliedUnits || []).filter((u) => !u.isHero);
+
+      const fg = this.getActiveFrontGate();
+      const shopMult = this.getShopWarPowerMult();
+      const genMult = 1 + ((hs.gen || 1) - 1) * 0.35;
+      const maxHp = Math.round(hCfg.baseHp * genMult * shopMult);
+      const dmg = Math.round(hCfg.baseDmg * genMult * shopMult);
+
+      this.alliedUnits.push({
+        id: Math.random(),
+        isHero: true,
+        heroId: hCfg.id,
+        gen: hs.gen || 1,
+        unitType: hCfg.id === 'hero_brasch' ? 'deploy_mech' : 'deploy_squad',
+        label: `${hCfg.icon} HERO: ${hCfg.name.toUpperCase()}`,
+        subTag: hs.gen === 1 ? '⚠️ GEN-1 (MAY DIE -> MARTYR NUKE!)' : `🧬 CLONE GEN-${hs.gen} (+${(hs.gen - 1) * 35}% LEGACY)`,
+        x: 0,
+        z: (this.missionType === 'attack') ? -1020 : (fg.z - 65),
+        hp: maxHp,
+        maxHp,
+        damage: dmg,
+        fireRate: hCfg.fireRate || 0.22,
+        fireCooldown: 0,
+        range: 470,
+        speed: 155,
+        color: hCfg.color,
+        patrolDir: 1
+      });
+    }
+
+    handleHeroDeathInWar(heroUnit) {
+      const hCfg = (CFG.WAR_HEROES || []).find((h) => h.id === heroUnit.heroId) || CFG.WAR_HEROES[0];
+      const hs = this.heroesState?.[heroUnit.heroId];
+      if (hs) {
+        hs.dead = true;
+        hs.deaths = (hs.deaths || 0) + 1;
+      }
+
+      // Martyrdom Hellbomb Explosion: Wipes screen enemies & awards +1 Forever Martyr Medal!
+      this.medals += 1;
+      this.audio.playStratagem();
+      this.world.triggerCameraShake(18, 0.55);
+      this.explosions.push({ x: heroUnit.x, z: heroUnit.z, maxR: 185, t: 0, duration: 0.65 });
+
+      for (const e of this.enemies) {
+        e.hp -= 650;
+        this.explosions.push({ x: e.x, z: e.z, maxR: 75, t: 0, duration: 0.35 });
+        if (e.hp <= 0) this.handleEnemyKilled(e);
+      }
+      this.enemies = this.enemies.filter((e) => e.hp > 0);
+
+      if (!this.martyrMemorials) this.martyrMemorials = [];
+      if (this.martyrMemorials.length >= 4) this.martyrMemorials.shift();
+      this.martyrMemorials.push({
+        name: hCfg ? hCfg.name : 'Hero',
+        gen: heroUnit.gen || 1,
+        x: heroUnit.x,
+        z: heroUnit.z
+      });
+
+      this.spawnFloatingText(
+        heroUnit.x,
+        heroUnit.z - 65,
+        `🪦 HERO ${hCfg ? hCfg.name.toUpperCase() : ''} (GEN-${heroUnit.gen || 1}) DIED HEROICALLY! MARTYR NUKE +1 ⭐ MEDAL!`,
+        '#ef4444'
+      );
+      this.saveGame();
+      this.updateHUD();
+    }
+
+    startNewWarGame(mode = null) {
+      if (mode) this.missionType = mode;
+      this.warMatchActive = true;
+      this.missionStage = 1;
+      this.warMarchProgress = 0;
+      this.warXp = 0;
+      this.warXpNext = 100;
+      this.warRoguelikeLvl = 1;
+      this.roguelikePerks = {};
+
+      // Restore all gates for the new match
+      for (const g of CFG.GATES) {
+        const gs = this.gates[g.id];
+        if (gs) {
+          gs.broken = false;
+          gs.hp = gs.maxHp;
+          gs.ammo = gs.maxAmmo || g.maxAmmo;
         }
       }
+
+      // Clear previous non-permanent units and deploy:
+      // 1) Active Named Hero (if alive)
+      // 2) SEAF Clones assigned to `⚔️ Pick War` (`workerJobs.war`)
+      // 3) Free Volunteer Clients from `gearedClientsPool` (30% volunteer rate!)
+      this.alliedUnits = [];
+      this.deployActiveHeroToWar();
+
+      const warClones = this.workerJobs?.war || 0;
+      const shopMult = this.getShopWarPowerMult();
+      const fg = this.getActiveFrontGate();
+      for (let i = 0; i < warClones; i++) {
+        this.alliedUnits.push({
+          id: Math.random(),
+          unitType: 'deploy_squad',
+          label: `⚔️ SEAF WAR CLONE #${i + 1}`,
+          x: (Math.random() - 0.5) * 240,
+          z: (this.missionType === 'attack') ? -940 : (fg.z - 50),
+          hp: Math.round(300 * shopMult),
+          maxHp: Math.round(300 * shopMult),
+          damage: Math.round(30 * shopMult),
+          fireRate: 0.30,
+          fireCooldown: 0,
+          range: 390,
+          speed: 140,
+          color: '#4ade80',
+          patrolDir: i % 2 === 0 ? 1 : -1
+        });
+      }
+
+      let volunteers = 0;
+      if (this.gearedClientsPool && this.gearedClientsPool.length > 0) {
+        const checkCount = Math.min(4, this.gearedClientsPool.length);
+        for (let i = 0; i < checkCount; i++) {
+          if (Math.random() < 0.45 || i === 0) {
+            const tier = this.gearedClientsPool.pop();
+            this.spawnClientWarUnit(tier, true);
+            volunteers++;
+          }
+        }
+      }
+
+      this.attackOutpostMaxHp = Math.round(1200 * Math.pow(1.32, this.waveNumber - 1));
+      this.attackOutpostHp = this.attackOutpostMaxHp;
+      this.startNextWave(false);
+      this.triggerRoguelikePerkDraft();
+
+      const bonusPct = Math.round((shopMult - 1) * 100);
+      this.spawnFloatingText(
+        this.player.x,
+        this.player.z - 55,
+        `🎮 WAR GAME #${this.warMatchNumber || 1} STARTED! SHOP BONUS +${bonusPct}% · ${volunteers} CLIENTS VOLUNTEERED!`,
+        '#fde047'
+      );
+      this.updateHUD();
     }
 
     updateCustomersAndSales(dt) {
@@ -2706,7 +3300,8 @@
       // Multi-Counter Checkout: 1, 2, or 3 physical counters in a lane serve up to 3 customers per tick!
       this.cashierTimer -= dt;
       if (this.cashierTimer <= 0) {
-        const cashierSpeed = 0.22 / (1 + (this.upgrades.seaf_cashier || 0) * 0.22);
+        const salesStaff = this.workerJobs?.sales || 0;
+        const cashierSpeed = 0.22 / (1 + (this.upgrades.seaf_cashier || 0) * 0.22 + salesStaff * 0.30);
         this.cashierTimer = cashierSpeed;
 
         for (const it of unlockedItems) {
@@ -2966,6 +3561,21 @@
           e.attackCooldown -= dt;
           if (e.attackCooldown <= 0) {
             e.attackCooldown = 1.05;
+            // Frontline Hero / Allied Squad intercepts enemy fire first!
+            if (this.alliedUnits && this.alliedUnits.length > 0) {
+              const frontUnit = this.alliedUnits[0];
+              frontUnit.hp -= e.dmg * 1.35;
+              this.spawnFloatingText(frontUnit.x, frontUnit.z - 32, `-${Math.round(e.dmg * 1.35)} 💥`, '#fca5a5');
+              if (frontUnit.hp <= 0) {
+                this.alliedUnits.shift();
+                if (frontUnit.isHero) {
+                  this.handleHeroDeathInWar(frontUnit);
+                } else {
+                  this.spawnFloatingText(frontUnit.x, frontUnit.z - 40, `💀 ${frontUnit.label} FALLEN!`, '#f87171');
+                }
+              }
+              continue;
+            }
             const prevHp = activeGateState.hp;
             activeGateState.hp = Math.max(0, activeGateState.hp - e.dmg);
             activeGateState.lastHitTime = this.world.time;
@@ -3182,6 +3792,17 @@
       this.totalKills++;
       this.lifetimeKills++;
       const isBoss = enemy.type === 'hulk' || enemy.type === 'titan' || enemy.type === 'strider';
+
+      // War Game Battle XP & Forward Attack March Progress
+      const xpGain = isBoss ? 85 : 28;
+      this.warXp = (this.warXp || 0) + xpGain;
+      this.warMarchProgress = Math.min(100, (this.warMarchProgress || 0) + (isBoss ? 25 : 8));
+      if (this.warXp >= (this.warXpNext || 100)) {
+        this.warXp -= (this.warXpNext || 100);
+        this.warXpNext = Math.round((this.warXpNext || 100) * 1.25);
+        this.warRoguelikeLvl = (this.warRoguelikeLvl || 1) + 1;
+        this.triggerRoguelikePerkDraft();
+      }
       this.explosions.push({
         x: enemy.x,
         z: enemy.z,
@@ -3396,6 +4017,11 @@
           mendCostEl.textContent = ml >= 20 ? 'MAX Lv.10' : `Lv.${ml} ($${mc})`;
         }
 
+        const cloneCountEl = document.getElementById('hud-clone-count');
+        if (cloneCountEl) {
+          cloneCountEl.textContent = `${this.hiredClonesCount || 0}/${this.getMaxWorkerCap()}`;
+        }
+
         const missionTypeEl = document.getElementById('label-mission-type');
         const missionStageEl = document.getElementById('sub-mission-stage');
         if (missionTypeEl) {
@@ -3403,6 +4029,46 @@
         }
         if (missionStageEl) {
           missionStageEl.textContent = `Stage ${this.missionStage || 1}/5 (🧬${this.superSamples || 0})`;
+        }
+
+        // Update Game-by-Game War Operations Panel (#war-game-panel)
+        const secAtkBtn = document.getElementById('btn-war-sec-attack');
+        const secDefBtn = document.getElementById('btn-war-sec-defense');
+        if (secAtkBtn && secDefBtn) {
+          secAtkBtn.classList.toggle('active-sec', this.missionType === 'attack');
+          secDefBtn.classList.toggle('active-sec', this.missionType !== 'attack');
+        }
+        const shopSynEl = document.getElementById('war-shop-synergy-badge');
+        if (shopSynEl) {
+          const pct = Math.round((this.getShopWarPowerMult() - 1) * 100);
+          shopSynEl.innerHTML = `🏪 Shop Scale Bonus: <strong>+${pct}% ATK/HP</strong>`;
+        }
+        const matchNumEl = document.getElementById('war-match-num');
+        if (matchNumEl) matchNumEl.textContent = `${this.waveNumber || 1}`;
+        const rkLvlEl = document.getElementById('war-roguelike-lvl');
+        if (rkLvlEl) rkLvlEl.textContent = `🎲 Roguelike Lv.${this.warRoguelikeLvl || 1}`;
+        const xpFillEl = document.getElementById('war-xp-fill');
+        if (xpFillEl) {
+          const pct = Math.min(100, Math.round(((this.warXp || 0) / Math.max(1, this.warXpNext || 100)) * 100));
+          xpFillEl.style.width = `${pct}%`;
+        }
+        const stageProgEl = document.getElementById('war-stage-progress-text');
+        if (stageProgEl) {
+          stageProgEl.textContent = this.missionType === 'attack'
+            ? `Stage ${this.missionStage || 1}/5 · March ${this.warMarchProgress || 0}%`
+            : `Defense Wave ${this.missionStage || 1}/5`;
+        }
+        const clientPoolEl = document.getElementById('war-client-pool-count');
+        if (clientPoolEl) {
+          clientPoolEl.textContent = `${(this.gearedClientsPool || []).length}`;
+        }
+        const heroStatusEl = document.getElementById('war-hero-status-text');
+        if (heroStatusEl) {
+          const hCfg = (CFG.WAR_HEROES || []).find((h) => h.id === this.activeHeroId) || CFG.WAR_HEROES[0];
+          const hs = this.heroesState?.[hCfg.id] || { gen: 1, dead: false };
+          heroStatusEl.textContent = hs.dead
+            ? `${hCfg.name} (🪦 KIA — Tap to Clone Gen-${(hs.gen || 1) + 1} $${hCfg.reviveCloneCost})`
+            : `${hCfg.name} (Gen-${hs.gen || 1})`;
         }
 
         // Update Floating Idle Click-to-Upgrade Inspector Bar
@@ -4000,6 +4666,13 @@
         unlockedBases: this.unlockedBases,
         activeBaseId: this.activeBaseId,
         mendProjectorLevel: this.mendProjectorLevel,
+        cloneRoomLevel: this.cloneRoomLevel,
+        hiredClonesCount: this.hiredClonesCount,
+        workerJobs: this.workerJobs,
+        gearedClientsPool: this.gearedClientsPool,
+        activeHeroId: this.activeHeroId,
+        heroesState: this.heroesState,
+        martyrMemorials: this.martyrMemorials,
         hellpodBayLevel: this.hellpodBayLevel,
         totalHellpodDrops: this.totalHellpodDrops,
         missionType: this.missionType,
@@ -4053,6 +4726,13 @@
         if (data.unlockedBases) Object.assign(this.unlockedBases, data.unlockedBases);
         if (typeof data.activeBaseId === 'string') this.activeBaseId = data.activeBaseId;
         if (typeof data.mendProjectorLevel === 'number') this.mendProjectorLevel = data.mendProjectorLevel;
+        if (typeof data.cloneRoomLevel === 'number') this.cloneRoomLevel = data.cloneRoomLevel;
+        if (typeof data.hiredClonesCount === 'number') this.hiredClonesCount = data.hiredClonesCount;
+        if (data.workerJobs) Object.assign(this.workerJobs, data.workerJobs);
+        if (Array.isArray(data.gearedClientsPool)) this.gearedClientsPool = data.gearedClientsPool;
+        if (typeof data.activeHeroId === 'string') this.activeHeroId = data.activeHeroId;
+        if (data.heroesState) Object.assign(this.heroesState, data.heroesState);
+        if (Array.isArray(data.martyrMemorials)) this.martyrMemorials = data.martyrMemorials;
         if (typeof data.hellpodBayLevel === 'number') this.hellpodBayLevel = data.hellpodBayLevel;
         if (typeof data.totalHellpodDrops === 'number') this.totalHellpodDrops = data.totalHellpodDrops;
         if (typeof data.missionType === 'string') this.missionType = data.missionType;
@@ -4224,6 +4904,66 @@
       document.getElementById('btn-mode-tech')?.addEventListener('click', () => {
         this.renderSkillsModal();
         document.getElementById('modal-skills')?.classList.add('open');
+      });
+
+      // Idle Pop-Up Window & Clone Room Modal Buttons (v0.0.10)
+      document.getElementById('btn-idle-open-popup')?.addEventListener('click', () => {
+        const sel = this.selectedInspectTarget || { type: 'station', id: 'cloth' };
+        this.openBuildingPopover(sel.type, sel.id);
+      });
+      document.getElementById('btn-close-popover')?.addEventListener('click', () => {
+        this.closeBuildingPopover();
+      });
+
+      document.getElementById('btn-open-clone-top')?.addEventListener('click', () => {
+        this.renderCloneRoomModal();
+        document.getElementById('modal-clone-room')?.classList.add('open');
+      });
+      document.getElementById('btn-close-clone-room')?.addEventListener('click', () => {
+        document.getElementById('modal-clone-room')?.classList.remove('open');
+      });
+      document.getElementById('btn-hire-seaf-clone')?.addEventListener('click', () => this.hireSeafClone());
+      document.getElementById('btn-upgrade-clone-room')?.addEventListener('click', () => this.upgradeCloneRoom());
+      document.getElementById('btn-auto-balance-jobs')?.addEventListener('click', () => this.autoBalanceWorkerJobs());
+
+      // Game-by-Game War Operations Panel Controls (Attack vs Defense, Start Match, Auto-Pilot, Hire Client, Hero)
+      document.getElementById('btn-war-sec-attack')?.addEventListener('click', () => {
+        this.startNewWarGame('attack');
+      });
+      document.getElementById('btn-war-sec-defense')?.addEventListener('click', () => {
+        this.startNewWarGame('defense');
+      });
+      document.getElementById('btn-war-start-match')?.addEventListener('click', () => {
+        this.startNewWarGame(this.missionType || 'attack');
+      });
+      document.getElementById('btn-war-autopilot')?.addEventListener('click', () => {
+        this.warAutoPilot = !this.warAutoPilot;
+        const apBtn = document.getElementById('btn-war-autopilot');
+        if (apBtn) {
+          apBtn.textContent = this.warAutoPilot ? '🤖 Auto-Pilot: ON' : '🕹️ Manual Control';
+          apBtn.style.borderColor = this.warAutoPilot ? '#4ade80' : '#facc15';
+          apBtn.style.color = this.warAutoPilot ? '#4ade80' : '#fde047';
+        }
+      });
+      document.getElementById('btn-war-hire-client')?.addEventListener('click', () => {
+        this.hireGearedClientForWar();
+      });
+      document.getElementById('btn-war-hero-action')?.addEventListener('click', () => {
+        const hCfg = (CFG.WAR_HEROES || []).find((h) => h.id === this.activeHeroId) || CFG.WAR_HEROES[0];
+        const hs = this.heroesState?.[hCfg.id];
+        if (hs && hs.dead && this.cash >= hCfg.reviveCloneCost) {
+          this.cash -= hCfg.reviveCloneCost;
+          hs.gen = (hs.gen || 1) + 1;
+          hs.dead = false;
+          this.deployActiveHeroToWar();
+          this.audio.playUnlock();
+          this.spawnFloatingText(this.player.x, this.player.z - 55, `🧬 ${hCfg.name.toUpperCase()} CLONED AS GEN-${hs.gen} (+${(hs.gen - 1) * 35}% POWER)!`, '#4ade80');
+          this.saveGame();
+          this.updateHUD();
+        } else {
+          this.renderCloneRoomModal();
+          document.getElementById('modal-clone-room')?.classList.add('open');
+        }
       });
 
       // Idle Inspector Quick-Upgrade & Belt-Upgrade Buttons

@@ -758,7 +758,8 @@
         '💵 STARBOARD DECK: 3-COUNTER EXPANSION HALL (Lv.1=1 Desk · Lv.4=2 Desks · Lv.8=3 Desks)'
       );
 
-      // 8. Bridge Galactic War Hologram Table, Mindustry Core & 4 Hellpod Drop Tubes
+      // 8. Bridge Galactic War Hologram Table, Clone Vat Room, Mindustry Core & 4 Hellpod Drop Tubes
+      this.drawSeafCloneVatRoom(ctx, state);
       this.drawMindustryCoreAndPortal(ctx, state);
       this.drawBridgeHellpodLaunchBay(ctx, state);
     }
@@ -803,11 +804,63 @@
       ctx.restore();
     }
 
+    drawSeafCloneVatRoom(ctx, state) {
+      const cLvl = state.cloneRoomLevel || 1;
+      const maxW = state.getMaxWorkerCap ? state.getMaxWorkerCap() : (3 + cLvl * 3);
+      const curW = (state.workers || []).length;
+      const hireCost = state.getCloneHireCost ? state.getCloneHireCost() : 70;
+
+      ctx.save();
+      ctx.translate(-1500, -95);
+
+      ctx.fillStyle = '#0c1f24';
+      ctx.strokeStyle = '#22c55e';
+      ctx.lineWidth = 3.5;
+      ctx.beginPath();
+      ctx.roundRect(-240, -56, 480, 110, 14);
+      ctx.fill();
+      ctx.stroke();
+
+      // 4 Bubbling Green Bio-Clone Incubation Vats
+      for (let i = 0; i < 4; i++) {
+        const vx = -150 + i * 100;
+        const pulse = 0.55 + 0.45 * Math.sin(this.time * 5 + i * 1.3);
+        ctx.fillStyle = `rgba(34, 197, 94, ${0.22 * pulse})`;
+        ctx.strokeStyle = '#4ade80';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(vx, 4, 24, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.font = '18px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('🧬', vx, 5);
+      }
+
+      ctx.fillStyle = '#86efac';
+      ctx.font = '900 11.5px Orbitron, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(`🧬 SEAF CLONE VAT ROOM (Lv.${cLvl}/10) — WORKERS: ${curW}/${maxW} MAX`, 0, -36);
+
+      ctx.fillStyle = '#0284c7';
+      ctx.beginPath();
+      ctx.roundRect(-175, 32, 350, 22, 6);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '900 10px Orbitron, sans-serif';
+      ctx.fillText(
+        `👆 TAP TO CLONE SEAF ($${hireCost}) & ASSIGN 6 SECTOR JOBS (MINER/SALES/CASH/AMMO/WAR)`,
+        0,
+        44
+      );
+      ctx.restore();
+    }
+
     drawBridgeHellpodLaunchBay(ctx, state) {
-      const hpLvl = state.hellpodBayLevel || 1;
-      const hpCost = state.getHellpodUpgradeCost ? state.getHellpodUpgradeCost() : 140;
-      const dropFee = state.getHellpodDropFee ? state.getHellpodDropFee() : 45;
       const queuedPodCount = (state.customers || []).filter((c) => c.state === 'to_hellpod').length;
+      const clientPoolCount = (state.gearedClientsPool || []).length;
 
       ctx.save();
       ctx.translate(220, -100);
@@ -820,12 +873,12 @@
       ctx.fill();
       ctx.stroke();
 
-      // 4 Circular Hellpod Launch Tubes
+      // 4 Circular Hellpod Launch Tubes (Pure Departure Exit — No Auto-War or Fee!)
       for (let i = 0; i < 4; i++) {
         const hx = -150 + i * 100;
         const pulse = 0.65 + 0.35 * Math.sin(this.time * 6 + i);
         ctx.fillStyle = '#090d14';
-        ctx.strokeStyle = i < queuedPodCount ? '#4ade80' : `rgba(250, 204, 21, ${pulse})`;
+        ctx.strokeStyle = i < queuedPodCount ? '#38bdf8' : `rgba(250, 204, 21, ${pulse})`;
         ctx.lineWidth = 3.5;
         ctx.beginPath();
         ctx.arc(hx, 4, 25, 0, Math.PI * 2);
@@ -841,17 +894,16 @@
       ctx.fillStyle = '#fde047';
       ctx.font = '900 11.5px Orbitron, sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(`🚀 HELLPOD LAUNCH BAY (Lv.${hpLvl}/10) — GEARD HELLDIVERS PAY +$${dropFee} TO DROP TO WAR!`, 0, -34);
+      ctx.fillText(`🚀 HELLPOD DEPARTURE TUBES — SERVED CLIENTS EXIT HERE (${state.totalHellpodDrops || 0} SENT)`, 0, -34);
 
-      // Clickable Idle Upgrade Badge on Hellpod Bay
-      ctx.fillStyle = hpLvl >= 10 ? '#16a34a' : '#0284c7';
+      ctx.fillStyle = '#1e293b';
       ctx.beginPath();
-      ctx.roundRect(-145, 32, 290, 22, 6);
+      ctx.roundRect(-175, 32, 350, 22, 6);
       ctx.fill();
-      ctx.fillStyle = '#ffffff';
+      ctx.fillStyle = '#7dd3fc';
       ctx.font = '900 10px Orbitron, sans-serif';
       ctx.fillText(
-        hpLvl >= 10 ? `✅ MAX Lv.10 (Dropped: ${state.totalHellpodDrops || 0} Helldivers)` : `👆 TAP TO UPGRADE Lv.${hpLvl + 1}/10 ($${hpCost}) · Faster Drop & +$25 Fee`,
+        `🫡 GEARED CLIENTS STANDBY IN ORBIT: ${clientPoolCount} (CAN VOLUNTEER OR BE HIRED IN WAR!)`,
         0,
         44
       );
@@ -1825,9 +1877,14 @@
         ctx.roundRect(-84, 58, 168, 25, 6);
         ctx.fill();
         ctx.stroke();
+        const ab = st || {};
         ctx.fillStyle = stMax ? '#4ade80' : '#fde047';
-        ctx.font = '900 10px Orbitron, sans-serif';
-        ctx.fillText(stMax ? `✅ MAX Lv.10 (3 COUNTERS)` : `👆 TAP Lv.${lvl + 1}/10 ($${upgCost})`, 0, 71);
+        ctx.font = '900 9.5px Orbitron, sans-serif';
+        ctx.fillText(
+          `🎛️ TAP POPUP: 💰${ab.priceLvl || 1} ⚡${ab.speedLvl || 1} 📦${ab.yieldLvl || 1} 🏪${ab.counterLvl || 1}`,
+          0,
+          71
+        );
 
         ctx.restore();
 
@@ -2011,34 +2068,29 @@
         ctx.restore();
       }
 
-      for (const pod of state.cryoPods) {
-        ctx.save();
-        ctx.translate(pod.x, pod.z);
-        ctx.fillStyle = pod.rescued ? '#1e293b' : '#0284c7';
-        ctx.strokeStyle = pod.rescued ? '#475569' : '#38bdf8';
-        ctx.lineWidth = 3;
-        ctx.fillRect(-40, -40, 80, 80);
-        ctx.strokeRect(-40, -40, 80, 80);
-
-        ctx.fillStyle = '#ffffff';
-        ctx.font = '900 12px Orbitron, sans-serif';
-        ctx.textAlign = 'center';
-        if (pod.rescued) {
-          ctx.fillText(`❄️ THAWING (${Math.ceil(pod.cooldown)}s)`, 0, 5);
-        } else {
-          ctx.fillText(`🥶 CRYO HELLDIVER`, 0, -48);
-          ctx.fillStyle = '#facc15';
-          ctx.fillText(`Feed ${pod.needed - pod.fed} Items -> +1 SEAF!`, 0, 54);
-          this.drawCarbotBean(ctx, 0, 6, {
-            bodyColor: '#38bdf8',
-            capeColor: '#0284c7',
-            visorColor: '#bae6fd',
-            isCommander: false,
-            scale: 0.78,
-            walkPhase: 0
-          });
+      // Draw Fallen Hero Martyr Memorials (When a Gen-1 Hero dies heroically in action!)
+      if (state.martyrMemorials && state.martyrMemorials.length > 0) {
+        for (const mem of state.martyrMemorials) {
+          ctx.save();
+          ctx.translate(mem.x, mem.z);
+          ctx.fillStyle = '#1e293b';
+          ctx.strokeStyle = '#facc15';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.roundRect(-55, -28, 110, 56, 8);
+          ctx.fill();
+          ctx.stroke();
+          ctx.font = '20px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText('🪦', 0, -4);
+          ctx.fillStyle = '#fde047';
+          ctx.font = '900 9.5px Orbitron, sans-serif';
+          ctx.fillText(`MARTYR: ${mem.name}`, 0, 14);
+          ctx.fillStyle = '#86efac';
+          ctx.font = '700 9px Rajdhani, sans-serif';
+          ctx.fillText(`Gen-${mem.gen} Fallen Hero (+1 ⭐)`, 0, 24);
+          ctx.restore();
         }
-        ctx.restore();
       }
 
       for (const d of state.warDrops) {
@@ -2348,17 +2400,24 @@
     }
 
     drawSeafWorker(ctx, w) {
-      const isAmmo = w.role === 'ammo';
-      const isMiner = w.role === 'miner';
+      const roleStyles = {
+        miner:   { body: '#0f766e', cape: '#2dd4bf', visor: '#99f6e4', title: '⛏️ PICK RAW' },
+        hauler:  { body: '#854d0e', cape: '#facc15', visor: '#fef08a', title: '📦 HAUL GOODS' },
+        sales:   { body: '#581c87', cape: '#a855f7', visor: '#e9d5ff', title: '🫡 SALES CASHIER' },
+        cash:    { body: '#14532d', cape: '#22c55e', visor: '#86efac', title: '💵 PICK MONEY' },
+        ammo:    { body: '#7c2d12', cape: '#f97316', visor: '#fed7aa', title: '🧱 PICK AMMO' },
+        war:     { body: '#7f1d1d', cape: '#ef4444', visor: '#fca5a5', title: '⚔️ WAR RESERVE' }
+      };
+      const st = roleStyles[w.role] || roleStyles.hauler;
       this.drawCarbotBean(ctx, w.x, w.z, {
-        bodyColor: isMiner ? '#0f766e' : (isAmmo ? '#7c2d12' : '#1d4ed8'),
-        capeColor: isMiner ? '#2dd4bf' : (isAmmo ? '#f97316' : '#38bdf8'),
+        bodyColor: st.body,
+        capeColor: st.cape,
         trimColor: '#f8fafc',
-        visorColor: isMiner ? '#99f6e4' : (isAmmo ? '#fb923c' : '#38bdf8'),
+        visorColor: st.visor,
         isCommander: false,
         walkPhase: w.walkPhase || 0,
         scale: 0.94,
-        label: isMiner ? '⛏️ SEAF MINER' : (isAmmo ? '🧱 SEAF ENGINEER' : '🪖 SEAF LOGISTICS'),
+        label: st.title,
         subLabel: w.taskLabel || '',
         stack: w.inventory
       });
@@ -2394,8 +2453,7 @@
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       if (c.state === 'to_hellpod') {
-        const fee = state.getHellpodDropFee ? state.getHellpodDropFee() : 45;
-        ctx.fillText(`🚀 TO HELLPOD (+$${fee})`, 0, -2);
+        ctx.fillText(`🚀 TO HELLPOD EXIT`, 0, -2);
       } else if (c.state === 'leaving') {
         ctx.fillText('😊 DEMOCRACY!', 0, -2);
       } else if (c.orders && c.orders.length > 1) {
@@ -2866,10 +2924,15 @@
       ctx.fillRect(-20, -38, 40, 6);
       ctx.fillStyle = '#4ade80';
       ctx.fillRect(-19, -37, 38 * hpRatio, 4);
-      ctx.fillStyle = '#86efac';
-      ctx.font = '900 9.5px Orbitron, sans-serif';
+      ctx.fillStyle = u.isHero ? '#fde047' : '#86efac';
+      ctx.font = u.isHero ? '900 11px Orbitron, sans-serif' : '900 9.5px Orbitron, sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText(u.label || 'ALLIED UNIT', 0, -42);
+      if (u.isHero && u.subTag) {
+        ctx.fillStyle = u.gen === 1 ? '#fca5a5' : '#38bdf8';
+        ctx.font = '700 9.5px Rajdhani, sans-serif';
+        ctx.fillText(u.subTag, 0, -54);
+      }
       ctx.restore();
     }
 

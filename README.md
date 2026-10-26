@@ -1,4 +1,4 @@
-# HELLDIVERS PLEASE! — SES Super Destroyer Warship, 3-Counter Expansion & Capybara Go! Roguelike War Tycoon (`v0.0.09`)
+# HELLDIVERS PLEASE! — SES Super Destroyer Warship, 3-Counter Expansion & Capybara Go! Roguelike War Tycoon (`v0.0.10`)
 
 An arcade factory-automation, Mindustry multi-base logistics, and *Capybara Go!* / Tower-Defense Roguelike War-Front web game inspired by **Burger Please!**, **Whiteout Survival Playable Ads**, **Capybara Go!**, **Factorio**, **Mindustry**, and **CarbotAnimations' Helldivers 2 cartoons** (across **all episodes Ep1–Ep10+**, including [Pro vs Noobs | Helldivers 2 Ep7](http://www.youtube.com/watch?v=bn0GTO_zvAg)), built from the [Modular Game Prompt Library](https://docs.google.com/document/d/1ZoW7Oou5QpTyvwD6vrczKuXv0nW42JgLJC-au62H7Pw/edit?usp=drivesdk&ouid=114024991701964609548).
 
@@ -29,6 +29,18 @@ An arcade factory-automation, Mindustry multi-base logistics, and *Capybara Go!*
 ---
 
 ## 📜 Complete Version History & Changelog (`v0.0.00` – `v0.0.09`)
+
+### `v0.0.10` — Idle Building Multi-Ability Pop-Up Window, SEAF Clone Vat Room & 6-Sector Job Board, Pure Departure Hellpods & Game-by-Game Roguelike War Operations (Attack/Defense, Shop Power Bonus, Client Volunteers/Mercenaries & Gen-1 Martyrdom Heroes)
+- **Idle Tap Pop-Up Multi-Ability Upgrade Window (`#building-upgrade-popover`)**: Tapping any Shop Machine, Counter Desk, Quarry Auto-Drill, or Ammo Press opens a compact Idle-Tycoon Pop-Up Window to independently upgrade **💰 Unit Sale Price (`priceLvl`)**, **⚡ Crafting/Drill Speed (`speedLvl`)**, **📦 1 Raw ➔ More Goods (`yieldLvl`, up to `4x` items per raw ore!)**, and **🏪 Counter Desk Expansion (`counterLvl`, `1 -> 2 -> 3` physical counters)**.
+- **SEAF Clone Vat Room (`🧬 克隆培育室`) & 6-Sector Job Assignment Board (`#modal-clone-room`)**: Replaced War Zone cryo-pod thawing with a dedicated **SEAF Clone Vat Room (`x = -1500, z = -95`)** on the Super Destroyer deck. Upgrade the Clone Room (`Lv.1–10`) to raise your **Worker Upper Limit (`6 -> 33` max clones)**, hire SEAF Clones, and freely assign them across **6 Sector Jobs**: `⛏️ Pick Raw`, `📦 Haul Goods`, `🫡 Sales Cashier`, `💵 Pick Money`, `🧱 Pick Ammo`, and `⚔️ Pick War`.
+- **Pure Departure Hellpods & Geared Client Standby Pool**: Served Helldiver customers exit via the 4 Hellpod Tubes (`x = 220, z = -100`) with **zero auto-war spawn and zero drop fee**, entering your **Geared Client Standby Pool (`gearedClientsPool`)** with the exact weapon/vehicle/mech tier they purchased.
+- **Redesigned Game-by-Game War Operations (`#war-game-panel`)**:
+  - **(a) In-Match Battle XP & 3-Card Roguelike Draft**: Kill enemies to gain Battle XP (`💎`), level up your in-run Roguelike rank, and draft stackable tactical perks.
+  - **(b) Separate Attack vs. Defense Sections**: Switch between **⚔️ Attack Op (5-Stage Forward Expedition `0% -> 100%`)** and **🛡️ Defense Op (5-Wave Fortress Bastion Holdout)**.
+  - **(c) Game-by-Game Match Loop + Shop Scale Power Bonus**: Each War Game is a self-contained 5-Wave match where your **Shop's scale & ability levels directly buff your squad's ATK & HP (`🏪 Shop Scale Bonus: +X% ATK/HP`)**.
+  - **(d) Low-Control Player Participation (`🤖 Auto-Pilot: ON/OFF`)**: Auto-maneuvers, dodges, collects drops, and auto-fires so you can play effortlessly with 1-tap stratagems, or take manual control anytime.
+  - **(e) Clients Affect the War (Free Volunteers + Paid Mercenaries)**: Served Shop Clients have a **free volunteer chance** at the start of each War Game, or you can click **`🫡 Pay Client to Join ($60)`** to hire geared clients from your pool to drop in with the gear they bought!
+  - **(f) Named Heroes with Gen-1 Permadeath Martyrdom & Clone DNA Rebirth**: Recruit **General Brasch 🦅**, **John Helldiver 💀**, **Eagle-1 Ace ✈️**, and **Viper Commando 🐍**. If your Hero dies in their Gen-1 deployment, they detonate a screen-wiping **Martyrdom Hellbomb (`+1 ⭐ Martyr Medal`)**, leave a **🪦 Martyr Memorial**, and can be re-cloned into **`Gen-2+` with `+35% Martyr Legacy Stats`**!
 
 ### `v0.0.09` — Idle Click-to-Upgrade, Max Lv.10 + 3-Counter Physical Expansion, Mixed Customer Orders, Hellpod Drop Fee Loop & Capybara Go! Roguelike War Zone
 - **Hybrid Idle Click-to-Upgrade + Selected Step-to-Pay**: Removed 85% of floor step pads; players now tap/click any unlocked Machine, 3-Counter Bay, Quarry Rig, Ammo Press, Hellpod Bay, or Gate directly on the 2D canvas (or via `#idle-inspector-bar`) to upgrade, while keeping Step-and-Pay for unlocking `Lv.0` stations.

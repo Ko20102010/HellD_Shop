@@ -5,8 +5,8 @@
 // ============================================================================
 
 window.GameConfig = {
-  VERSION: 'v0.0.09',
-  STORAGE_KEY: 'helldivers_please_save_v0009',
+  VERSION: 'v0.0.10',
+  STORAGE_KEY: 'helldivers_please_save_v0010',
   MAX_LEVEL: 10,
 
   // Expanded 4600 x 4000 2D Factorio + Carbot World for 7 Full Horizontal Lanes
@@ -1171,7 +1171,8 @@ window.GameConfig = {
 
   LOCATIONS: {
     armoryLoadoutPad: { x: -160, z: -40, radius: 95 },
-    hellpodBay: { x: 220, z: -100, radius: 130, baseCost: 140, costScale: 1.45, maxLevel: 10, baseDropFee: 45 },
+    cloneRoom: { x: -1500, z: -95, radius: 135, baseCost: 140, costScale: 1.42, maxLevel: 10, baseHireCost: 70, hireCostScale: 1.20 },
+    hellpodBay: { x: 220, z: -100, radius: 130, baseCost: 140, costScale: 1.45, maxLevel: 10, baseDropFee: 0 },
     trashCanZone: { x: -1820, z: 1680, radius: 85 },
     cashRegisterZone: { x: 1420, z: 120, radius: 115 },
     counterDropZone: { x: 280, z: 120, radius: 105 },
@@ -1774,6 +1775,221 @@ window.GameConfig = {
       icon: '💰',
       color: '#22c55e',
       desc: 'Increases all War-Zone kill bounties, Mission Victory Chests, and Shop Hellpod Drop Fees by +50%!'
+    }
+  ],
+
+  // --------------------------------------------------------------------------
+  // NEW IN v0.0.10: IDLE TAP POP-UP MULTI-ABILITY UPGRADE DEFINITIONS
+  // Tapping any Machine, Counter, Quarry Drill, or Ammo Press opens a compact
+  // Idle-Tycoon Pop-Up Window to upgrade individual abilities (Lv.1-10)!
+  // --------------------------------------------------------------------------
+  BUILDING_ABILITIES: {
+    station: [
+      {
+        key: 'priceLvl',
+        icon: '💰',
+        name: 'Unit Sale Price (單價提升)',
+        desc: '+25% Requisition sale price per item at this Counter.',
+        baseCostMult: 0.85,
+        costScale: 1.34
+      },
+      {
+        key: 'speedLvl',
+        icon: '⚡',
+        name: 'Crafting Speed (製造加速)',
+        desc: '+22% faster fabrication speed & conveyor output rate.',
+        baseCostMult: 0.90,
+        costScale: 1.35
+      },
+      {
+        key: 'yieldLvl',
+        icon: '📦',
+        name: '1 Raw ➔ More Goods (原料倍增產出)',
+        desc: '1 raw batch crafts +1 extra finished item (Lv.3/6/9 -> up to 4x goods!) + +7% raw-save chance/lvl.',
+        baseCostMult: 1.15,
+        costScale: 1.40
+      },
+      {
+        key: 'counterLvl',
+        icon: '🏪',
+        name: 'Counter Desks & Shelf (櫃檯擴建 1➔3)',
+        desc: 'Lv.4 unlocks 2nd Counter Desk, Lv.8 unlocks 3rd Counter Desk + +25% checkout speed & shelf cap!',
+        baseCostMult: 1.05,
+        costScale: 1.38
+      }
+    ],
+    raw: [
+      {
+        key: 'speedLvl',
+        icon: '⚡',
+        name: 'Drill / Pump Speed (採集速度)',
+        desc: '+25% faster auto-extraction cycle & adds extra drill rigs.',
+        baseCostMult: 0.90,
+        costScale: 1.35
+      },
+      {
+        key: 'yieldLvl',
+        icon: '📦',
+        name: 'Batch Yield (單次採集產量)',
+        desc: '+1 extra Raw Ore produced every cycle per 2 levels (up to 6x per cycle!).',
+        baseCostMult: 1.10,
+        costScale: 1.38
+      },
+      {
+        key: 'bufferLvl',
+        icon: '🗄️',
+        name: 'Storage & Belt Feed (容量與輸送)',
+        desc: '+6 max storage buffer & +20% faster raw belt packet transfer.',
+        baseCostMult: 0.80,
+        costScale: 1.32
+      }
+    ],
+    ammo: [
+      {
+        key: 'speedLvl',
+        icon: '⚡',
+        name: 'Press Stamp Speed (壓製速度)',
+        desc: '+25% faster munitions stamping speed.',
+        baseCostMult: 0.90,
+        costScale: 1.35
+      },
+      {
+        key: 'yieldLvl',
+        icon: '🧱',
+        name: '1 Iron ➔ More Ammo (1鐵產更多彈藥)',
+        desc: '1x ⛏️ Iron produces +1 extra 🧱 Turret Ammo per level (from 3x up to 12x per Iron!).',
+        baseCostMult: 1.10,
+        costScale: 1.38
+      },
+      {
+        key: 'bufferLvl',
+        icon: '🗄️',
+        name: 'Ordnance Magazine Cap (彈藥庫容量)',
+        desc: '+8 max ammo storage & +25% faster Gate Ammo Belt feed.',
+        baseCostMult: 0.80,
+        costScale: 1.32
+      }
+    ]
+  },
+
+  // --------------------------------------------------------------------------
+  // NEW IN v0.0.10: SEAF CLONE VAT ROOM & 6 ASSIGNABLE SECTOR JOBS
+  // No need to thaw cryo pods in the War Zone! Upgrade the Clone Room to raise
+  // your Worker Upper Limit (4 -> 30), hire SEAF Clones, and freely assign them!
+  // --------------------------------------------------------------------------
+  CLONE_JOBS: [
+    {
+      id: 'miner',
+      icon: '⛏️',
+      name: 'Quarry Miner (採礦與投料)',
+      shortName: 'Pick Raw',
+      color: '#38bdf8',
+      desc: 'Harvests 🛢️ E-710 & ⛏️ Iron in the Quarry and feeds Machine Hoppers.'
+    },
+    {
+      id: 'hauler',
+      icon: '📦',
+      name: 'Factory Hauler (成品搬運)',
+      shortName: 'Haul Goods',
+      color: '#facc15',
+      desc: 'Carries finished items from Factory Output Pads to the 7 Counter Bays.'
+    },
+    {
+      id: 'sales',
+      icon: '🫡',
+      name: 'Counter Sales (櫃檯銷售收銀)',
+      shortName: 'Sales Desk',
+      color: '#a855f7',
+      desc: 'Staffs the 7 Counters to check out Helldiver customers +30% faster per worker!'
+    },
+    {
+      id: 'cash',
+      icon: '💵',
+      name: 'Cash Collector (自動收錢專員)',
+      shortName: 'Pick Money',
+      color: '#22c55e',
+      desc: 'Patrols all 7 Counter Cash Vaults and vacuums $REQ bills straight to your wallet.'
+    },
+    {
+      id: 'ammo',
+      icon: '🧱',
+      name: 'Ammo & Gate Tech (搬彈與修門)',
+      shortName: 'Pick Ammo',
+      color: '#f97316',
+      desc: 'Feeds ⛏️ Iron to the Munitions Press, loads 🧱 Turret Ammo & repairs Defense Gates.'
+    },
+    {
+      id: 'war',
+      icon: '⚔️',
+      name: 'War Front Reserve (戰場參戰部隊)',
+      shortName: 'Pick War',
+      color: '#ef4444',
+      desc: 'Deploys directly into every War Game (Attack & Defense) as an allied SEAF Rifleman!'
+    }
+  ],
+
+  // --------------------------------------------------------------------------
+  // NEW IN v0.0.10: NAMED WAR HEROES (WITH GEN-1 PERMADEATH MARTYRDOM & CLONE REBIRTH)
+  // Heroes lead your War Game squad! On their first design (Gen-1), if their HP
+  // hits 0 in battle, they die heroically (detonating a Martyrdom Hellbomb,
+  // earning +1 ⭐ Martyr Medal, and unlocking stronger Gen-2+ Clone DNA rebirth!).
+  // --------------------------------------------------------------------------
+  WAR_HEROES: [
+    {
+      id: 'hero_brasch',
+      name: 'General Brasch',
+      zhName: '傳奇英雄：布拉쉬將軍',
+      icon: '🦅',
+      color: '#facc15',
+      hireCost: 180,
+      reviveCloneCost: 140,
+      baseHp: 950,
+      baseDmg: 68,
+      fireRate: 0.22,
+      abilityName: '500KG Martyr Hellbomb & Dual HMG',
+      desc: 'Super Earth’s toughest tactician. Fires twin HMGs. If killed in Gen-1, triggers a screen-wiping 500KG Martyrdom Nuke (+1 ⭐ Medal) & unlocks Gen-2+ Clone DNA (+35% stats/gen)!'
+    },
+    {
+      id: 'hero_john',
+      name: 'John Helldiver',
+      zhName: '無雙戰神：約翰·絕地戰兵',
+      icon: '💀',
+      color: '#38bdf8',
+      hireCost: 260,
+      reviveCloneCost: 190,
+      baseHp: 1150,
+      baseDmg: 92,
+      fireRate: 0.20,
+      abilityName: 'Quasar Overcharge & Orbital Laser',
+      desc: 'One-man army armed with a rapid-fire Quasar Cannon. If killed, unleashes an Orbital Laser sweep across all enemies & returns +35% stronger per Clone Gen!'
+    },
+    {
+      id: 'hero_eagle',
+      name: 'Eagle-1 Ace Pilot',
+      zhName: '空戰王牌：飛鷹一號戰機長',
+      icon: '✈️',
+      color: '#f97316',
+      hireCost: 380,
+      reviveCloneCost: 260,
+      baseHp: 1050,
+      baseDmg: 115,
+      fireRate: 0.24,
+      abilityName: 'Carpet Napalm & Cluster Strike',
+      desc: 'Calls automatic Eagle airstrikes every 5s during War Games. If shot down, drops a full payload of Cluster Bombs & unlocks stronger Clone DNA!'
+    },
+    {
+      id: 'hero_viper',
+      name: 'Viper Commando Alpha',
+      zhName: '叢林死神：毒蛇突擊隊長',
+      icon: '🐍',
+      color: '#4ade80',
+      hireCost: 520,
+      reviveCloneCost: 340,
+      baseHp: 1450,
+      baseDmg: 140,
+      fireRate: 0.18,
+      abilityName: 'Super-Stim Aura (+25% Squad SPD/HEAL)',
+      desc: 'Boosts all allied Client Mercenaries & SEAF troops by +25% attack speed and heals them every wave!'
     }
   ]
 };

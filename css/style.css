@@ -953,3 +953,223 @@ html, body {
     display: none;
   }
 }
+
+/* ==========================================================================
+   NEW IN v0.0.10: IDLE TAP POP-UP BUILDING UPGRADE WINDOW & WAR GAME PANEL
+   ========================================================================== */
+.building-popover {
+  position: absolute;
+  bottom: max(68px, calc(env(safe-area-inset-bottom, 12px) + 56px));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 26;
+  width: 94vw;
+  max-width: 490px;
+  background: rgba(9, 14, 26, 0.97);
+  backdrop-filter: blur(12px);
+  border: 2px solid #38bdf8;
+  border-radius: 14px;
+  padding: 10px 12px;
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.92);
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: auto;
+}
+
+.building-popover.open {
+  display: flex;
+}
+
+.popover-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+.popover-title {
+  font-family: var(--font-display);
+  font-size: 0.82rem;
+  font-weight: 900;
+  color: #fde047;
+}
+
+.popover-stats {
+  font-size: 0.68rem;
+  color: #93c5fd;
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+.popover-abilities-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 46vh;
+  overflow-y: auto;
+}
+
+.popover-ability-row {
+  background: rgba(30, 41, 59, 0.85);
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  border-radius: 9px;
+  padding: 6px 9px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.popover-ability-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.popover-ability-name {
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  font-weight: 900;
+  color: #f8fafc;
+}
+
+.popover-ability-desc {
+  font-size: 0.65rem;
+  color: #cbd5e1;
+  line-height: 1.2;
+}
+
+.popover-level-dots {
+  display: inline-flex;
+  gap: 2px;
+  margin-left: 5px;
+}
+
+.popover-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 2px;
+  background: #334155;
+}
+
+.popover-dot.filled {
+  background: #4ade80;
+}
+
+/* GAME-BY-GAME WAR OPERATIONS PANEL (#war-game-panel) */
+#war-game-panel {
+  position: absolute;
+  top: max(46px, calc(env(safe-area-inset-top, 6px) + 40px));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 17;
+  width: 95vw;
+  max-width: 880px;
+  background: rgba(11, 15, 27, 0.93);
+  backdrop-filter: blur(8px);
+  border: 1.5px solid rgba(239, 68, 68, 0.65);
+  border-radius: 12px;
+  padding: 6px 10px;
+  display: none;
+  flex-direction: column;
+  gap: 5px;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.85);
+  pointer-events: auto;
+}
+
+#war-game-panel.visible {
+  display: flex;
+}
+
+.war-panel-top, .war-panel-bottom {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.war-mode-tabs {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.war-sec-btn {
+  cursor: pointer;
+  background: rgba(30, 41, 59, 0.9);
+  color: #cbd5e1;
+  border: 1.5px solid #475569;
+  border-radius: 8px;
+  padding: 3px 9px;
+  font-family: var(--font-display);
+  font-size: 0.66rem;
+  font-weight: 900;
+}
+
+.war-sec-btn.active-sec {
+  background: linear-gradient(135deg, #ef4444, #b91c1c);
+  color: #fff;
+  border-color: #fca5a5;
+}
+
+.war-shop-synergy {
+  font-size: 0.7rem;
+  color: #fde047;
+  background: rgba(250, 204, 21, 0.12);
+  border: 1px solid rgba(250, 204, 21, 0.4);
+  border-radius: 999px;
+  padding: 2px 9px;
+}
+
+.war-match-controls, .war-hero-client-bar {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.war-xp-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-display);
+  font-size: 0.65rem;
+  color: #e9d5ff;
+  font-weight: 800;
+}
+
+.war-xp-bar {
+  width: 110px;
+  height: 9px;
+  background: #090d14;
+  border: 1px solid #a855f7;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.war-xp-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #a855f7, #38bdf8);
+  transition: width 0.2s ease;
+}
+
+#roguelike-draft-bar {
+  top: 132px;
+}
+
+@media (max-width: 768px) {
+  .building-popover {
+    bottom: max(142px, calc(env(safe-area-inset-bottom, 10px) + 132px));
+    padding: 8px 10px;
+  }
+  .war-shop-synergy {
+    display: none;
+  }
+  #roguelike-draft-bar {
+    top: 156px;
+  }
+}
