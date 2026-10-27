@@ -20,3 +20,10 @@ Restore the replaced v0.0.22 files. No data rollback is required.
 - Added four-card hero dock with HP, energy, ready glow and touch activation. The design remains four heroes, not five.
 - Added wave ribbon and countdown presentation.
 - These are original procedural visuals; no third-party character or background assets are included.
+
+## Battle crash hotfix
+- Replaced `CanvasRenderingContext2D.roundRect()` with a path-based rounded rectangle helper for older mobile browsers.
+- Rewrote ambiguous compact conditional alpha expressions.
+- Added missing-canvas and missing-context guards.
+- Added a controlled battle-render error state instead of allowing an uncaught animation-loop crash.
+- Added a compatibility test using a Canvas mock without `roundRect()`.
