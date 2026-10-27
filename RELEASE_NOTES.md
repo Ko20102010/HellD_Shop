@@ -8,6 +8,7 @@
 - Five-button Home, Squad, Battle, Industry and Menu navigation.
 - Existing three-slot save selector is opened at launch without rewriting storage.
 - Removed player-facing 500KG and GitHub ZIP controls, packager modal and JSZip dependency.
+- Every release ZIP must include the three Markdown handover files at the package root.
 - This is an overlay update: copy files over a complete v0.0.22 installation.
 
 ## Rollback
