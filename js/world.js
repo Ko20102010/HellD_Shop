@@ -203,7 +203,7 @@
         // v0.0.12 CAPYBARA GO! ROGUELIKE PATH WAR SCENE (Sample Search Diff 1-10 & 10-Wave Planet Capture)
         this.drawCapybaraRoguelikeBattlefield(ctx, state);
         this.drawProjectilesAndArcs(ctx, state);
-        this.drawEagleFlyover(ctx, state);
+
       } else {
         // TRUE SPLIT SHOP SCENE: Render ONLY the SES Super Destroyer Orbital Warship Deck!
         this.drawSuperDestroyerWarshipDeck(ctx, state);
@@ -926,10 +926,10 @@
       );
 
       const slotLabels = [
-        '⚔️ ACTIVE #1 (FRONT)',
-        '⚔️ ACTIVE #2 (MID)',
-        '⚔️ ACTIVE #3 (REAR)',
-        '🚀 SPARE #4 (REINFORCE)'
+        '🛡️ ACTIVE #1 (FRONT LEFT)',
+        '⚔️ ACTIVE #2 (FRONT RIGHT)',
+        '🎯 ACTIVE #3 (BACK LEFT)',
+        '💉 ACTIVE #4 (BACK RIGHT)'
       ];
       const slotColors = ['#facc15', '#38bdf8', '#22c55e', '#f97316'];
 
@@ -1087,7 +1087,7 @@
     // - Powers both Attack War Pages:
     //   1) 🧬 Sample Search (Diff 1-10: 1-3 Common 🟢, 4-6 Rare 🟠, 7-10 Super Rare 🟣)
     //   2) 🚩 Planet Capture (Select adjacent planet on Space Map, 10 Waves, Retreat after
-    //      each wave, True Permadeath if a Helldiver dies, 3 Active + 1 Spare Reinforcement!)
+    //      each wave, True Permadeath if a Helldiver dies, 4 Active Squad Members · No Spare Team!)
     // ========================================================================
     drawCapybaraRoguelikeBattlefield(ctx, state) {
       const W = window.GameConfig.WORLD;
@@ -1136,7 +1136,7 @@
       ctx.fillStyle = '#cbd5e1';
       ctx.font = '700 14px Rajdhani, sans-serif';
       ctx.fillText(
-        `🐹 CAPYBARA GO! ROGUELIKE PATH · WAVE ${wave}/${maxWaves} · 3 ACTIVE HELLDIVERS + 1 SPARE REINFORCEMENT · ⚠️ TRUE PERMADEATH ON DEATH (RETREAT AFTER ANY WAVE!)`,
+        `🐹 CAPYBARA GO! ROGUELIKE PATH · WAVE ${wave}/${maxWaves} · 4 ACTIVE HELLDIVERS · NO SPARE TEAM · ⚠️ TRUE PERMADEATH ON DEATH (RETREAT AFTER ANY WAVE!)`,
         0,
         -64
       );
@@ -2807,6 +2807,7 @@
 
     // Carbot Ep1/Ep7 Eagle-1 500KG Bomb Flyover Jet Silhouette & Red Stratagem Beacon Beam!
     drawEagleFlyover(ctx, state) {
+      return; // removed from player-facing v0.0.23-rework
       if (!state.eagleFlyover) return;
       const ef = state.eagleFlyover;
       const p = Math.min(1, ef.t / ef.duration);
