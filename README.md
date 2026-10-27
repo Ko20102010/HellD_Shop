@@ -1,4 +1,19 @@
 
+## War cleanup — v0.0.21-war-cleanup
+
+- Removes obsolete Capybara wave-war UI and engine code that rendered behind the current expedition system.
+- Gives route and combat screens an opaque full-viewport War surface.
+- Preserves current `warRun`, Shop Phase 6 upgrades and save compatibility.
+
+
+## Shop Phase 6 — v0.0.20-phase6
+
+- Adds Common, Rare and Super Rare Sample costs to Shop upgrades.
+- Extends production stations to Level 20 across Basic, Developed, Advanced and Elite tiers.
+- Adds atomic multi-currency payments, filters, resource wallet, cost tokens, tier labels and progress bars.
+- Adds `js/shop-upgrades.js` and `tests/shop-upgrades.test.js`.
+
+
 ## War Redesign Phase 5 — v0.0.19-phase5
 
 - Adds Standard injuries, paid/natural recovery, and an explicit 150% reward Helldive Contract with permanent death.

@@ -421,7 +421,7 @@
         const batchOut = 1 + Math.floor(((st.yieldLvl || 1)) / 3);
         const desks = this.getUnlockedCounterCount(item.id);
         const prodTier = this.getStationProductionTier(item.id);
-        titleEl.textContent = `${item.icon} ${item.name} (Lv.${st.level || 1}/10 · ${prodTier.shortBadge})`;
+        titleEl.textContent = `${item.icon} ${item.name} (Lv.${st.level || 1}/20 · ${prodTier.shortBadge})`;
         statsEl.textContent = `💵 Price: $${this.getItemSellPrice(item)} (${prodTier.badge}) · ⚡ ${st.cycleTime.toFixed(2)}s · 📦 1 Raw ➔ ${batchOut}x · 🏪 ${desks}/3 Desks`;
 
         for (const ab of (CFG.BUILDING_ABILITIES.station || [])) {
@@ -461,65 +461,6 @@
 
     getHellpodDropFee() {
       return 0;
-    }
-
-    triggerRoguelikePerkDraft() {
-      const pool = CFG.ROGUELIKE_CARDS || [];
-      if (pool.length === 0) return;
-      const shuffled = [...pool].sort(() => Math.random() - 0.5);
-      this.pendingPerkChoices = shuffled.slice(0, 3);
-      this.perkAutoPickTimer = 14.0;
-      this.renderRoguelikeDraftBar();
-    }
-
-    selectRoguelikePerk(cardId) {
-      const card = (CFG.ROGUELIKE_CARDS || []).find((c) => c.id === cardId);
-      if (!card) return;
-      this.roguelikePerks[cardId] = (this.roguelikePerks[cardId] || 0) + 1;
-      this.pendingPerkChoices = [];
-      this.audio.playUnlock();
-      this.recalcDerivedStats();
-      this.renderRoguelikeDraftBar();
-      this.spawnFloatingText(
-        this.player.x,
-        this.player.z - 55,
-        `🎲 PERK EQUIPPED: ${card.name} (Lv.${this.roguelikePerks[cardId]})!`,
-        card.color
-      );
-    }
-
-    renderRoguelikeDraftBar() {
-      const bar = document.getElementById('roguelike-draft-bar');
-      const container = document.getElementById('rk-cards-container');
-      const progEl = document.getElementById('rk-mission-progress');
-      if (!bar || !container) return;
-
-      if (this.viewMode !== 'war' || !this.pendingPerkChoices || this.pendingPerkChoices.length === 0) {
-        bar.classList.remove('visible');
-        return;
-      }
-
-      bar.classList.add('visible');
-      if (progEl && this.capybaraRun) {
-        progEl.textContent = `${this.capybaraRun.mode === 'capture' ? '🚩 CAPTURE' : '🧬 SAMPLE'} WAVE ${this.capybaraRun.wave}/${this.capybaraRun.maxWaves}`;
-      }
-      container.innerHTML = '';
-      for (const c of this.pendingPerkChoices) {
-        const curLvl = this.roguelikePerks[c.id] || 0;
-        const btn = document.createElement('button');
-        btn.className = 'rk-card-btn';
-        btn.style.borderColor = c.color || '#facc15';
-        btn.innerHTML = `
-          <div style="font-size:1.25rem;">${c.icon}</div>
-          <div class="rk-card-title">${c.name} ${curLvl > 0 ? `(Lv.${curLvl + 1})` : '(NEW!)'}</div>
-          <div class="rk-card-desc">${c.desc}</div>
-        `;
-        btn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          this.selectRoguelikePerk(c.id);
-        });
-        container.appendChild(btn);
-      }
     }
 
     handleCanvasBuildingClick(wx, wz) {
@@ -611,98 +552,45 @@
     triggerSelectedInspectorUpgrade() {
       const sel = this.selectedInspectTarget || { type: 'station', id: 'cloth' };
       const item = this.getItemConfig(sel.id) || CFG.ITEMS[0];
-      const isUnlocked = !!this.unlocked[item.id];
       const st = this.stations[item.id];
-      if (!isUnlocked) {
-        const rem = this.unlockRemaining[item.id] ?? item.unlockCost;
-        if (this.cash >= rem) {
-          this.cash -= rem;
-          this.unlockRemaining[item.id] = 0;
-          this.unlocked[item.id] = true;
-          st.level = 1;
+      if (!this.unlocked[item.id]) {
+        const cashCost = this.unlockRemaining[item.id] ?? item.unlockCost;
+        const cost = window.ShopUpgradeEngine.buildCost('station', 0, cashCost, CFG);
+        const result = window.ShopUpgradeEngine.purchase(this, cost, () => {
+          this.unlockRemaining[item.id] = 0; this.unlocked[item.id] = true; st.level = 1;
           st.stock = item.initialStock || 2;
-          st.inputStock = {
-            raw_iron: item.initialInput?.raw_iron || 4,
-            raw_e710: item.initialInput?.raw_e710 || 4
-          };
-          this.counterBuffer[item.id] = 2;
-          this.recalcDerivedStats();
-          this.buildSolidObstacles();
-          this.audio.playUnlock();
-          this.spawnFloatingText(item.stationPos.x, item.stationPos.z - 45, `🎉 UNLOCKED ${item.shortName.toUpperCase()}!`, item.color);
-        }
-      } else if ((st.level || 1) < 10) {
-        const upgCost = this.getStationUpgradeCost(item.id);
-        if (this.cash >= upgCost) {
-          const prevCounters = this.getUnlockedCounterCount(item.id);
-          this.cash -= upgCost;
-          st.level = (st.level || 1) + 1;
-          const newCounters = this.getUnlockedCounterCount(item.id);
-          this.recalcDerivedStats();
-          this.buildSolidObstacles();
-          this.audio.playUnlock();
-          if (newCounters > prevCounters) {
-            this.spawnFloatingText(
-              item.counterPos.x + (newCounters - 1) * 320,
-              item.counterPos.z - 55,
-              `🎉 EXPANDED TO ${newCounters}/3 PHYSICAL COUNTERS (${item.shortName.toUpperCase()})!`,
-              '#4ade80'
-            );
-          } else {
-            this.spawnFloatingText(
-              item.stationPos.x,
-              item.stationPos.z - 45,
-              `⬆️ ${item.shortName.toUpperCase()} Lv.${st.level}/10!`,
-              item.color
-            );
-          }
-        }
+          st.inputStock = { raw_iron: item.initialInput?.raw_iron || 4, raw_e710: item.initialInput?.raw_e710 || 4 };
+          this.counterBuffer[item.id] = 2; return true;
+        });
+        if (!result.ok) return;
+      } else {
+        const level = st.level || 1;
+        if (level >= 20) return;
+        const cost = window.ShopUpgradeEngine.buildCost('station', level, this.getStationUpgradeCost(item.id), CFG);
+        const result = window.ShopUpgradeEngine.purchase(this, cost, () => { st.level = level + 1; return true; });
+        if (!result.ok) return;
       }
-      this.updateHUD();
+      this.recalcDerivedStats(); this.buildSolidObstacles(); this.audio.playUnlock(); this.saveGame(); this.updateHUD();
     }
 
     setViewMode(mode, subPage = null) {
       if (subPage) this.warSubPage = subPage;
       this.viewMode = mode === 'war' ? 'war' : 'shop';
-      const shopBtn = document.getElementById('btn-mode-shop');
-      const sampleBtn = document.getElementById('btn-mode-sample');
-      const captureBtn = document.getElementById('btn-mode-capture');
-      const warPanel = document.getElementById('war-game-panel');
-      const idleBar = document.getElementById('idle-inspector-bar');
-      const retreatBar = document.getElementById('capybara-wave-retreat-bar');
-
-      if (this.viewMode === 'war') {
+      const inWar = this.viewMode === 'war';
+      document.body.classList.toggle('war-mode-active', inWar);
+      document.getElementById('idle-inspector-bar')?.classList.toggle('hidden-bar', inWar);
+      document.getElementById('btn-mode-shop')?.classList.toggle('active-shop', !inWar);
+      document.getElementById('btn-mode-sample')?.classList.toggle('active-war', inWar && this.warSubPage === 'sample');
+      document.getElementById('btn-mode-capture')?.classList.toggle('active-war', inWar && this.warSubPage === 'capture');
+      if (inWar) {
         this.closeBuildingPopover();
-        idleBar?.classList.add('hidden-bar');
-        warPanel?.classList.add('visible');
-        shopBtn?.classList.remove('active-shop');
-        sampleBtn?.classList.toggle('active-war', this.warSubPage === 'sample');
-        captureBtn?.classList.toggle('active-war', this.warSubPage === 'capture');
-        this.player.x = -520;
-        this.player.z = -900;
         this.pointerTarget = null;
-        this.world.camX = 0;
-        this.world.camZ = -1040;
-        if (!this.capybaraRun || !this.capybaraRun.active) {
-          if (this.warSubPage === 'capture') {
-            this.startPlanetCaptureRun(this.targetCapturePlanetId);
-          } else {
-            this.startSampleSearchRun(this.sampleSearchDiff || 1);
-          }
-        }
       } else {
-        warPanel?.classList.remove('visible');
-        if (retreatBar) retreatBar.style.display = 'none';
-        idleBar?.classList.remove('hidden-bar');
-        sampleBtn?.classList.remove('active-war');
-        captureBtn?.classList.remove('active-war');
-        shopBtn?.classList.add('active-shop');
+        document.getElementById('war-expedition-ui')?.setAttribute('hidden', '');
+        document.getElementById('war-combat-panel')?.setAttribute('hidden', '');
         if (this.player.z < -160) {
-          this.player.x = -120;
-          this.player.z = 240;
-          this.pointerTarget = null;
-          this.world.camX = -120;
-          this.world.camZ = 240;
+          this.player.x = -120; this.player.z = 240; this.pointerTarget = null;
+          this.world.camX = -120; this.world.camZ = 240;
         }
         this.spawnFloatingText(this.player.x, this.player.z - 40, '🏪 SUPER DESTROYER SHOP & PORT PAGE', '#4ade80');
       }
@@ -803,9 +691,6 @@
 
       this.hellpodBayLevel = this.hellpodBayLevel || 1;
       this.totalHellpodDrops = this.totalHellpodDrops || 0;
-      this.roguelikePerks = {};
-      this.pendingPerkChoices = [];
-      this.perkAutoPickTimer = 0;
       this.superSamples = this.superSamples || 0;
       this.samples = this.samples || { common: 0, rare: 0, superRare: 0 };
 
@@ -828,7 +713,6 @@
       this.warSubPage = 'sample';
       this.sampleSearchDiff = 1;
       this.targetCapturePlanetId = 'sp_heeth';
-      this.capybaraRun = null;
       this.warRun = null;
       this.warProgress = this.warProgress || null;
       this.warMigrationNoticePending = false;
@@ -1110,13 +994,6 @@
       if (this.beltPadCooldown > 0) this.beltPadCooldown = Math.max(0, this.beltPadCooldown - dt);
       if (this.armoryPadCooldown > 0) this.armoryPadCooldown = Math.max(0, this.armoryPadCooldown - dt);
 
-      if (this.pendingPerkChoices && this.pendingPerkChoices.length > 0) {
-        this.perkAutoPickTimer -= dt;
-        if (this.perkAutoPickTimer <= 0) {
-          this.selectRoguelikePerk(this.pendingPerkChoices[0].id);
-        }
-      }
-
       this.updatePlayerMovement(dt);
       this.updateRawAndAmmoProduction(dt);
       this.updateArsenalFactories(dt);
@@ -1125,9 +1002,6 @@
       this.updatePlayerInteractions(dt);
       this.updateWorkers(dt);
       this.updateCustomersAndSales(dt);
-      if (this.viewMode === 'war') {
-        this.updateCapybaraRoguelikeWar(dt);
-      }
       this.updateMindustryBasesAndAllies(dt);
       this.updateVisualEffects(dt);
       this.checkMilestones(dt);
@@ -2491,38 +2365,6 @@
         }
       }
 
-      const pageSampleBtn = document.getElementById('btn-war-page-sample');
-      const pageCaptureBtn = document.getElementById('btn-war-page-capture');
-      const diffWrapEl = document.getElementById('war-sample-diff-wrap');
-      if (pageSampleBtn && pageCaptureBtn) {
-        pageSampleBtn.classList.toggle('active-sec', this.warSubPage !== 'capture');
-        pageCaptureBtn.classList.toggle('active-sec', this.warSubPage === 'capture');
-      }
-      if (diffWrapEl) {
-        diffWrapEl.style.display = this.warSubPage === 'capture' ? 'none' : 'flex';
-      }
-
-      const shopSynEl = document.getElementById('war-shop-synergy-badge');
-      if (shopSynEl) {
-        const pct = Math.round((this.getShopWarPowerMult() - 1) * 100);
-        shopSynEl.innerHTML = `🏪 Shop Boost: <strong>+${pct}% ATK/HP</strong>`;
-      }
-
-      const run = this.capybaraRun;
-      const matchNumEl = document.getElementById('war-match-num');
-      if (matchNumEl) matchNumEl.textContent = `${run ? run.wave : 1}`;
-
-      const stageProgEl = document.getElementById('war-stage-progress-text');
-      const xpFillEl = document.getElementById('war-xp-fill');
-      if (stageProgEl && run) {
-        const aliveCnt = (run.activeHeroes || []).filter((h) => h && !h.dead).length;
-        const hasSpare = run.spareHero && !run.spareHero.dead && !run.spareUsed;
-        stageProgEl.textContent = `${run.mode === 'capture' ? `🚩 Capture ${run.planetName}` : `🧬 Sample Diff-${run.difficulty}`} · Wave ${run.wave}/${run.maxWaves} · ${aliveCnt}/3 Active + ${hasSpare ? '1' : '0'} Spare`;
-        if (xpFillEl) {
-          xpFillEl.style.width = `${Math.min(100, Math.round((run.wave / Math.max(1, run.maxWaves)) * 100))}%`;
-        }
-      }
-
       const inspTitle = document.getElementById('idle-inspector-title');
       const inspSub = document.getElementById('idle-inspector-sub');
       const inspBtn = document.getElementById('btn-idle-quick-upgrade');
@@ -2535,12 +2377,14 @@
         const desks = isUnl ? this.getUnlockedCounterCount(item.id) : 0;
         const sc = !isUnl ? (this.unlockRemaining[item.id] ?? item.unlockCost) : this.getStationUpgradeCost(item.id);
         const prodTier = this.getStationProductionTier(item.id);
-        inspTitle.textContent = `${item.icon} ${item.shortName} (Lv.${sl}/10 · ${desks}/3 Counters · $${this.getItemSellPrice(item)} · ${prodTier.shortBadge})`;
+        inspTitle.textContent = `${item.icon} ${item.shortName} (Lv.${sl}/20 · ${desks}/3 Counters · $${this.getItemSellPrice(item)} · ${prodTier.shortBadge})`;
         if (inspSub) {
           inspSub.textContent = `Produces Simple Mk.I with 🛢️/⛏️, or Mk.II (x2.2) with Lv.4–6 🏜️/🔩, or Mk.III (x3.5) with Lv.7–10 🧪/⚛️!`;
         }
-        inspBtn.textContent = sl >= 10 ? 'MAX Lv.10' : (!isUnl ? `🔓 Unlock ($${sc})` : `⬆️ Lv.${sl + 1}/10 ($${sc})`);
-        inspBtn.disabled = sl >= 10 || this.cash < sc;
+        const quickCost = window.ShopUpgradeEngine.buildCost('station', sl, sc, CFG);
+        const quickCostText = window.ShopUpgradeEngine.formatCost(quickCost).join(' + ');
+        inspBtn.textContent = sl >= 20 ? 'MAX Lv.20' : (!isUnl ? `🔓 Unlock (${quickCostText})` : `⬆️ Lv.${sl + 1}/20 (${quickCostText})`);
+        inspBtn.disabled = sl >= 20 || !window.ShopUpgradeEngine.validate(this, quickCost).ok;
 
         if (beltBtn) {
           const nextBelt = CFG.CONVEYORS.find((c) => (this.conveyorLevels[c.id] || 0) < 10) || CFG.CONVEYORS[0];
@@ -2630,135 +2474,100 @@
 
     renderUpgradesModal() {
       const list = document.getElementById('upgrades-list');
-      if (!list) return;
-      list.innerHTML = '';
+      const wallet = document.getElementById('shop-upgrade-wallet');
+      const filters = document.getElementById('shop-upgrade-filters');
+      const live = document.getElementById('shop-upgrade-live');
+      if (!list || !wallet || !filters) return;
+      list.replaceChildren();
+      const engine = window.ShopUpgradeEngine;
+      const balances = engine.balances(this);
+      wallet.innerHTML = `<span>💵 $${Math.floor(balances.cash)}</span><span>🟢 Common ${balances.common}</span><span>🟠 Rare ${balances.rare}</span><span>🟣 Super Rare ${balances.superRare}</span>`;
 
       this.upgradesModalPage = this.upgradesModalPage || 'stations';
+      this.shopUpgradeFilter = this.shopUpgradeFilter || 'all';
       const page = this.upgradesModalPage;
-
-      const navBar = document.createElement('div');
-      navBar.style = 'grid-column: 1 / -1; display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px; background:rgba(15,23,42,0.9); padding:10px; border-radius:10px; border:1px solid #38bdf8;';
-      const pages = [
-        { id: 'stations', label: '🏪 Page 1: 7 Production Stations & Counters' },
-        { id: 'belts', label: '🔗 Page 2: 3 Shop Conveyor Belts' },
-        { id: 'suit', label: '⚡ Page 3: Commander Exosuit & Automation' }
+      const pageDefs = [
+        { id:'stations', label:'🏪 Production' },
+        { id:'belts', label:'🔗 Logistics' },
+        { id:'suit', label:'⚡ Commander' }
       ];
-      for (const pg of pages) {
+      filters.replaceChildren();
+      const pageRow = document.createElement('div');
+      pageRow.className = 'shop-filter-row';
+      for (const pg of pageDefs) {
         const b = document.createElement('button');
-        b.className = page === pg.id ? 'buy-btn' : 'hud-btn';
+        b.type = 'button';
+        b.className = page === pg.id ? 'active' : '';
         b.textContent = pg.label;
-        b.addEventListener('click', () => {
-          this.upgradesModalPage = pg.id;
-          this.renderUpgradesModal();
-        });
-        navBar.appendChild(b);
+        b.setAttribute('aria-pressed', String(page === pg.id));
+        b.addEventListener('click', () => { this.upgradesModalPage = pg.id; this.renderUpgradesModal(); });
+        pageRow.appendChild(b);
       }
-      list.appendChild(navBar);
+      const affordabilityRow = document.createElement('div');
+      affordabilityRow.className = 'shop-filter-row secondary';
+      for (const def of [{id:'all',label:'All'},{id:'affordable',label:'Affordable now'},{id:'samples',label:'Requires samples'},{id:'max',label:'Maximum level'}]) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = this.shopUpgradeFilter === def.id ? 'active' : '';
+        b.textContent = def.label;
+        b.setAttribute('aria-pressed', String(this.shopUpgradeFilter === def.id));
+        b.addEventListener('click', () => { this.shopUpgradeFilter = def.id; this.renderUpgradesModal(); });
+        affordabilityRow.appendChild(b);
+      }
+      filters.append(pageRow, affordabilityRow);
+
+      const showForFilter = (isMax, cost) => {
+        if (this.shopUpgradeFilter === 'max') return isMax;
+        if (this.shopUpgradeFilter === 'affordable') return !isMax && engine.validate(this, cost).ok;
+        if (this.shopUpgradeFilter === 'samples') return !isMax && Object.values(cost.samples).some(Number);
+        return true;
+      };
+      const announce = (text) => { if (live) live.textContent = text; };
+      const addCard = ({icon,name,description,level,maxLevel,type,cashCost,apply,currentEffect,nextEffect}) => {
+        const isMax = level >= maxLevel;
+        const cost = engine.buildCost(type, level, cashCost, CFG);
+        if (!showForFilter(isMax, cost)) return;
+        const tier = engine.tierForLevel(Math.max(1, isMax ? level : level + 1), CFG.SHOP_UPGRADE_TIERS);
+        const check = engine.validate(this, cost);
+        const card = document.createElement('article');
+        card.className = `upgrade-item shop-upgrade-card tier-${tier.id}`;
+        const segments = Array.from({length:maxLevel},(_,i)=>`<i class="${i<level?'filled':''} ${i===2||i===9||i===14?'boundary':''}"></i>`).join('');
+        const costTokens = isMax ? '<span class="cost-token max">Maximum level</span>' : engine.formatCost(cost).map((x,i)=>`<span class="cost-token ${i?'sample':''}">${x}</span>`).join('');
+        card.innerHTML = `<div class="upgrade-info"><div class="shop-upgrade-heading"><h4>${icon} ${name}</h4><span class="tier-label" style="--tier-colour:${tier.colour}">${tier.name}</span></div><p>${description}</p><div class="shop-effect-line"><span>Current: <strong>${currentEffect}</strong></span>${isMax?'':`<span>Next: <strong>${nextEffect}</strong></span>`}</div><div class="shop-level-bar" aria-label="Level ${level} of ${maxLevel}">${segments}</div><div class="shop-cost-row">${costTokens}</div></div><button type="button" class="buy-btn" ${isMax||!check.ok?'disabled':''}>${isMax?'MAX':type==='station'&&level>=10?'Research':'Upgrade'} to Lv.${Math.min(maxLevel,level+1)}</button>`;
+        card.querySelector('button').addEventListener('click', () => {
+          if (isMax) return;
+          const result = engine.purchase(this, cost, apply);
+          if (!result.ok) { announce(`Upgrade unavailable. Missing ${Object.entries(result.missing||{}).map(([k,v])=>`${k} ${v}`).join(', ') || result.error}.`); return; }
+          this.recalcDerivedStats(); this.buildSolidObstacles(); this.syncWorkers(); this.audio.playUnlock(); this.saveGame();
+          announce(`${name} upgraded to level ${level + 1}.`); this.renderUpgradesModal(); this.updateHUD();
+        });
+        list.appendChild(card);
+      };
 
       if (page === 'stations') {
         for (const item of CFG.ITEMS) {
-          const isUnlocked = !!this.unlocked[item.id];
-          const st = this.stations[item.id];
-          const lvl = isUnlocked ? (st.level || 1) : 0;
-          const isMax = lvl >= 10;
-          const cost = !isUnlocked ? (this.unlockRemaining[item.id] ?? item.unlockCost) : this.getStationUpgradeCost(item.id);
-          const prodTier = this.getStationProductionTier(item.id);
-
-          const card = document.createElement('div');
-          card.className = 'upgrade-item';
-          card.innerHTML = `
-            <div class="upgrade-info">
-              <h4>${item.icon} ${item.name} &amp; Counter #${item.tier} (Lv.${lvl}/10)</h4>
-              <p>${item.recipeText} · Mode: <strong>${prodTier.shortBadge}</strong> · Sell: <strong>$${this.getItemSellPrice(item)}</strong></p>
-            </div>
-            <button class="buy-btn" ${(isMax || this.cash < cost) ? 'disabled' : ''}>
-              ${isMax ? 'MAX Lv.10' : (!isUnlocked ? `🔓 Unlock $${cost}` : `⬆️ Lv.${lvl + 1} ($${cost})`)}
-            </button>
-          `;
-          card.querySelector('button').addEventListener('click', () => {
-            if (!isMax && this.cash >= cost) {
-              this.cash -= cost;
-              if (!isUnlocked) {
-                this.unlocked[item.id] = true;
-                this.unlockRemaining[item.id] = 0;
-                st.level = 1;
-                st.stock = item.initialStock || 2;
-                this.counterBuffer[item.id] = 1;
-              } else {
-                st.level = lvl + 1;
-              }
-              this.recalcDerivedStats();
-              this.buildSolidObstacles();
-              this.audio.playUnlock();
-              this.saveGame();
-              this.renderUpgradesModal();
-              this.updateHUD();
-            }
-          });
-          list.appendChild(card);
+          const unlocked = !!this.unlocked[item.id], st = this.stations[item.id], level = unlocked ? (st.level || 1) : 0;
+          if (!unlocked) {
+            const cashCost = this.unlockRemaining[item.id] ?? item.unlockCost;
+            addCard({icon:item.icon,name:`${item.name} & Counter #${item.tier}`,description:item.recipeText,level:0,maxLevel:20,type:'station',cashCost,currentEffect:'Locked',nextEffect:'Unlock production lane',apply:()=>{this.unlockRemaining[item.id]=0;this.unlocked[item.id]=true;st.level=1;st.stock=item.initialStock||2;st.inputStock={raw_iron:item.initialInput?.raw_iron||4,raw_e710:item.initialInput?.raw_e710||4};this.counterBuffer[item.id]=2;return true;}});
+          } else {
+            const currentSpeed=(1/Math.max(.1,item.cycleTime/(1+level*.12))*60).toFixed(1), nextSpeed=(1/Math.max(.1,item.cycleTime/(1+(level+1)*.12))*60).toFixed(1);
+            addCard({icon:item.icon,name:`${item.name} & Counter #${item.tier}`,description:`${item.recipeText} · ${this.getStationProductionTier(item.id).shortBadge}`,level,maxLevel:20,type:'station',cashCost:this.getStationUpgradeCost(item.id),currentEffect:`${currentSpeed} cycles/min · Sell $${this.getItemSellPrice(item)}`,nextEffect:`${nextSpeed} cycles/min`,apply:()=>{st.level=level+1;return true;}});
+          }
         }
       } else if (page === 'belts') {
         for (const c of CFG.CONVEYORS) {
-          const lvl = this.conveyorLevels[c.id] || 0;
-          const isMax = lvl >= 10;
-          const cost = this.getConveyorUpgradeCost(c.id);
-          const card = document.createElement('div');
-          card.className = 'upgrade-item';
-          card.innerHTML = `
-            <div class="upgrade-info">
-              <h4>${c.icon} ${c.name} (Lv.${lvl}/10)</h4>
-              <p>${c.desc}</p>
-            </div>
-            <button class="buy-btn" ${(isMax || this.cash < cost) ? 'disabled' : ''}>
-              ${isMax ? 'MAX Lv.10' : (lvl === 0 ? `🔓 Unlock $${cost}` : `⬆️ Lv.${lvl + 1} ($${cost})`)}
-            </button>
-          `;
-          card.querySelector('button').addEventListener('click', () => {
-            if (!isMax && this.cash >= cost) {
-              this.cash -= cost;
-              this.conveyorLevels[c.id] = lvl + 1;
-              this.conveyors[c.id] = true;
-              this.conveyorRemaining[c.id] = this.getConveyorUpgradeCost(c.id);
-              this.recalcDerivedStats();
-              this.audio.playUnlock();
-              this.saveGame();
-              this.renderUpgradesModal();
-              this.updateHUD();
-            }
-          });
-          list.appendChild(card);
+          const level=this.conveyorLevels[c.id]||0;
+          addCard({icon:c.icon,name:c.name,description:c.description||'Moves materials automatically between Shop systems.',level,maxLevel:10,type:'conveyor',cashCost:this.getConveyorUpgradeCost(c.id),currentEffect:level?`Level ${level} throughput`:'Not installed',nextEffect:`Level ${level+1} throughput`,apply:()=>{this.conveyorLevels[c.id]=level+1;this.conveyors[c.id]=true;this.conveyorRemaining[c.id]=this.getConveyorUpgradeCost(c.id);return true;}});
         }
       } else {
         for (const upg of CFG.UPGRADES) {
-          const lvl = this.upgrades[upg.id] || 0;
-          const isMax = lvl >= upg.maxLevel;
-          const cost = Math.round(upg.baseCost * Math.pow(upg.costMultiplier, lvl));
-          const canAfford = !isMax && this.cash >= cost;
-          const card = document.createElement('div');
-          card.className = 'upgrade-item';
-          card.innerHTML = `
-            <div class="upgrade-info">
-              <h4>${upg.icon} ${upg.name} (Lv.${lvl}/${upg.maxLevel})</h4>
-              <p>${upg.description}</p>
-            </div>
-            <button class="upg-buy-btn buy-btn" data-upg="${upg.id}" ${canAfford ? '' : 'disabled'}>
-              ${isMax ? 'MAX Lv.10' : `💵 $${cost}`}
-            </button>
-          `;
-          card.querySelector('button').addEventListener('click', () => {
-            if (!isMax && this.cash >= cost) {
-              this.cash -= cost;
-              this.upgrades[upg.id] = lvl + 1;
-              this.syncWorkers();
-              this.recalcDerivedStats();
-              this.audio.playUnlock();
-              this.saveGame();
-              this.renderUpgradesModal();
-              this.updateHUD();
-            }
-          });
-          list.appendChild(card);
+          const level=this.upgrades[upg.id]||0, cashCost=Math.round(upg.baseCost*Math.pow(upg.costMultiplier,level));
+          addCard({icon:upg.icon,name:upg.name,description:upg.description,level,maxLevel:upg.maxLevel,type:'global',cashCost,currentEffect:`Level ${level} active`,nextEffect:`Level ${level+1} effect`,apply:()=>{this.upgrades[upg.id]=level+1;return true;}});
         }
+      }
+      if (!list.children.length) {
+        const empty=document.createElement('p'); empty.className='shop-upgrade-empty'; empty.textContent='No upgrades match this filter.'; list.appendChild(empty);
       }
     }
 
@@ -4787,54 +4596,15 @@
       }
     }
 
-    // ========================================================================
-    // NEW IN v0.0.12: CAPYBARA GO! ROGUELIKE PATH ATTACK ENGINE (2 PAGES)
-    // - Page 1: 🧬 Sample Search (Diff 1-10: 1-3 Common 🟢, 4-6 Rare 🟠, 7-10 Super Rare 🟣)
-    // - Page 2: 🚩 Planet Capture (Select adjacent planet on Space Map, 10 Waves,
-    //           Retreat after each wave, True Permadeath on Hero Death, 3 Active + 1 Spare!)
-    // ========================================================================
-    buildCapybaraRunSquad() {
+    // Current War expedition entry points. Legacy wave-combat code was removed in v0.0.21.
+    hasAvailableWarSquad() {
       this.initHelldiverRoster();
-      // Auto-populate any missing lineup slots from available roster
-      for (let s = 0; s < 4; s++) {
-        if (!this.capybaraLineup[s] || !this.helldiverRoster.some((h) => h.id === this.capybaraLineup[s])) {
-          const unused = this.helldiverRoster.find((h) => !this.capybaraLineup.includes(h.id));
-          this.capybaraLineup[s] = unused ? unused.id : null;
-        }
-      }
-
-      const shopMult = this.getShopWarPowerMult();
-      const makeCombatant = (heroId, slotIndex) => {
-        const h = this.helldiverRoster.find((x) => x.id === heroId);
-        if (!h) return null;
-        this.recalcHeroStats(h);
-        const cls = (CFG.HELLDIVER_CLASSES || []).find((c) => c.id === h.classId) || CFG.HELLDIVER_CLASSES[0];
-        const maxHp = Math.round(h.maxHp * shopMult);
-        return {
-          ...h,
-          slotIndex,
-          maxHp,
-          hp: maxHp,
-          atk: Math.round(h.atk * shopMult),
-          shield: h.classId === 'cls_bulwark' ? Math.round(maxHp * 0.25) : 0,
-          miracleReady: h.classId === 'cls_medic' && h.level >= 60,
-          dead: false,
-          fireCooldown: 0.2,
-          skillTimers: [1.5, 3.0, 5.0],
-          skills: cls.skills || [],
-          x: -560 + (slotIndex === 0 ? 110 : 0),
-          z: -900 + (slotIndex === 1 ? -140 : (slotIndex === 2 ? 140 : 0))
-        };
-      };
-
-      const activeHeroes = [0, 1, 2].map((idx) => makeCombatant(this.capybaraLineup[idx], idx)).filter(Boolean);
-      const spareHero = makeCombatant(this.capybaraLineup[3], 3);
-      return { activeHeroes, spareHero };
+      const available = window.WarCasualtyEngine?.availableLineup(this) || (this.capybaraLineup || []).filter(Boolean);
+      return available.filter(Boolean).length >= 3;
     }
 
     launchPreparedWarRun(options) {
-      const availableIds = window.WarCasualtyEngine?.availableLineup(this) || this.capybaraLineup;
-      if (availableIds.filter(Boolean).length < 3) return false;
+      if (!this.hasAvailableWarSquad()) return false;
       this.createWarFoundationRun(options);
       if (!this.warRun) return false;
       this.warRun.supplies = options.supplies || {};
@@ -4844,592 +4614,54 @@
         hpMult: 1, attackMult: 1, startingEnergy: 0,
         damageReduction: 0, enemyAttackMult: 1, startingShield: 0
       };
-      if (this.viewMode !== 'war') this.setViewMode('war', options.mode);
+      this.setViewMode('war', options.mode);
       this.saveGame();
       window.WarUI?.show(this);
       return true;
     }
 
-    startSampleSearchRun(diff = null, legacyCombat = false) {
+    startSampleSearchRun(diff = null) {
       const chosenDiff = Math.max(1, Math.min(10, parseInt(diff || this.sampleSearchDiff || 1, 10)));
       this.sampleSearchDiff = chosenDiff;
       this.warSubPage = 'sample';
-
-      const { activeHeroes, spareHero } = this.buildCapybaraRunSquad();
-      const availableIds = window.WarCasualtyEngine?.availableLineup(this) || this.capybaraLineup;
-      if (activeHeroes.length === 0) {
+      if (!this.hasAvailableWarSquad()) {
         this.spawnFloatingText(this.player.x, this.player.z - 45, '⚠️ NEED 3 AVAILABLE HELLDIVERS! RECOVER INJURED HEROES OR CHANGE LINEUP.', '#ef4444');
         this.renderTrainingRoomModal();
         document.getElementById('modal-training-room')?.classList.add('open');
         return;
       }
-
       const faction = chosenDiff % 2 === 1 ? 'bugs' : 'autobots';
-      if (!legacyCombat) {
-        window.WarSupplyUI?.open(this, {
-          mode: 'sample', difficulty: chosenDiff, faction, seed: Date.now()
-        }, (options) => this.launchPreparedWarRun(options));
-        return;
-      }
-      this.capybaraRun = {
-        active: true,
-        mode: 'sample',
-        difficulty: chosenDiff,
-        faction,
-        planetId: null,
-        planetName: `Sample Sector Diff-${chosenDiff}`,
-        wave: 1,
-        maxWaves: 5,
-        phase: 'combat',
-        activeHeroes,
-        spareHero,
-        spareUsed: false,
-        sentries: [],
-        lootBag: { cash: 0, common: 0, rare: 0, superRare: 0 }
-      };
-
-      const retreatBar = document.getElementById('capybara-wave-retreat-bar');
-      if (retreatBar) retreatBar.style.display = 'none';
-      if (this.viewMode !== 'war') this.setViewMode('war', 'sample');
-      this.spawnCapybaraWaveEnemies();
-      this.saveGame();
-      this.updateHUD();
+      window.WarSupplyUI?.open(this, {
+        mode: 'sample', difficulty: chosenDiff, faction, seed: Date.now()
+      }, (options) => this.launchPreparedWarRun(options));
     }
 
-    startPlanetCaptureRun(planetId = null, legacyCombat = false) {
-      this.initSpaceMapState();
+    startPlanetCaptureRun(planetId = null) {
       let targetId = planetId || this.targetCapturePlanetId;
       let pCfg = (CFG.SPACE_MAP_PLANETS || []).find((p) => p.id === targetId && !p.isHome && !this.spacePlanets[p.id]?.owned);
-      if (!pCfg || !this.isPlanetAdjacentToOwned(pCfg.id)) {
-        // Pick first available adjacent enemy planet
-        pCfg = (CFG.SPACE_MAP_PLANETS || []).find((p) => !p.isHome && !this.spacePlanets[p.id]?.owned && this.isPlanetAdjacentToOwned(p.id));
-      }
+      if (!pCfg) pCfg = (CFG.SPACE_MAP_PLANETS || []).find((p) => !p.isHome && !this.spacePlanets[p.id]?.owned && this.isPlanetAdjacentToOwned(p.id));
       if (!pCfg) {
         this.spawnFloatingText(this.player.x, this.player.z - 45, '🎉 ALL ADJACENT PLANETS CAPTURED! CHECK SPACE MAP!', '#4ade80');
-        this.renderSpaceMapModal();
-        document.getElementById('modal-space-map')?.classList.add('open');
         return;
       }
-
-      this.targetCapturePlanetId = pCfg.id;
-      this.warSubPage = 'capture';
-
-      const { activeHeroes, spareHero } = this.buildCapybaraRunSquad();
-      const availableIds = window.WarCasualtyEngine?.availableLineup(this) || this.capybaraLineup;
-      if (activeHeroes.length === 0) {
+      if (!this.hasAvailableWarSquad()) {
         this.spawnFloatingText(this.player.x, this.player.z - 45, '⚠️ NEED 3 AVAILABLE HELLDIVERS! RECOVER INJURED HEROES OR CHANGE LINEUP.', '#ef4444');
         this.renderTrainingRoomModal();
         document.getElementById('modal-training-room')?.classList.add('open');
         return;
       }
-
-      if (!legacyCombat) {
-        window.WarSupplyUI?.open(this, {
-          mode: 'capture', difficulty: pCfg.difficulty, faction: pCfg.faction,
-          planetId: pCfg.id, planetName: pCfg.name, seed: Date.now()
-        }, (options) => this.launchPreparedWarRun(options));
-        return;
-      }
-      this.capybaraRun = {
-        active: true,
-        mode: 'capture',
-        difficulty: pCfg.difficulty,
-        faction: pCfg.faction, // Strictly 'bugs' OR 'autobots'
-        planetId: pCfg.id,
-        planetName: pCfg.name,
-        wave: 1,
-        maxWaves: 10, // At least 10 Waves required for Planet Capture!
-        phase: 'combat',
-        activeHeroes,
-        spareHero,
-        spareUsed: false,
-        sentries: [],
-        lootBag: { cash: 0, common: 0, rare: 0, superRare: 0 }
-      };
-
-      const retreatBar = document.getElementById('capybara-wave-retreat-bar');
-      if (retreatBar) retreatBar.style.display = 'none';
-      if (this.viewMode !== 'war') this.setViewMode('war', 'capture');
-      this.spawnCapybaraWaveEnemies();
-      this.saveGame();
-      this.updateHUD();
+      this.targetCapturePlanetId = pCfg.id;
+      this.warSubPage = 'capture';
+      window.WarSupplyUI?.open(this, {
+        mode: 'capture', difficulty: pCfg.difficulty, faction: pCfg.faction,
+        planetId: pCfg.id, planetName: pCfg.name, seed: Date.now()
+      }, (options) => this.launchPreparedWarRun(options));
     }
 
     startWarNodeCombat() {
-      if (!this.warRun || !this.warRun.active) return;
+      if (!this.warRun?.active) return;
       this.warRun.phase = 'combat';
       window.WarCombatUI?.start(this);
-    }
-
-    resumeWarExpeditionAfterCombat() {
-      if (!this.warRun || !this.warRun.active) return false;
-      this.capybaraRun = null;
-      this.enemies = [];
-      this.warRun.phase = 'reward';
-      window.WarUI?.showReward(this);
-      this.saveGame();
-      return true;
-    }
-
-    spawnCapybaraWaveEnemies() {
-      const run = this.capybaraRun;
-      if (!run) return;
-      this.enemies = [];
-      const diff = run.difficulty || 1;
-      const wave = run.wave || 1;
-      const isBugs = run.faction === 'bugs';
-
-      // Harder difficulty scaling as requested by user!
-      const count = 6 + wave * 2 + Math.floor(diff * 1.4);
-      const hpScale = (1 + (diff - 1) * 0.85) * (1 + (wave - 1) * 0.32);
-      const dmgScale = (1 + (diff - 1) * 0.55) * (1 + (wave - 1) * 0.22);
-
-      const bugTypes = ['hunter', 'bug', 'spewer', 'titan'];
-      const botTypes = ['trooper', 'devastator', 'hulk', 'strider'];
-      const pool = isBugs ? bugTypes : botTypes;
-
-      for (let i = 0; i < count; i++) {
-        let typeIdx = 0;
-        if (i === count - 1 && (wave % 3 === 0 || wave === run.maxWaves || diff >= 6)) {
-          typeIdx = 3; // Apex Boss (Bile Titan or Factory Strider)
-        } else if (i % 4 === 0 && (wave >= 2 || diff >= 3)) {
-          typeIdx = 2; // Elite (Bile Spewer or Hulk)
-        } else if (i % 2 === 1) {
-          typeIdx = 1;
-        }
-        const eType = pool[typeIdx];
-        const baseHp = typeIdx === 3 ? 620 : (typeIdx === 2 ? 310 : (typeIdx === 1 ? 175 : 115));
-        const baseDmg = typeIdx === 3 ? 48 : (typeIdx === 2 ? 28 : (typeIdx === 1 ? 19 : 13));
-        const hp = Math.round(baseHp * hpScale);
-
-        this.enemies.push({
-          id: Math.random(),
-          type: eType,
-          x: 240 + i * 95 + (Math.random() - 0.5) * 40,
-          z: -900 + ((i % 3) - 1) * 130 + (Math.random() - 0.5) * 30,
-          hp,
-          maxHp: hp,
-          dmg: Math.round(baseDmg * dmgScale),
-          speed: typeIdx === 0 ? 145 : (typeIdx === 3 ? 88 : 112),
-          attackCooldown: 0.5
-        });
-      }
-    }
-
-    updateCapybaraRoguelikeWar(dt) {
-      const run = this.capybaraRun;
-      if (!run || !run.active) return;
-
-      if (run.phase === 'decision') {
-        // Waiting for player to click Continue Next Wave or Retreat after wave
-        return;
-      }
-
-      const aliveHeroes = (run.activeHeroes || []).filter((h) => h && !h.dead && h.hp > 0);
-      if (aliveHeroes.length === 0) {
-        this.handleCapybaraSquadWipeout();
-        return;
-      }
-
-      // 1. Update Active Helldiver Heroes (Basic Attacks + Unlocked Lv.1/25/60 Class Skills!)
-      const arcStacks = this.roguelikePerks?.rk_arc_chain || 0;
-      const stimStacks = this.roguelikePerks?.rk_viper_stims || 0;
-
-      for (const h of aliveHeroes) {
-        h.fireCooldown = Math.max(0, (h.fireCooldown || 0) - dt * (1 + stimStacks * 0.20));
-
-        // Find closest enemy on the path
-        let target = null;
-        let bestDist = 9999;
-        for (const e of this.enemies) {
-          if (e.hp <= 0) continue;
-          const d = Math.hypot(e.x - h.x, e.z - h.z);
-          if (d < bestDist) {
-            bestDist = d;
-            target = e;
-          }
-        }
-
-        if (target && h.fireCooldown <= 0) {
-          h.fireCooldown = h.fireRate || 0.30;
-          const isCrit = Math.random() < (0.12 + (h.stats100?.agility || 50) * 0.0035);
-          const dmg = Math.round(h.atk * (isCrit ? 2.1 : 1.0));
-          target.hp -= dmg;
-          this.tracers.push({
-            sx: h.x + 18,
-            sz: h.z - 10,
-            tx: target.x,
-            tz: target.z,
-            color: isCrit ? '#facc15' : (h.color || '#38bdf8'),
-            width: isCrit ? 5 : 3,
-            t: 0,
-            duration: 0.09
-          });
-          this.audio.playLaser();
-
-          // Arc Chain Perk
-          if (arcStacks > 0 && this.enemies.length > 1) {
-            for (let c = 0; c < Math.min(2, this.enemies.length); c++) {
-              const other = this.enemies[c];
-              if (other !== target && other.hp > 0) {
-                other.hp -= Math.round(dmg * 0.45 * arcStacks);
-              }
-            }
-          }
-        }
-
-        // Cast Unlocked Class Skills (Lv.1, Lv.25, Lv.60)
-        for (let sIdx = 0; sIdx < (h.skills || []).length; sIdx++) {
-          const sk = h.skills[sIdx];
-          if (h.level < sk.reqLvl || sk.cd <= 0) continue;
-          h.skillTimers[sIdx] = (h.skillTimers[sIdx] || sk.cd) - dt;
-          if (h.skillTimers[sIdx] <= 0 && this.enemies.length > 0) {
-            h.skillTimers[sIdx] = Math.max(2.2, sk.cd * (1 - (h.stats100?.tactics || 50) * 0.0035));
-            this.triggerHeroClassSkill(h, sk);
-          }
-        }
-      }
-
-      // 2. Update Deployed Engineer Sentries
-      for (const s of (run.sentries || [])) {
-        s.cd = (s.cd || 0) - dt;
-        if (s.cd <= 0 && this.enemies.length > 0) {
-          s.cd = 0.28;
-          const t = this.enemies[0];
-          t.hp -= s.dmg;
-          this.tracers.push({ sx: s.x, sz: s.z - 10, tx: t.x, tz: t.z, color: '#a855f7', width: 3, t: 0, duration: 0.08 });
-        }
-      }
-
-      // Clean up killed enemies & add wave loot
-      for (let i = this.enemies.length - 1; i >= 0; i--) {
-        if (this.enemies[i].hp <= 0) {
-          const deadE = this.enemies[i];
-          this.enemies.splice(i, 1);
-          this.totalKills++;
-          this.lifetimeKills++;
-          run.lootBag.cash += Math.round(18 + run.difficulty * 8);
-          this.explosions.push({ x: deadE.x, z: deadE.z, maxR: 36, t: 0, duration: 0.22 });
-        }
-      }
-
-      // 3. Advance Enemies Leftward toward the 3 Active Helldivers!
-      for (const e of this.enemies) {
-        // Pick closest living active hero
-        let closestHero = aliveHeroes[0];
-        let minD = 9999;
-        for (const h of aliveHeroes) {
-          const d = Math.hypot(e.x - h.x, e.z - h.z);
-          if (d < minD) {
-            minD = d;
-            closestHero = h;
-          }
-        }
-        if (!closestHero) continue;
-
-        if (minD > 58) {
-          const dx = closestHero.x - e.x;
-          const dz = closestHero.z - e.z;
-          e.x += (dx / minD) * e.speed * dt;
-          e.z += (dz / minD) * e.speed * dt;
-        } else {
-          e.attackCooldown = (e.attackCooldown || 0) - dt;
-          if (e.attackCooldown <= 0) {
-            e.attackCooldown = 0.95;
-            // Check Dodge & Bulwark Riot Shield
-            if (closestHero.classId === 'cls_sniper' && closestHero.level >= 25 && Math.random() < 0.30) {
-              this.spawnFloatingText(closestHero.x, closestHero.z - 40, '💨 DODGED!', '#38bdf8');
-              continue;
-            }
-            let incomingDmg = e.dmg;
-            if (closestHero.classId === 'cls_bulwark') incomingDmg = Math.round(incomingDmg * 0.65);
-
-            if ((closestHero.shield || 0) > 0) {
-              const abs = Math.min(closestHero.shield, incomingDmg);
-              closestHero.shield -= abs;
-              incomingDmg -= abs;
-            }
-            closestHero.hp -= incomingDmg;
-            this.spawnFloatingText(closestHero.x, closestHero.z - 34, `-${incomingDmg} 💥`, '#ef4444');
-
-            // Check Hero Death & True Permadeath + Slot #4 Spare Reinforcement!
-            if (closestHero.hp <= 0) {
-              this.handleCapybaraHeroDeath(closestHero);
-            }
-          }
-        }
-      }
-
-      // 4. Check if Current Wave is Cleared!
-      if (this.enemies.length === 0) {
-        this.completeCapybaraWave();
-      }
-    }
-
-    triggerHeroClassSkill(hero, sk) {
-      const run = this.capybaraRun;
-      if (!run) return;
-      this.spawnFloatingText(hero.x, hero.z - 58, `${sk.icon} ${sk.name.split('(')[0].trim()}!`, hero.color || '#facc15');
-
-      if (sk.id === 'sk_stim' || sk.id === 'sk_infusion' || sk.id === 'sk_rally') {
-        for (const h of (run.activeHeroes || [])) {
-          if (h && !h.dead) {
-            const heal = Math.round(h.maxHp * (sk.id === 'sk_stim' ? 0.24 : 0.18));
-            h.hp = Math.min(h.maxHp, h.hp + heal);
-          }
-        }
-        return;
-      }
-      if (sk.id === 'sk_dome') {
-        for (const h of (run.activeHeroes || [])) {
-          if (h && !h.dead) h.shield = (h.shield || 0) + Math.round(h.maxHp * 0.30);
-        }
-        return;
-      }
-      if (sk.id === 'sk_sentry') {
-        if ((run.sentries || []).length < 3) {
-          run.sentries.push({ x: hero.x + 85, z: hero.z + (Math.random() - 0.5) * 90, dmg: Math.round(hero.atk * 0.65), cd: 0.2 });
-        }
-        return;
-      }
-
-      // Offensive AoE / Single-Target Skills
-      const mult = (sk.id === 'sk_500kg' || sk.id === 'sk_railcannon' || sk.id === 'sk_hellbomb' || sk.id === 'sk_emancipator') ? 4.8 : 2.4;
-      const skillDmg = Math.round(hero.atk * mult);
-      for (const e of this.enemies) {
-        e.hp -= skillDmg;
-        this.explosions.push({ x: e.x, z: e.z, maxR: 52, t: 0, duration: 0.26 });
-      }
-      this.audio.playStratagem();
-    }
-
-    handleCapybaraHeroDeath(fallenHero) {
-      const run = this.capybaraRun;
-      if (!run) return;
-
-      // Check if Bio-Medic's Lv.60 Miracle Shield can save them once!
-      const medic = (run.activeHeroes || []).find((h) => h && !h.dead && h.miracleReady);
-      if (medic) {
-        medic.miracleReady = false;
-        fallenHero.hp = Math.round(fallenHero.maxHp * 0.50);
-        this.spawnFloatingText(fallenHero.x, fallenHero.z - 60, `✨ MIRACLE DEFIBRILLATOR SAVED ${fallenHero.name.toUpperCase()}!`, '#4ade80');
-        return;
-      }
-
-      // TRUE PERMADEATH: Remove fallen Helldiver permanently from helldiverRoster & capybaraLineup!
-      fallenHero.dead = true;
-      fallenHero.hp = 0;
-      this.helldiverRoster = (this.helldiverRoster || []).filter((h) => h.id !== fallenHero.id);
-      this.capybaraLineup = (this.capybaraLineup || []).map((id) => (id === fallenHero.id ? null : id));
-
-      this.world.triggerCameraShake(14, 0.4);
-      this.spawnFloatingText(
-        fallenHero.x,
-        fallenHero.z - 65,
-        `💀 ${fallenHero.name.toUpperCase()} KIA (PERMADEATH — HIRE NEW IN TRAINING ROOM)!`,
-        '#ef4444'
-      );
-
-      // Immediately check Slot #4 Orbital Spare Reinforcement!
-      if (run.spareHero && !run.spareHero.dead && !run.spareUsed) {
-        run.spareUsed = true;
-        const sp = run.spareHero;
-        sp.x = fallenHero.x;
-        sp.z = fallenHero.z;
-        const idx = run.activeHeroes.indexOf(fallenHero);
-        if (idx !== -1) {
-          run.activeHeroes[idx] = sp;
-        } else {
-          run.activeHeroes.push(sp);
-        }
-        run.spareHero = null;
-
-        // Hellpod kinetic slam damage on drop
-        for (const e of this.enemies) {
-          e.hp -= 380;
-          this.explosions.push({ x: e.x, z: e.z, maxR: 65, t: 0, duration: 0.35 });
-        }
-        this.audio.playStratagem();
-        this.spawnFloatingText(sp.x, sp.z - 85, `🚀 SPARE REINFORCEMENT DROPPED: ${sp.name.toUpperCase()} (Lv.${sp.level})!`, '#facc15');
-      }
-      this.saveGame();
-      this.updateHUD();
-    }
-
-    completeCapybaraWave() {
-      const run = this.capybaraRun;
-      if (!run) return;
-
-      const diff = run.difficulty || 1;
-      const diffCfg = (CFG.SAMPLE_DIFFICULTIES || []).find((d) => d.diff === diff) || CFG.SAMPLE_DIFFICULTIES[0];
-
-      // Add Wave Sample & Cash Rewards into run.lootBag
-      // Diff 1-3: Normal (🟢) only | Diff 4-6: Normal + Rare (🟠) | Diff 7-10: Normal + Rare + Super Rare (🟣)!
-      const addCommon = Math.max(1, Math.round((diffCfg.common[0] + diffCfg.common[1]) * 0.25));
-      const addRare = diff >= 4 ? Math.max(1, Math.round((diffCfg.rare[0] + diffCfg.rare[1]) * 0.25)) : 0;
-      const addSuper = diff >= 7 ? Math.max(1, Math.round((diffCfg.superRare[0] + diffCfg.superRare[1]) * 0.30)) : 0;
-
-      run.lootBag.common += addCommon;
-      run.lootBag.rare += addRare;
-      run.lootBag.superRare += addSuper;
-      run.lootBag.cash += Math.round(diffCfg.cashReward * 0.28);
-
-      // Check if Final Wave (Wave 10/10 for Capture, Wave 5/5 for Sample Search) is cleared!
-      if (run.wave >= run.maxWaves) {
-        this.finishCapybaraExpeditionVictory();
-        return;
-      }
-
-      // Pause after wave for the Post-Wave Retreat vs. Continue Decision!
-      run.phase = 'decision';
-      const retreatBar = document.getElementById('capybara-wave-retreat-bar');
-      const titleEl = document.getElementById('retreat-bar-title');
-      const descEl = document.getElementById('retreat-bar-desc');
-      const aliveCount = (run.activeHeroes || []).filter((h) => h && !h.dead).length;
-      const hasSpare = run.spareHero && !run.spareHero.dead && !run.spareUsed;
-
-      if (titleEl) {
-        titleEl.textContent = `🚁 WAVE ${run.wave}/${run.maxWaves} CLEARED — CONTINUE TO WAVE ${run.wave + 1} OR RETREAT?`;
-      }
-      if (descEl) {
-        descEl.innerHTML = `
-          Surviving Squad: <strong>${aliveCount}/3 Active Helldivers + ${hasSpare ? '1 Spare Ready' : '0 Spare'}</strong> ·
-          Current Loot Bag: <strong>💵 $${run.lootBag.cash} · 🟢 ${run.lootBag.common} · 🟠 ${run.lootBag.rare} · 🟣 ${run.lootBag.superRare}</strong>.<br/>
-          If you <strong>🚁 Retreat Now</strong>, all surviving Helldivers return safely with <strong>65% of collected resources</strong>. If you continue and a Helldiver dies, they <strong>die permanently</strong>!
-        `;
-      }
-      if (retreatBar) retreatBar.style.display = 'block';
-      this.audio.playUnlock();
-      this.updateHUD();
-    }
-
-    continueNextCapybaraWave() {
-      const run = this.capybaraRun;
-      if (!run || !run.active) return;
-      const retreatBar = document.getElementById('capybara-wave-retreat-bar');
-      if (retreatBar) retreatBar.style.display = 'none';
-
-      run.wave++;
-      run.phase = 'combat';
-      this.triggerRoguelikePerkDraft();
-      this.spawnCapybaraWaveEnemies();
-      this.audio.playStratagem();
-      this.updateHUD();
-    }
-
-    retreatFromCapybaraRun() {
-      const run = this.capybaraRun;
-      if (!run || !run.active) return;
-      const retreatBar = document.getElementById('capybara-wave-retreat-bar');
-      if (retreatBar) retreatBar.style.display = 'none';
-
-      // Retreat keeps 65% of collected resources & saves all surviving Helldivers!
-      const keepRatio = 0.65;
-      const gotCash = Math.round((run.lootBag.cash || 0) * keepRatio);
-      const gotCommon = Math.floor((run.lootBag.common || 0) * keepRatio);
-      const gotRare = Math.floor((run.lootBag.rare || 0) * keepRatio);
-      const gotSuper = Math.floor((run.lootBag.superRare || 0) * keepRatio);
-
-      this.cash += gotCash;
-      this.samples.common = (this.samples.common || 0) + gotCommon;
-      this.samples.rare = (this.samples.rare || 0) + gotRare;
-      this.samples.superRare = (this.samples.superRare || 0) + gotSuper;
-      this.superSamples = this.samples.superRare;
-
-      run.active = false;
-      if (this.warRun) this.warRun.active = false;
-      this.enemies = [];
-      this.setViewMode('shop');
-      this.audio.playPickup();
-      this.spawnFloatingText(
-        this.player.x,
-        this.player.z - 55,
-        `🚁 RETREATED SAFELY! KEPT +$${gotCash} · +🟢${gotCommon} +🟠${gotRare} +🟣${gotSuper}!`,
-        '#fde047'
-      );
-      this.saveGame();
-      this.updateHUD();
-    }
-
-    finishCapybaraExpeditionVictory() {
-      const run = this.capybaraRun;
-      if (!run) return;
-      const retreatBar = document.getElementById('capybara-wave-retreat-bar');
-      if (retreatBar) retreatBar.style.display = 'none';
-
-      const gotCash = run.lootBag.cash || 0;
-      const gotCommon = run.lootBag.common || 0;
-      const gotRare = run.lootBag.rare || 0;
-      const gotSuper = run.lootBag.superRare || 0;
-
-      this.cash += gotCash;
-      this.medals += Math.max(2, Math.ceil(run.difficulty * 0.8));
-      this.samples.common = (this.samples.common || 0) + gotCommon;
-      this.samples.rare = (this.samples.rare || 0) + gotRare;
-      this.samples.superRare = (this.samples.superRare || 0) + gotSuper;
-      this.superSamples = this.samples.superRare;
-
-      if (this.warRun?.active) {
-        // Legacy combat already credited its encounter rewards above; do not duplicate them in expedition loot.
-        this.resumeWarExpeditionAfterCombat();
-        this.updateHUD();
-        return;
-      }
-
-      if (run.mode === 'capture' && run.planetId && this.spacePlanets[run.planetId]) {
-        const ps = this.spacePlanets[run.planetId];
-        ps.owned = true;
-        ps.mineLvl = Math.max(1, ps.mineLvl || 1);
-        ps.storageLvl = Math.max(1, ps.storageLvl || 1);
-        ps.storedOil = 10;
-        ps.storedIron = 10;
-        const pCfg = (CFG.SPACE_MAP_PLANETS || []).find((x) => x.id === run.planetId);
-        ps.storedSand = pCfg?.sandRatio > 0 ? 6 : 0;
-        ps.storedBile = pCfg?.bileRatio > 0 ? 5 : 0;
-        ps.storedTitanium = pCfg?.titaniumRatio > 0 ? 6 : 0;
-        ps.storedQcore = pCfg?.qcoreRatio > 0 ? 5 : 0;
-        ps.buildings = { def_wall: 1, def_flak: 1, def_rail: 0 };
-        ps.garrison = { g_seaf_militia: 3, g_seaf_heavy: 1, g_helldiver_vet: 1, g_patriot_mech: 0 };
-        this.travianBattleLogs.unshift(`🚩 [VICTORY] Liberated ${run.planetName} after clearing all 10 Waves! Transport Ships are now hauling its ore to HallTown!`);
-      }
-
-      run.active = false;
-      if (this.warRun) this.warRun.active = false;
-      this.enemies = [];
-      this.setViewMode('shop');
-      this.audio.playUnlock();
-      this.spawnFloatingText(
-        this.player.x,
-        this.player.z - 65,
-        run.mode === 'capture'
-          ? `🚩 PLANET CAPTURED: ${run.planetName.toUpperCase()}! +$${gotCash} · +🟢${gotCommon} 🟠${gotRare} 🟣${gotSuper}!`
-          : `🧬 SAMPLE SEARCH COMPLETE! +$${gotCash} · +🟢${gotCommon} 🟠${gotRare} 🟣${gotSuper}!`,
-        '#4ade80'
-      );
-      this.saveGame();
-      this.updateHUD();
-    }
-
-    handleCapybaraSquadWipeout() {
-      const run = this.capybaraRun;
-      if (!run) return;
-      const retreatBar = document.getElementById('capybara-wave-retreat-bar');
-      if (retreatBar) retreatBar.style.display = 'none';
-
-      run.active = false;
-      if (this.warRun) this.warRun.active = false;
-      this.enemies = [];
-      this.setViewMode('shop');
-      this.spawnFloatingText(
-        this.player.x,
-        this.player.z - 65,
-        `💀 SQUAD WIPED OUT ON WAVE ${run.wave}! HIRE NEW HELLDIVERS IN THE TRAINING ROOM!`,
-        '#ef4444'
-      );
-      this.saveGame();
-      this.renderTrainingRoomModal();
-      document.getElementById('modal-training-room')?.classList.add('open');
-      this.updateHUD();
     }
 
     getSlotStorageKey(slotNum = null) {
@@ -5459,7 +4691,6 @@
         workerJobs: this.workerJobs,
         hellpodBayLevel: this.hellpodBayLevel,
         totalHellpodDrops: this.totalHellpodDrops,
-        roguelikePerks: this.roguelikePerks,
         superSamples: this.superSamples,
         samples: this.samples,
         portLogistics: this.portLogistics,
@@ -5722,7 +4953,6 @@
         if (data.workerJobs) Object.assign(this.workerJobs, data.workerJobs);
         if (typeof data.hellpodBayLevel === 'number') this.hellpodBayLevel = data.hellpodBayLevel;
         if (typeof data.totalHellpodDrops === 'number') this.totalHellpodDrops = data.totalHellpodDrops;
-        if (data.roguelikePerks) Object.assign(this.roguelikePerks, data.roguelikePerks);
         if (typeof data.superSamples === 'number') this.superSamples = data.superSamples;
         if (data.samples) Object.assign(this.samples, data.samples);
         if (data.portLogistics) {
@@ -5781,7 +5011,7 @@
         if (data.stations) {
           for (const item of CFG.ITEMS) {
             if (data.stations[item.id] && this.stations[item.id]) {
-              this.stations[item.id].level = Math.min(10, Math.max(1, data.stations[item.id].level || 1));
+              this.stations[item.id].level = Math.min(20, Math.max(1, data.stations[item.id].level || 1));
               this.stations[item.id].priceLvl = Math.min(10, Math.max(1, data.stations[item.id].priceLvl || 1));
               this.stations[item.id].speedLvl = Math.min(10, Math.max(1, data.stations[item.id].speedLvl || 1));
               this.stations[item.id].yieldLvl = Math.min(10, Math.max(1, data.stations[item.id].yieldLvl || 1));
@@ -6231,15 +5461,6 @@
         document.getElementById('modal-space-map')?.classList.add('open');
       });
 
-      document.getElementById('btn-wave-continue')?.addEventListener('click', () => {
-        this.continueNextCapybaraWave();
-      });
-      document.getElementById('btn-wave-retreat')?.addEventListener('click', () => {
-        this.retreatFromCapybaraRun();
-      });
-      document.getElementById('btn-war-retreat-now')?.addEventListener('click', () => {
-        this.retreatFromCapybaraRun();
-      });
 
       document.getElementById('btn-open-github')?.addEventListener('click', () => {
         document.getElementById('modal-github')?.classList.add('open');

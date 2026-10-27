@@ -5,7 +5,7 @@
 // ============================================================================
 
 window.GameConfig = {
-  VERSION: 'v0.0.19-phase5',
+  VERSION: 'v0.0.21-war-cleanup',
   STORAGE_KEY: 'helldivers_please_save_v0013',
   MAX_LEVEL: 10,
 
@@ -534,7 +534,7 @@ window.GameConfig = {
     {
       id: 'char_gate_turret',
       name: 'A/MG-43 & A/MLS-4X Gate Sentries (Ep1–Ep10)',
-      zhName: '三層防線雙聯裝機槍與電磁軌道砲塔 (Lv.1–20)',
+      zhName: '三層防線雙聯裝機槍與電磁軌道砲塔 (Lv.1–10)',
       faction: 'Super Earth Automated Defense',
       badge: '🛡️ 3-LAYER SENTRY',
       badgeColor: '#22c55e',
@@ -771,6 +771,22 @@ window.GameConfig = {
   // - `cashPos`:        x = +720 (Dedicated Requisition Cash Stack for THIS counter!)
   // - `queueStart`:     x = +920 (Dedicated Helldiver Customer Queue for THIS item!)
   // --------------------------------------------------------------------------
+  SHOP_UPGRADE_TIERS: [
+    { id:'basic', name:'Basic', minLevel:1, maxLevel:3, colour:'#94a3b8' },
+    { id:'developed', name:'Developed', minLevel:4, maxLevel:10, colour:'#4ade80' },
+    { id:'advanced', name:'Advanced Research', minLevel:11, maxLevel:15, colour:'#fb923c' },
+    { id:'elite', name:'Elite Research', minLevel:16, maxLevel:20, colour:'#c084fc' }
+  ],
+  SHOP_UPGRADE_LIMITS: { station:20, conveyor:10, global:10 },
+  SHOP_SAMPLE_COSTS: {
+    station: {
+      commonByTargetLevel: { 4:2, 5:3, 6:5, 7:7, 8:10, 9:14, 10:20 },
+      rareByTargetLevel: { 11:8, 12:10, 13:12, 14:15, 15:18 },
+      superRareByTargetLevel: { 16:2, 17:3, 18:4, 19:6, 20:8 }
+    },
+    conveyor: { commonByTargetLevel: { 4:2, 5:3, 6:5, 7:7, 8:10, 9:14, 10:20 } },
+    global: { commonByTargetLevel: { 4:2, 5:3, 6:5, 7:7, 8:10, 9:14, 10:20 } }
+  },
   ITEMS: [
     {
       id: 'cloth',
@@ -785,7 +801,7 @@ window.GameConfig = {
       unlockCost: 0,
       baseUpgradeCost: 80,
       costScale: 1.35,
-      maxLevel: 10,
+      maxLevel: 20,
       sellPrice: 30,
       cycleTime: 1.75,
       maxBuffer: 12,
@@ -804,7 +820,7 @@ window.GameConfig = {
       counter3Pos: { x: 1140, z: 120 },
       cashPos: { x: 1420, z: 120 },
       queueStart: { x: 1600, z: 120 },
-      description: 'LANE 1 (Lv.1–20): Uses 1x 🛢️ E-710 (Purple Belt) to weave B-01 Capes and sells them at Dedicated Counter #1.'
+      description: 'LANE 1 (Lv.1–10): Uses 1x 🛢️ E-710 (Purple Belt) to weave B-01 Capes and sells them at Dedicated Counter #1.'
     },
     {
       id: 'gun',
@@ -819,7 +835,7 @@ window.GameConfig = {
       unlockCost: 120,
       baseUpgradeCost: 110,
       costScale: 1.35,
-      maxLevel: 10,
+      maxLevel: 20,
       sellPrice: 55,
       cycleTime: 1.9,
       maxBuffer: 12,
@@ -838,7 +854,7 @@ window.GameConfig = {
       counter3Pos: { x: 1140, z: 390 },
       cashPos: { x: 1420, z: 390 },
       queueStart: { x: 1600, z: 390 },
-      description: 'LANE 2 (Lv.1–20): Uses 1x ⛏️ Super Iron (Cyan Belt) to forge Liberator Rifles and sells them at Dedicated Counter #2.'
+      description: 'LANE 2 (Lv.1–10): Uses 1x ⛏️ Super Iron (Cyan Belt) to forge Liberator Rifles and sells them at Dedicated Counter #2.'
     },
     {
       id: 'resource',
@@ -853,7 +869,7 @@ window.GameConfig = {
       unlockCost: 350,
       baseUpgradeCost: 180,
       costScale: 1.36,
-      maxLevel: 10,
+      maxLevel: 20,
       sellPrice: 110,
       cycleTime: 2.3,
       maxBuffer: 12,
@@ -872,7 +888,7 @@ window.GameConfig = {
       counter3Pos: { x: 1140, z: 660 },
       cashPos: { x: 1420, z: 660 },
       queueStart: { x: 1600, z: 660 },
-      description: 'LANE 3 (Lv.1–20): Combines 1x ⛏️ Iron + 1x 🛢️ E-710 and sells Munitions Crates at Dedicated Counter #3.'
+      description: 'LANE 3 (Lv.1–10): Combines 1x ⛏️ Iron + 1x 🛢️ E-710 and sells Munitions Crates at Dedicated Counter #3.'
     },
     {
       id: 'equipment',
@@ -887,7 +903,7 @@ window.GameConfig = {
       unlockCost: 900,
       baseUpgradeCost: 320,
       costScale: 1.36,
-      maxLevel: 10,
+      maxLevel: 20,
       sellPrice: 220,
       cycleTime: 2.8,
       maxBuffer: 10,
@@ -906,7 +922,7 @@ window.GameConfig = {
       counter3Pos: { x: 1140, z: 930 },
       cashPos: { x: 1420, z: 930 },
       queueStart: { x: 1600, z: 930 },
-      description: 'LANE 4 (Lv.1–20): Combines 1x ⛏️ Iron + 2x 🛢️ E-710 and sells Jump Packs at Dedicated Counter #4.'
+      description: 'LANE 4 (Lv.1–10): Combines 1x ⛏️ Iron + 2x 🛢️ E-710 and sells Jump Packs at Dedicated Counter #4.'
     },
     {
       id: 'vehicle',
@@ -921,7 +937,7 @@ window.GameConfig = {
       unlockCost: 2400,
       baseUpgradeCost: 650,
       costScale: 1.38,
-      maxLevel: 10,
+      maxLevel: 20,
       sellPrice: 480,
       cycleTime: 3.5,
       maxBuffer: 8,
@@ -940,7 +956,7 @@ window.GameConfig = {
       counter3Pos: { x: 1140, z: 1200 },
       cashPos: { x: 1420, z: 1200 },
       queueStart: { x: 1600, z: 1200 },
-      description: 'LANE 5 (Lv.1–20): Combines 2x ⛏️ Iron + 1x 🛢️ E-710 to build Recon Buggy Vehicles for Dedicated Counter #5.'
+      description: 'LANE 5 (Lv.1–10): Combines 2x ⛏️ Iron + 1x 🛢️ E-710 to build Recon Buggy Vehicles for Dedicated Counter #5.'
     },
     {
       id: 'mech',
@@ -955,7 +971,7 @@ window.GameConfig = {
       unlockCost: 6500,
       baseUpgradeCost: 1400,
       costScale: 1.38,
-      maxLevel: 10,
+      maxLevel: 20,
       sellPrice: 1100,
       cycleTime: 4.4,
       maxBuffer: 6,
@@ -974,7 +990,7 @@ window.GameConfig = {
       counter3Pos: { x: 1140, z: 1470 },
       cashPos: { x: 1420, z: 1470 },
       queueStart: { x: 1600, z: 1470 },
-      description: 'LANE 6 (Lv.1–20): Combines 3x ⛏️ Iron + 2x 🛢️ E-710 to construct Patriot Mechs for Dedicated Counter #6.'
+      description: 'LANE 6 (Lv.1–10): Combines 3x ⛏️ Iron + 2x 🛢️ E-710 to construct Patriot Mechs for Dedicated Counter #6.'
     },
     {
       id: 'warship',
@@ -989,7 +1005,7 @@ window.GameConfig = {
       unlockCost: 18000,
       baseUpgradeCost: 3500,
       costScale: 1.40,
-      maxLevel: 10,
+      maxLevel: 20,
       sellPrice: 2800,
       cycleTime: 5.5,
       maxBuffer: 5,
@@ -1008,7 +1024,7 @@ window.GameConfig = {
       counter3Pos: { x: 1140, z: 1740 },
       cashPos: { x: 1420, z: 1740 },
       queueStart: { x: 1600, z: 1740 },
-      description: 'LANE 7 (Lv.1–20): Combines 4x ⛏️ Iron + 4x 🛢️ E-710 to charter SES Super Destroyers at Dedicated Counter #7.'
+      description: 'LANE 7 (Lv.1–10): Combines 4x ⛏️ Iron + 4x 🛢️ E-710 to charter SES Super Destroyers at Dedicated Counter #7.'
     }
   ],
 
@@ -1034,7 +1050,7 @@ window.GameConfig = {
       baseCost: 130,
       costMultiplier: 1.45,
       maxLevel: 10,
-      description: 'Smart AI (Lv.1–20): Hauls un-belted Raw Ore to unique hoppers, OR hand-mines bonus ore from Quarry Veins once Raw Belts are active!'
+      description: 'Smart AI (Lv.1–10): Hauls un-belted Raw Ore to unique hoppers, OR hand-mines bonus ore from Quarry Veins once Raw Belts are active!'
     },
     {
       id: 'raw_speed_boost',
@@ -1043,7 +1059,7 @@ window.GameConfig = {
       baseCost: 120,
       costMultiplier: 1.42,
       maxLevel: 10,
-      description: 'Increases Super Iron & E-710 Auto-Drill speed (+25%/lvl) and expands Quarry storage buffer up to Lv.20.'
+      description: 'Increases Super Iron & E-710 Auto-Drill speed (+25%/lvl) and expands Quarry storage buffer up to Lv.10.'
     },
     {
       id: 'seaf_ammo_hauler',
@@ -1052,7 +1068,7 @@ window.GameConfig = {
       baseCost: 150,
       costMultiplier: 1.45,
       maxLevel: 10,
-      description: 'Smart AI (Lv.1–20): Prioritizes manually rebuilding Broken/Damaged Gates, then supplies un-belted Gate Turrets or boosts Ammo Press!'
+      description: 'Smart AI (Lv.1–10): Prioritizes manually rebuilding Broken/Damaged Gates, then supplies un-belted Gate Turrets or boosts Ammo Press!'
     },
     {
       id: 'seaf_carrier',
@@ -1061,7 +1077,7 @@ window.GameConfig = {
       baseCost: 140,
       costMultiplier: 1.45,
       maxLevel: 10,
-      description: 'Smart AI (Lv.1–20): Stocks un-belted Item Counters, OR patrols all 7 Counters to serve customers faster & auto-collect $REQ when Belts are on!'
+      description: 'Smart AI (Lv.1–10): Stocks un-belted Item Counters, OR patrols all 7 Counters to serve customers faster & auto-collect $REQ when Belts are on!'
     },
     {
       id: 'seaf_cashier',
@@ -1070,7 +1086,7 @@ window.GameConfig = {
       baseCost: 240,
       costMultiplier: 1.48,
       maxLevel: 10,
-      description: 'Automatically serves queued Helldivers across all 7 Item Counters faster (+20%/lvl up to Lv.20) and streams Requisition straight to your wallet.'
+      description: 'Automatically serves queued Helldivers across all 7 Item Counters faster (+20%/lvl up to Lv.10) and streams Requisition straight to your wallet.'
     },
     {
       id: 'player_boots',
@@ -1079,7 +1095,7 @@ window.GameConfig = {
       baseCost: 110,
       costMultiplier: 1.40,
       maxLevel: 10,
-      description: 'Increases Commander movement speed (+8%/lvl up to Lv.20) and War-Zone snowplow radius.'
+      description: 'Increases Commander movement speed (+8%/lvl up to Lv.10) and War-Zone snowplow radius.'
     },
     {
       id: 'player_exo_rig',
@@ -1088,7 +1104,7 @@ window.GameConfig = {
       baseCost: 130,
       costMultiplier: 1.42,
       maxLevel: 10,
-      description: 'Adds +3 max carry capacity to your vertical back-stack per upgrade level (up to Lv.20).'
+      description: 'Adds +3 max carry capacity to your vertical back-stack per upgrade level (up to Lv.10).'
     },
     {
       id: 'factory_overclock',
@@ -1097,7 +1113,7 @@ window.GameConfig = {
       baseCost: 200,
       costMultiplier: 1.48,
       maxLevel: 10,
-      description: 'Speeds up all 7 weapon, vehicle, mech, and warship assembly lines by +15% per level (up to Lv.20).'
+      description: 'Speeds up all 7 weapon, vehicle, mech, and warship assembly lines by +15% per level (up to Lv.10).'
     }
   ],
 
@@ -1109,7 +1125,7 @@ window.GameConfig = {
       baseMedalCost: 2,
       costScale: 1.38,
       maxLevel: 10,
-      desc: 'PERMANENT (Lv.1–20): +20% sale price across all 7 Item Counters forever.'
+      desc: 'PERMANENT (Lv.1–10): +20% sale price across all 7 Item Counters forever.'
     },
     {
       id: 'perm_raw_speed',
@@ -1118,7 +1134,7 @@ window.GameConfig = {
       baseMedalCost: 2,
       costScale: 1.38,
       maxLevel: 10,
-      desc: 'PERMANENT (Lv.1–20): +25% Raw Quarry & Munitions Press speed + 2.5% chance/lvl to save Raw Ore when crafting!'
+      desc: 'PERMANENT (Lv.1–10): +25% Raw Quarry & Munitions Press speed + 2.5% chance/lvl to save Raw Ore when crafting!'
     },
     {
       id: 'perm_gate_armor',
@@ -1127,7 +1143,7 @@ window.GameConfig = {
       baseMedalCost: 2,
       costScale: 1.38,
       maxLevel: 10,
-      desc: 'PERMANENT (Lv.1–20): +30% Max HP on all 3 Gate Layers and +5 HP/s maintenance on UNBROKEN gates (broken gates require manual repair!).'
+      desc: 'PERMANENT (Lv.1–10): +30% Max HP on all 3 Gate Layers and +5 HP/s maintenance on UNBROKEN gates (broken gates require manual repair!).'
     },
     {
       id: 'perm_turret_power',
@@ -1136,7 +1152,7 @@ window.GameConfig = {
       baseMedalCost: 3,
       costScale: 1.40,
       maxLevel: 10,
-      desc: 'PERMANENT (Lv.1–20): +25% Gate Turret damage across all 3 Layers and +2.5% chance/lvl not to consume 🧱 Ammo.'
+      desc: 'PERMANENT (Lv.1–10): +25% Gate Turret damage across all 3 Layers and +2.5% chance/lvl not to consume 🧱 Ammo.'
     },
     {
       id: 'perm_start_grant',
@@ -1145,7 +1161,7 @@ window.GameConfig = {
       baseMedalCost: 3,
       costScale: 1.40,
       maxLevel: 10,
-      desc: 'PERMANENT (Lv.1–20): Start every deployment with +$150 Requisition and +2 Carry Capacity per level.'
+      desc: 'PERMANENT (Lv.1–10): Start every deployment with +$150 Requisition and +2 Carry Capacity per level.'
     },
     {
       id: 'perm_commander_elite',
@@ -1154,7 +1170,7 @@ window.GameConfig = {
       baseMedalCost: 3,
       costScale: 1.40,
       maxLevel: 10,
-      desc: 'PERMANENT (Lv.1–20): +10% Commander & SEAF move speed and +25% personal weapon & Guard Dog drone damage forever.'
+      desc: 'PERMANENT (Lv.1–10): +10% Commander & SEAF move speed and +25% personal weapon & Guard Dog drone damage forever.'
     }
   ],
 

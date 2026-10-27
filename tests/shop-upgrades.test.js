@@ -1,0 +1,14 @@
+const assert=require('assert');
+const shop=require('../js/shop-upgrades.js');
+const cfg={SHOP_UPGRADE_TIERS:[{id:'basic',name:'Basic',minLevel:1,maxLevel:3},{id:'developed',name:'Developed',minLevel:4,maxLevel:10},{id:'advanced',name:'Advanced',minLevel:11,maxLevel:15},{id:'elite',name:'Elite',minLevel:16,maxLevel:20}],SHOP_SAMPLE_COSTS:{station:{commonByTargetLevel:{4:2,10:20},rareByTargetLevel:{11:8,15:18},superRareByTargetLevel:{16:2,20:8}},global:{commonByTargetLevel:{4:2}},conveyor:{commonByTargetLevel:{4:2}}}};
+assert.strictEqual(shop.tierForLevel(1,cfg.SHOP_UPGRADE_TIERS).id,'basic');
+assert.strictEqual(shop.tierForLevel(11,cfg.SHOP_UPGRADE_TIERS).id,'advanced');
+assert.strictEqual(shop.tierForLevel(20,cfg.SHOP_UPGRADE_TIERS).id,'elite');
+assert.deepStrictEqual(shop.buildCost('station',3,100,cfg).samples,{common:2,rare:0,superRare:0});
+assert.deepStrictEqual(shop.buildCost('station',10,500,cfg).samples,{common:0,rare:8,superRare:0});
+assert.deepStrictEqual(shop.buildCost('station',15,900,cfg).samples,{common:0,rare:0,superRare:2});
+let game={cash:1000,samples:{common:10,rare:10,superRare:3},level:3};
+let cost=shop.buildCost('station',3,100,cfg);let r=shop.purchase(game,cost,()=>{game.level++;return true;});assert(r.ok);assert.strictEqual(game.cash,900);assert.strictEqual(game.samples.common,8);assert.strictEqual(game.level,4);
+const before=JSON.stringify(game);cost=shop.buildCost('station',15,100,cfg);game.samples.superRare=0;r=shop.purchase(game,cost,()=>{game.level++;return true;});assert(!r.ok);assert.strictEqual(JSON.stringify(game),JSON.stringify({...JSON.parse(before),samples:{...JSON.parse(before).samples,superRare:0}}));
+game={cash:1000,samples:{common:10,rare:10,superRare:3},level:3};const rollback=JSON.stringify(game);r=shop.purchase(game,shop.buildCost('station',3,100,cfg),()=>false);assert(!r.ok);assert.strictEqual(JSON.stringify(game),rollback);
+console.log('PASS shop-upgrades: tiers, Common/Rare/Super Rare costs, atomic purchase, insufficient funds and rollback');

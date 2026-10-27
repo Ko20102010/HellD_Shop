@@ -221,89 +221,6 @@
         <div class="popover-abilities-list" id="popover-abilities-list"></div>
       </div>
 
-      <!-- CLEAN CAPYBARA GO! 2-PAGE EXPEDITION HEADER BAR (SAMPLE SEARCH PAGE vs. 10-WAVE PLANET CAPTURE PAGE) -->
-      <div id="war-game-panel">
-        <div class="war-panel-top">
-          <div class="war-mode-tabs">
-            <button class="war-sec-btn active-sec" id="btn-war-page-sample" title="Page 1: Capybara Go! Sample Search (Diff 1–3: 🟢 Normal, Diff 4–6: 🟠 Rare, Diff 7–10: 🟣 Super Rare)">
-              🧬 Page 1: 樣本搜尋 (Sample Search)
-            </button>
-            <button class="war-sec-btn" id="btn-war-page-capture" title="Page 2: Capybara Go! 10-Wave Planet Capture (Select Linked Planet on Space Map)">
-              🚩 Page 2: 星球佔領 (10-Wave Capture)
-            </button>
-            <button class="hud-btn" id="btn-war-back-shop" style="border-color:#4ade80;color:#86efac;" title="Return to Super Destroyer Shop Deck">
-              🏪 返回工廠 (Back to Shop)
-            </button>
-          </div>
-          <div class="war-shop-synergy" id="war-shop-synergy-badge" title="Shop Equipment &amp; Upgrades boost your 3+1 Helldiver Squad!">
-            🏪 Shop Boost: <strong>+25% ATK/HP</strong>
-          </div>
-          <div class="war-match-controls">
-            <label id="war-sample-diff-wrap" style="font-family:var(--font-display);font-size:0.72rem;color:#fde047;display:flex;align-items:center;gap:4px;">
-              🧬 Diff (1-10):
-              <select id="sample-diff-select" style="background:#0f172a;color:#fde047;border:1px solid #facc15;border-radius:6px;padding:3px 6px;font-family:var(--font-display);font-size:0.72rem;font-weight:800;">
-                <option value="1">Lv.1 Trivial (🟢 Only)</option>
-                <option value="2">Lv.2 Easy (🟢 Only)</option>
-                <option value="3">Lv.3 Medium (🟢 Only)</option>
-                <option value="4">Lv.4 Challenging (🟢+🟠 Rare)</option>
-                <option value="5">Lv.5 Hard (🟢+🟠 Rare)</option>
-                <option value="6">Lv.6 Extreme (🟢+🟠 Rare)</option>
-                <option value="7">Lv.7 Suicide (🟢+🟠+🟣 Super!)</option>
-                <option value="8">Lv.8 Impossible (🟢+🟠+🟣 Super!)</option>
-                <option value="9">Lv.9 Helldive (🟢+🟠+🟣 Super!)</option>
-                <option value="10">Lv.10 Super Helldive (🟣 MAX!)</option>
-              </select>
-            </label>
-            <button class="buy-btn" id="btn-war-start-match" title="Restart / Launch Current Capybara Go! Expedition">
-              🚀 Re-Launch Wave #<span id="war-match-num">1</span>
-            </button>
-            <button class="hud-btn" id="btn-war-retreat-now" style="border-color:#ef4444;color:#fca5a5;" title="Emergency Retreat: Save Surviving Helldivers &amp; Keep 65% Collected Loot!">
-              🚁 撤退 Retreat (Keep 65%)
-            </button>
-            <button class="hud-btn" id="btn-war-open-training" style="border-color:#facc15;color:#fde047;" title="Open Helldiver Training Room (3 Active + 1 Spare)">
-              🏋️ 訓練室 Heroes
-            </button>
-          </div>
-        </div>
-        <div class="war-panel-bottom">
-          <div class="war-xp-wrap">
-            <span id="war-roguelike-lvl">🎲 Perk Lv.1</span>
-            <div class="war-xp-bar"><div class="war-xp-fill" id="war-xp-fill" style="width:20%;"></div></div>
-            <span id="war-stage-progress-text">⚔️ Wave 1/5 · 3/3 Active + 1 Spare Ready</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- NEW IN v0.0.14: CAPYBARA GO! POST-WAVE RETREAT OR CONTINUE DECISION BAR -->
-      <div id="capybara-wave-retreat-bar" style="display:none;position:fixed;top:118px;left:50%;transform:translateX(-50%);z-index:85;width:min(760px,95vw);background:rgba(9,13,24,0.97);border:2.5px solid #facc15;border-radius:16px;padding:14px 18px;box-shadow:0 16px 45px rgba(0,0,0,0.88);pointer-events:auto;">
-        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
-          <div style="font-family:var(--font-display);font-weight:900;font-size:1rem;color:#fde047;" id="retreat-bar-title">
-            🚁 WAVE 1/10 CLEARED — CONTINUE OR RETREAT?
-          </div>
-          <span class="version-pill" style="border-color:#ef4444;color:#fca5a5;">⚠️ PERMADEATH WARNING: Fallen Helldivers die forever!</span>
-        </div>
-        <div style="font-size:0.84rem;color:#e2e8f0;margin-bottom:12px;line-height:1.45;" id="retreat-bar-desc">
-          Surviving Squad: 3/3 Active + 1 Spare. If you retreat now, all surviving Helldivers return safely with 65% of collected resources!
-        </div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;">
-          <button class="hud-btn" id="btn-wave-retreat" style="background:linear-gradient(135deg,#dc2626,#991b1b);color:#fff;border-color:#fca5a5;padding:9px 16px;font-size:0.86rem;">
-            🚁 撤退保命 Retreat Now (Keep 65% Loot · Save Squad!)
-          </button>
-          <button class="buy-btn" id="btn-wave-continue" style="background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;padding:9px 18px;font-size:0.88rem;">
-            ⚔️ 繼續推進下一波 Continue Next Wave (+Draft Perk!)
-          </button>
-        </div>
-      </div>
-
-      <!-- NEW IN v0.0.14: CAPYBARA GO! × ROGUELIKE 3-CARD PERK DRAFT & MISSION VICTORY CHEST OVERLAY -->
-      <div id="roguelike-draft-bar">
-        <div class="rk-header">
-          <span id="rk-draft-title">🎲 ROGUELIKE TACTICAL PERK DRAFT — CHOOSE 1 OF 3 UPGRADES!</span>
-          <span id="rk-mission-progress">⚔️ ATTACK MISSION STAGE 1/5</span>
-        </div>
-        <div id="rk-cards-container"></div>
-      </div>
-
       <!-- v0.0.18 Phase 4: Atomic mission supply loadout -->
       <div id="war-supply-sheet" class="war-supply-sheet" hidden>
         <section class="war-supply-card" role="dialog" aria-modal="true" aria-labelledby="war-supply-title">
@@ -570,7 +487,10 @@
           <p style="font-size:0.82rem; color:#cbd5e1;">
             Every <strong>Quarry Auto-Drill, Production Machine + Dedicated Counter (#1–#7), Split Factorio Conveyor Belt (🛢️ E-710 / ⛏️ Iron / 🛒 7 Counter Belts / 🧱 Gate Belts), Gate Layer, and Smart SEAF Staff Role</strong> upgrades from <strong>Lv.1 to Lv.20</strong>:
           </p>
-          <div class="upgrade-grid" id="upgrades-list"></div>
+          <div id="shop-upgrade-wallet" class="shop-upgrade-wallet" aria-label="Upgrade resources"></div>
+          <div id="shop-upgrade-filters" class="shop-upgrade-filters" role="group" aria-label="Upgrade filters"></div>
+          <div id="shop-upgrade-live" class="sr-only" aria-live="polite"></div>
+          <div class="upgrade-grid shop-upgrade-grid" id="upgrades-list"></div>
         </div>
       </div>
     </div>
@@ -700,6 +620,7 @@
   <!-- Modular Game Scripts -->
   <script src="./js/config.js"></script>
   <script src="./js/audio.js"></script>
+  <script src="./js/shop-upgrades.js"></script>
   <script src="./js/war-run.js"></script>
   <script src="./js/war-casualties.js"></script>
   <script src="./js/war-supplies.js"></script>
