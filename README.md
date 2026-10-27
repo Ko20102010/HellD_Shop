@@ -1,3 +1,9 @@
+## War black-screen fix - v0.0.22
+
+- Hardens War screen visibility and route/combat panel switching.
+- Prevents CSS cascade conflicts from leaving an opaque blank screen.
+- Preserves existing saves.
+
 
 ## War cleanup — v0.0.21-war-cleanup
 

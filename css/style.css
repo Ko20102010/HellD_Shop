@@ -1206,3 +1206,9 @@ body.war-mode-active #war-expedition-ui{position:fixed!important;inset:0!importa
 body.war-mode-active #war-combat-panel{position:fixed!important;inset:max(54px,env(safe-area-inset-top,0px)) max(8px,env(safe-area-inset-right,0px)) max(8px,env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-left,0px))!important;z-index:80!important;max-width:900px!important;background:linear-gradient(180deg,#07111f,#020617)!important;box-shadow:0 0 0 100vmax #020617!important}
 body.war-mode-active #war-map-sheet{z-index:90!important}
 @media(max-width:520px){body.war-mode-active #war-expedition-ui{padding-top:max(54px,calc(env(safe-area-inset-top,0px) + 48px))!important;padding-inline:6px!important}body.war-mode-active #war-combat-panel{inset:max(50px,env(safe-area-inset-top,0px)) 4px 4px!important}}
+
+/* v0.0.22 war black-screen recovery */
+[hidden]{display:none!important}
+#war-expedition-ui:not([hidden]){display:grid!important;visibility:visible!important;opacity:1!important;isolation:isolate;background:#07111f!important;color:#fff!important}
+#war-route-panel:not([hidden]){display:grid!important;visibility:visible!important;opacity:1!important;min-height:100dvh;background:linear-gradient(180deg,#0b1b31,#07111f)!important}
+#war-combat-panel:not([hidden]){display:grid!important;visibility:visible!important;opacity:1!important;min-height:100dvh;background:#07111f!important}
