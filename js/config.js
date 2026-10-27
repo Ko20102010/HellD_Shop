@@ -5,7 +5,7 @@
 // ============================================================================
 
 window.GameConfig = {
-  VERSION: 'v0.0.14',
+  VERSION: 'v0.0.19-phase5',
   STORAGE_KEY: 'helldivers_please_save_v0013',
   MAX_LEVEL: 10,
 
@@ -2628,6 +2628,119 @@ window.GameConfig = {
   // - Diff 4-6: Normal (🟢) + Rare (🟠) Samples
   // - Diff 7-10: Normal (🟢) + Rare (🟠) + Super Rare (🟣) Samples
   // --------------------------------------------------------------------------
+
+  // --------------------------------------------------------------------------
+  // v0.0.15 PHASE 1: DETERMINISTIC WAR EXPEDITION FOUNDATION
+  // Route generation is persisted now; event/combat node execution lands later.
+  // --------------------------------------------------------------------------
+  WAR_EXPEDITIONS: {
+    sample: {
+      id: 'sample',
+      nodeCount: 12,
+      finalNodeType: 'boss',
+      guaranteedCampBeforeBoss: true,
+      minEliteNode: 4
+    },
+    capture: {
+      id: 'capture',
+      nodeCount: 20,
+      finalNodeType: 'boss',
+      guaranteedCampBeforeBoss: true,
+      requiredFactionEvent: true,
+      minEliteNode: 4
+    }
+  },
+  WAR_NODE_TYPES: {
+    battle: { icon: '⚔️', weight: 38 },
+    elite: { icon: '💀', weight: 10 },
+    event: { icon: '❓', weight: 18 },
+    camp: { icon: '⛺', weight: 10 },
+    armoury: { icon: '📦', weight: 8 },
+    merchant: { icon: '💰', weight: 7 },
+    hazard: { icon: '☢️', weight: 6 },
+    boss: { icon: '👑', weight: 0 }
+  },
+  WAR_RUN_SCHEMA_VERSION: 1,
+  WAR_EVENTS: [
+    { id:'damaged_convoy', title:'Damaged SEAF Convoy', icon:'🚚', description:'A damaged convoy blocks the expedition route.', choices:[
+      { id:'repair', label:'Repair the convoy', detail:'Spend 2 Iron · gain support and healing', cost:{ raw_iron:2 }, outcome:{ cash:120, healPct:0.10 } },
+      { id:'salvage', label:'Salvage supplies', detail:'Guaranteed requisition', outcome:{ cash:220 } },
+      { id:'search', label:'Search the wreckage', detail:'Unknown risk · possible rare samples', outcome:{ cash:80, rare:1 } }
+    ]},
+    { id:'abandoned_hellpod', title:'Abandoned Hellpod', icon:'🚀', description:'A silent Hellpod transmits a valid Super Earth identity code.', choices:[
+      { id:'open', label:'Open the Hellpod', detail:'Recover samples and ammunition', outcome:{ common:3, cash:80 } },
+      { id:'mark', label:'Mark for retrieval', detail:'Safer requisition reward', outcome:{ cash:160 } }
+    ]},
+    { id:'distress_beacon', title:'Distress Beacon', icon:'📡', description:'A weak SEAF distress signal repeats from hostile territory.', choices:[
+      { id:'rescue', label:'Attempt rescue', detail:'Higher reward · elevated risk', outcome:{ cash:260, common:2 } },
+      { id:'bypass', label:'Maintain mission priority', detail:'Recover 8% squad health', outcome:{ healPct:0.08 } }
+    ]},
+    { id:'unstable_cache', title:'Unstable Ammunition Cache', icon:'💥', description:'Damaged munitions are scattered around a live detonator.', choices:[
+      { id:'recover', label:'Careful recovery', detail:'Gain requisition and samples', outcome:{ cash:180, common:2 } },
+      { id:'detonate', label:'Remote detonation', detail:'Clear the route safely', outcome:{ cash:90 } }
+    ]},
+    { id:'field_medic', title:'Injured Helldiver', icon:'🩺', description:'A stranded Helldiver requests emergency extraction.', choices:[
+      { id:'stabilise', label:'Stabilise and extract', detail:'Squad heals 18%', outcome:{ healPct:0.18 } },
+      { id:'supplies', label:'Leave medical supplies', detail:'Gain one Rare sample', outcome:{ rare:1 } }
+    ]},
+    { id:'faction_signal', title:'Encrypted Enemy Signal', icon:'🛰️', description:'A faction command channel exposes a temporary weakness.', choices:[
+      { id:'decode', label:'Decode tactical data', detail:'Gain requisition and intelligence', outcome:{ cash:240 } },
+      { id:'jam', label:'Jam the transmission', detail:'Gain samples', outcome:{ common:4 } }
+    ]}
+  ],
+  WAR_CASUALTY_RULES: {
+    standard: { id:'standard', name:'Standard Operation', rewardMult:1.0, permadeath:false, injuryNodes:1 },
+    hardcore: { id:'hardcore', name:'Helldive Contract', rewardMult:1.5, permadeath:true, injuryNodes:0 }
+  },
+  WAR_RECOVERY_COSTS: {
+    injured: { cash:180, common:2 },
+    critical: { cash:500, rare:2 }
+  },
+  WAR_SUPPLY_EFFECTS: {
+    cloth: { itemId:'cloth', icon:'🦺', name:'Cape & Armour', description:'+10% squad maximum health', hpMult:1.10 },
+    gun: { itemId:'gun', icon:'🔫', name:'Liberator Rifle', description:'+12% squad attack', attackMult:1.12 },
+    resource: { itemId:'resource', icon:'📦', name:'Munitions Crate', description:'Heroes begin battle with 25 energy', startingEnergy:25 },
+    equipment: { itemId:'equipment', icon:'🎒', name:'Jump Pack', description:'+8% damage avoidance', damageReduction:0.08 },
+    vehicle: { itemId:'vehicle', icon:'🚙', name:'Recon Vehicle', description:'Enemy attack reduced by 10%', enemyAttackMult:0.90 },
+    mech: { itemId:'mech', icon:'🤖', name:'Patriot Mech', description:'Squad begins with a 20% HP shield', startingShield:0.20 },
+    warship: { itemId:'warship', icon:'🛸', name:'Super Destroyer', description:'Heroes begin with 50 energy', startingEnergy:50 }
+  },
+  WAR_COMBAT: {
+    tickSeconds: 0.1,
+    enrageSeconds: 75,
+    normalDurationTarget: [10, 20],
+    eliteDurationTarget: [20, 35],
+    bossDurationTarget: [35, 60],
+    formationBonuses: {
+      front: { damageReduction: 0.15, threat: 1.20 },
+      middle: { energyGain: 0.10, threat: 1.00 },
+      rear: { attack: 0.15, threat: 0.75 }
+    },
+    eliteModifiers: [
+      { id:'armoured', name:'Armoured', defence:0.28 },
+      { id:'berserk', name:'Berserk', speed:0.22 },
+      { id:'regenerating', name:'Regenerating', regen:0.012 },
+      { id:'explosive', name:'Explosive', deathDamage:0.06 },
+      { id:'suppressing', name:'Suppressing', energyPenalty:0.30 },
+      { id:'commanding', name:'Commanding', attack:0.20 }
+    ],
+    ultimates: {
+      cls_vanguard: { name:'Eagle 500KG Strike', icon:'🦅', damage:4.8 },
+      cls_bulwark: { name:'Squad Barrier', icon:'🛡️', shield:0.32 },
+      cls_sniper: { name:'Orbital Railcannon', icon:'🎯', damage:6.0 },
+      cls_medic: { name:'Emergency Infusion', icon:'💉', heal:0.36 },
+      cls_engineer: { name:'Mini-Hellbomb', icon:'💣', damage:5.2 },
+      cls_mech: { name:'Autocannon Salvo', icon:'🤖', damage:5.5 }
+    }
+  },
+  WAR_REWARDS: [
+    { id:'precision', title:'Precision Doctrine', description:'+12% critical effectiveness for this expedition.' },
+    { id:'fortified', title:'Fortified Formation', description:'+15% squad durability for this expedition.' },
+    { id:'overclock', title:'Overclocked Support', description:'+10% ability generation for this expedition.' },
+    { id:'salvager', title:'Field Salvager', description:'+20% requisition from future nodes.' },
+    { id:'medic_protocol', title:'Medic Protocol', description:'Recover 6% health after each node.' },
+    { id:'orbital_link', title:'Orbital Link', description:'One future encounter may be rerolled.' }
+  ],
   SAMPLE_DIFFICULTIES: [
     { diff: 1, name: '1 - Trivial (微不足道)', tierText: '🟢 Normal Sample Only', common: [2, 4], rare: [0, 0], superRare: [0, 0], hpMult: 1.0, atkMult: 1.0, cashReward: 120 },
     { diff: 2, name: '2 - Easy (簡單任務)', tierText: '🟢 Normal Sample Only', common: [4, 7], rare: [0, 0], superRare: [0, 0], hpMult: 1.45, atkMult: 1.30, cashReward: 190 },

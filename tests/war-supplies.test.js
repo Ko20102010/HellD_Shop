@@ -1,0 +1,10 @@
+const assert=require('assert');
+const supplies=require('../js/war-supplies.js');
+const effects={cloth:{hpMult:1.1},gun:{attackMult:1.12},resource:{startingEnergy:25},warship:{startingEnergy:50},mech:{startingShield:.2}};
+const game={stations:{cloth:{stock:2},gun:{stock:1},resource:{stock:0},warship:{stock:1},mech:{stock:1}}};
+assert.strictEqual(supplies.stock(game,'cloth'),2);
+let check=supplies.validate(game,{cloth:true,resource:true},effects);assert(!check.ok);assert.deepStrictEqual(check.missing,['resource']);
+const before=JSON.stringify(game);let failed=supplies.transaction(game,{cloth:true,resource:true},effects);assert(!failed.ok);assert.strictEqual(JSON.stringify(game),before,'failed transaction must consume nothing');
+const success=supplies.transaction(game,{cloth:true,gun:true,warship:true,mech:true},effects);assert(success.ok);assert.strictEqual(game.stations.cloth.stock,1);assert.strictEqual(game.stations.gun.stock,0);assert.strictEqual(success.effects.hpMult,1.1);assert.strictEqual(success.effects.attackMult,1.12);assert.strictEqual(success.effects.startingEnergy,50);assert.strictEqual(success.effects.startingShield,.2);
+supplies.refund(game,success.consumed);assert.strictEqual(game.stations.cloth.stock,2);assert.strictEqual(game.stations.gun.stock,1);
+console.log('PASS war-supplies: validation, atomic failure, exact consumption, effect aggregation and rollback refund');

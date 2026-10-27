@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>HELLDIVERS PLEASE! — Super Destroyer Warship &amp; Mindustry War-Zone Tycoon (v0.0.14)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>HELLDIVERS PLEASE! — Super Destroyer Warship &amp; Mindustry War-Zone Tycoon (v0.0.15 Phase 1)</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
@@ -302,6 +302,50 @@
           <span id="rk-mission-progress">⚔️ ATTACK MISSION STAGE 1/5</span>
         </div>
         <div id="rk-cards-container"></div>
+      </div>
+
+      <!-- v0.0.18 Phase 4: Atomic mission supply loadout -->
+      <div id="war-supply-sheet" class="war-supply-sheet" hidden>
+        <section class="war-supply-card" role="dialog" aria-modal="true" aria-labelledby="war-supply-title">
+          <header><div><h2 id="war-supply-title">Mission Supply Loadout</h2><p id="war-supply-subtitle">Select factory stock to consume for this expedition.</p></div><button type="button" id="btn-war-supply-close" aria-label="Close supply loadout">✕</button></header>
+          <fieldset id="war-contract-options" class="war-contract-options">
+            <legend>Operation contract</legend>
+            <label><input type="radio" name="war-contract" value="standard" checked><span><strong>Standard Operation</strong><small>100% rewards · injuries, no normal permadeath</small></span></label>
+            <label><input type="radio" name="war-contract" value="hardcore"><span><strong>Helldive Contract</strong><small>150% rewards · permanent death enabled</small></span></label>
+          </fieldset>
+          <section id="war-injury-panel" class="war-injury-panel" aria-label="Injured heroes"></section>
+          <div id="war-supply-list" class="war-supply-list"></div>
+          <p id="war-supply-status" class="war-supply-status" aria-live="polite"></p>
+          <footer><button type="button" id="btn-war-supply-shop">Return to Shop</button><button type="button" id="btn-war-supply-launch">Launch Expedition</button></footer>
+        </section>
+      </div>
+
+      <!-- v0.0.16 Phase 2: Event-driven War expedition interface -->
+      <section id="war-expedition-ui" class="war-expedition-ui" aria-label="War expedition" hidden>
+        <header class="war-expedition-hud">
+          <div><strong id="war-expedition-title">EXPEDITION</strong><span id="war-expedition-progress">Node 1 / 12</span></div>
+          <div class="war-expedition-actions"><button type="button" id="btn-war-map">🗺️ Map</button><button type="button" id="btn-war-extract">🚁 Extract</button></div>
+        </header>
+        <div id="war-expedition-scene" class="war-expedition-scene">
+          <div id="war-node-icon" class="war-node-icon" aria-hidden="true">⚔️</div>
+          <p id="war-node-kicker">ENCOUNTER REVEALED</p>
+          <h2 id="war-node-title">Hostile Contact</h2>
+          <p id="war-node-description">Prepare the squad.</p>
+        </div>
+        <div id="war-choice-panel" class="war-choice-panel" role="group" aria-label="Encounter choices"></div>
+        <section id="war-combat-panel" class="war-combat-panel" aria-label="Expedition combat" hidden>
+          <canvas id="war-combat-canvas" width="720" height="720" aria-label="Vertical automatic combat scene"></canvas>
+          <div id="war-combat-status" class="war-combat-status"></div>
+          <div id="war-hero-controls" class="war-hero-controls" aria-label="Hero ultimates"></div>
+          <div class="war-combat-tools"><button type="button" id="btn-war-auto-ultimate" aria-pressed="false">AUTO ULT: OFF</button><button type="button" id="btn-war-speed">1× SPEED</button></div>
+        </section>
+        <div id="war-expedition-live" class="sr-only" aria-live="polite"></div>
+      </section>
+      <div id="war-map-sheet" class="war-map-sheet" hidden>
+        <div class="war-map-card" role="dialog" aria-modal="true" aria-labelledby="war-map-title">
+          <header><h2 id="war-map-title">Expedition Route</h2><button type="button" id="btn-war-map-close" aria-label="Close route map">✕</button></header>
+          <div id="war-map-nodes" class="war-map-nodes"></div>
+        </div>
       </div>
 
       <!-- ULTRA-CLEAN 2-BUTTON ZOOM PILL (Right Edge) -->
@@ -632,7 +676,7 @@
     <div class="modal-backdrop" id="modal-github">
       <div class="modal-card">
         <div class="modal-header">
-          <div class="modal-title">📦 GITHUB &amp; GITHUB PAGES REPOSITORY PACKAGER (v0.0.14)</div>
+          <div class="modal-title">📦 GITHUB &amp; GITHUB PAGES REPOSITORY PACKAGER (v0.0.15 Phase 1)</div>
           <button class="modal-close-btn modal-close" id="btn-close-github">✕</button>
         </div>
         <div class="modal-body">
@@ -656,6 +700,14 @@
   <!-- Modular Game Scripts -->
   <script src="./js/config.js"></script>
   <script src="./js/audio.js"></script>
+  <script src="./js/war-run.js"></script>
+  <script src="./js/war-casualties.js"></script>
+  <script src="./js/war-supplies.js"></script>
+  <script src="./js/war-supply-ui.js"></script>
+  <script src="./js/war-events.js"></script>
+  <script src="./js/war-combat.js"></script>
+  <script src="./js/war-combat-ui.js"></script>
+  <script src="./js/war-ui.js"></script>
   <script src="./js/world.js"></script>
   <script src="./js/game.js"></script>
 </body>

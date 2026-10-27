@@ -233,6 +233,30 @@
       return Math.round(70 * Math.pow(1.18, count));
     }
 
+    initWarFoundation() {
+      const engine = window.WarRunEngine;
+      this.warProgress = engine
+        ? engine.migrateProgress(this.warProgress, this.sampleSearchDiff || 1)
+        : (this.warProgress || { schemaVersion: 1, highestSampleDifficulty: this.sampleSearchDiff || 1,
+            completedSampleRuns: 0, completedCaptureRuns: 0, discoveredEvents: {},
+            discoveredRelics: {}, injuredHeroes: {}, autoUltimateEnabled: false });
+      if (this.warRun && engine && !engine.isValidRun(this.warRun, CFG)) {
+        this.warRun = null;
+        this.warMigrationNoticePending = true;
+      }
+    }
+
+    createWarFoundationRun(options) {
+      const engine = window.WarRunEngine;
+      if (!engine) {
+        console.error('WarRunEngine is unavailable; deterministic route was not created.');
+        return null;
+      }
+      this.initWarFoundation();
+      this.warRun = engine.createRun(options, CFG);
+      return this.warRun;
+    }
+
     getShopWarPowerMult() {
       let score = 0;
       for (const item of CFG.ITEMS) {
@@ -805,6 +829,10 @@
       this.sampleSearchDiff = 1;
       this.targetCapturePlanetId = 'sp_heeth';
       this.capybaraRun = null;
+      this.warRun = null;
+      this.warProgress = this.warProgress || null;
+      this.warMigrationNoticePending = false;
+      this.initWarFoundation();
 
       this.workers = [];
       this.customers = [];
@@ -4804,20 +4832,45 @@
       return { activeHeroes, spareHero };
     }
 
-    startSampleSearchRun(diff = null) {
+    launchPreparedWarRun(options) {
+      const availableIds = window.WarCasualtyEngine?.availableLineup(this) || this.capybaraLineup;
+      if (availableIds.filter(Boolean).length < 3) return false;
+      this.createWarFoundationRun(options);
+      if (!this.warRun) return false;
+      this.warRun.supplies = options.supplies || {};
+      this.warRun.contractMode = options.contractMode || 'standard';
+      this.warRun.rewardMult = Number(options.rewardMult || 1);
+      this.warRun.supplyEffects = options.supplyEffects || {
+        hpMult: 1, attackMult: 1, startingEnergy: 0,
+        damageReduction: 0, enemyAttackMult: 1, startingShield: 0
+      };
+      if (this.viewMode !== 'war') this.setViewMode('war', options.mode);
+      this.saveGame();
+      window.WarUI?.show(this);
+      return true;
+    }
+
+    startSampleSearchRun(diff = null, legacyCombat = false) {
       const chosenDiff = Math.max(1, Math.min(10, parseInt(diff || this.sampleSearchDiff || 1, 10)));
       this.sampleSearchDiff = chosenDiff;
       this.warSubPage = 'sample';
 
       const { activeHeroes, spareHero } = this.buildCapybaraRunSquad();
+      const availableIds = window.WarCasualtyEngine?.availableLineup(this) || this.capybaraLineup;
       if (activeHeroes.length === 0) {
-        this.spawnFloatingText(this.player.x, this.player.z - 45, '⚠️ NO HELLDIVERS IN SQUAD! HIRE HEROES IN TRAINING ROOM FIRST!', '#ef4444');
+        this.spawnFloatingText(this.player.x, this.player.z - 45, '⚠️ NEED 3 AVAILABLE HELLDIVERS! RECOVER INJURED HEROES OR CHANGE LINEUP.', '#ef4444');
         this.renderTrainingRoomModal();
         document.getElementById('modal-training-room')?.classList.add('open');
         return;
       }
 
       const faction = chosenDiff % 2 === 1 ? 'bugs' : 'autobots';
+      if (!legacyCombat) {
+        window.WarSupplyUI?.open(this, {
+          mode: 'sample', difficulty: chosenDiff, faction, seed: Date.now()
+        }, (options) => this.launchPreparedWarRun(options));
+        return;
+      }
       this.capybaraRun = {
         active: true,
         mode: 'sample',
@@ -4839,10 +4892,11 @@
       if (retreatBar) retreatBar.style.display = 'none';
       if (this.viewMode !== 'war') this.setViewMode('war', 'sample');
       this.spawnCapybaraWaveEnemies();
+      this.saveGame();
       this.updateHUD();
     }
 
-    startPlanetCaptureRun(planetId = null) {
+    startPlanetCaptureRun(planetId = null, legacyCombat = false) {
       this.initSpaceMapState();
       let targetId = planetId || this.targetCapturePlanetId;
       let pCfg = (CFG.SPACE_MAP_PLANETS || []).find((p) => p.id === targetId && !p.isHome && !this.spacePlanets[p.id]?.owned);
@@ -4861,13 +4915,21 @@
       this.warSubPage = 'capture';
 
       const { activeHeroes, spareHero } = this.buildCapybaraRunSquad();
+      const availableIds = window.WarCasualtyEngine?.availableLineup(this) || this.capybaraLineup;
       if (activeHeroes.length === 0) {
-        this.spawnFloatingText(this.player.x, this.player.z - 45, '⚠️ NO HELLDIVERS IN SQUAD! HIRE HEROES IN TRAINING ROOM FIRST!', '#ef4444');
+        this.spawnFloatingText(this.player.x, this.player.z - 45, '⚠️ NEED 3 AVAILABLE HELLDIVERS! RECOVER INJURED HEROES OR CHANGE LINEUP.', '#ef4444');
         this.renderTrainingRoomModal();
         document.getElementById('modal-training-room')?.classList.add('open');
         return;
       }
 
+      if (!legacyCombat) {
+        window.WarSupplyUI?.open(this, {
+          mode: 'capture', difficulty: pCfg.difficulty, faction: pCfg.faction,
+          planetId: pCfg.id, planetName: pCfg.name, seed: Date.now()
+        }, (options) => this.launchPreparedWarRun(options));
+        return;
+      }
       this.capybaraRun = {
         active: true,
         mode: 'capture',
@@ -4889,7 +4951,24 @@
       if (retreatBar) retreatBar.style.display = 'none';
       if (this.viewMode !== 'war') this.setViewMode('war', 'capture');
       this.spawnCapybaraWaveEnemies();
+      this.saveGame();
       this.updateHUD();
+    }
+
+    startWarNodeCombat() {
+      if (!this.warRun || !this.warRun.active) return;
+      this.warRun.phase = 'combat';
+      window.WarCombatUI?.start(this);
+    }
+
+    resumeWarExpeditionAfterCombat() {
+      if (!this.warRun || !this.warRun.active) return false;
+      this.capybaraRun = null;
+      this.enemies = [];
+      this.warRun.phase = 'reward';
+      window.WarUI?.showReward(this);
+      this.saveGame();
+      return true;
     }
 
     spawnCapybaraWaveEnemies() {
@@ -5258,6 +5337,7 @@
       this.superSamples = this.samples.superRare;
 
       run.active = false;
+      if (this.warRun) this.warRun.active = false;
       this.enemies = [];
       this.setViewMode('shop');
       this.audio.playPickup();
@@ -5289,6 +5369,13 @@
       this.samples.superRare = (this.samples.superRare || 0) + gotSuper;
       this.superSamples = this.samples.superRare;
 
+      if (this.warRun?.active) {
+        // Legacy combat already credited its encounter rewards above; do not duplicate them in expedition loot.
+        this.resumeWarExpeditionAfterCombat();
+        this.updateHUD();
+        return;
+      }
+
       if (run.mode === 'capture' && run.planetId && this.spacePlanets[run.planetId]) {
         const ps = this.spacePlanets[run.planetId];
         ps.owned = true;
@@ -5307,6 +5394,7 @@
       }
 
       run.active = false;
+      if (this.warRun) this.warRun.active = false;
       this.enemies = [];
       this.setViewMode('shop');
       this.audio.playUnlock();
@@ -5329,6 +5417,7 @@
       if (retreatBar) retreatBar.style.display = 'none';
 
       run.active = false;
+      if (this.warRun) this.warRun.active = false;
       this.enemies = [];
       this.setViewMode('shop');
       this.spawnFloatingText(
@@ -5380,6 +5469,8 @@
         capybaraLineup: this.capybaraLineup,
         sampleSearchDiff: this.sampleSearchDiff,
         targetCapturePlanetId: this.targetCapturePlanetId,
+        warProgress: this.warProgress,
+        warRun: this.warRun && this.warRun.active ? this.warRun : null,
         ownedEquipment: this.ownedEquipment,
         equipped: this.equipped,
         waveNumber: this.waveNumber,
@@ -5500,6 +5591,8 @@
         };
         this.spacePlanets = null;
         this.helldiverRoster = null;
+        this.warProgress = null;
+        this.warRun = null;
         this.initRunState();
         this.ensureStarterSetup();
         this.spawnCustomer('cloth');
@@ -5611,7 +5704,7 @@
         }
         if (!saved) return;
         const data = JSON.parse(saved);
-        const isCurrentVersion = data.version === CFG.VERSION;
+        const isCurrentVersion = data.version === CFG.VERSION || data.version === 'v0.0.14';
 
         if (typeof data.medals === 'number') this.medals = data.medals;
         if (typeof data.prestigeCount === 'number') this.prestigeCount = data.prestigeCount;
@@ -5649,6 +5742,13 @@
         if (Array.isArray(data.capybaraLineup)) this.capybaraLineup = data.capybaraLineup;
         if (typeof data.sampleSearchDiff === 'number') this.sampleSearchDiff = data.sampleSearchDiff;
         if (typeof data.targetCapturePlanetId === 'string') this.targetCapturePlanetId = data.targetCapturePlanetId;
+        if (data.warProgress && typeof data.warProgress === 'object') this.warProgress = data.warProgress;
+        if (data.warRun && typeof data.warRun === 'object') this.warRun = data.warRun;
+        if (data.capybaraRun?.active && !data.warRun) {
+          this.warRun = null;
+          this.warMigrationNoticePending = true;
+        }
+        this.initWarFoundation();
         this.initTransportShips();
         this.initHelldiverRoster();
         if (data.ownedEquipment) Object.assign(this.ownedEquipment, data.ownedEquipment);
@@ -6188,6 +6288,12 @@
   function bootHelldiversGame() {
     if (!window.game) {
       window.game = new HelldiversFactorioGame();
+      setTimeout(() => {
+        if (window.game?.warRun?.active) {
+          if (window.game.warRun.phase === 'combat') window.WarCombatUI?.start(window.game);
+          else window.WarUI?.show(window.game);
+        }
+      }, 0);
     }
   }
 

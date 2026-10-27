@@ -1,3 +1,40 @@
+
+## War Redesign Phase 5 — v0.0.19-phase5
+
+- Adds Standard injuries, paid/natural recovery, and an explicit 150% reward Helldive Contract with permanent death.
+- Tracks fallen heroes, difficulty progression and completed captures in backward-compatible save fields.
+- Adds `js/war-casualties.js` and `tests/war-casualties.test.js`.
+
+
+## War Redesign Phase 4 — v0.0.18-phase4
+
+- Adds an atomic pre-launch loadout using all seven factory products.
+- Persists selected supplies and applies HP, attack, energy, mitigation and shield effects in expedition combat.
+- Adds rollback-safe stock consumption with `tests/war-supplies.test.js`.
+
+
+## War Redesign Phase 3 — v0.0.17-phase3
+
+- Replaces the legacy five-wave combat bridge with short vertical expedition battles.
+- Adds formations, energy, manual/automatic ultimates, elite modifiers, boss phases, enrage and combat save/resume.
+- Adds `js/war-combat.js`, `js/war-combat-ui.js` and `tests/war-combat.test.js`.
+
+
+## War Redesign Phase 2 — v0.0.16-phase2
+
+- Adds the event-driven expedition screen, node map, choices, extraction, camps, hazards and three-card expedition rewards.
+- Connects battle nodes to the existing combat as a temporary bridge until Phase 3.
+- Adds `js/war-events.js`, `js/war-ui.js` and `tests/war-events.test.js`.
+
+
+## War Redesign Phase 1 — v0.0.15-phase1
+
+- Adds deterministic 12-node Sample Search and 20-node Planet Capture routes.
+- Persists the route seed, route and War progression using backward-compatible optional save fields.
+- Adds route validation and migration safeguards.
+- Keeps the current battle mode active while the event UI and new combat engine are built in later phases.
+- Includes `tests/war-run.test.js` for route and migration regression checks.
+
 # HELLDIVERS PLEASE! — Nightfall: Kingdom Frontier TD Castle Defense, Dedicated Shop Clone Sector & Tactical War Squad Manager (`v0.0.14`)
 
 An arcade factory-automation, Mindustry multi-base logistics, and *Capybara Go!* / Tower-Defense Roguelike War-Front web game inspired by **Burger Please!**, **Whiteout Survival Playable Ads**, **Capybara Go!**, **Factorio**, **Mindustry**, and **CarbotAnimations' Helldivers 2 cartoons** (across **all episodes Ep1–Ep10+**, including [Pro vs Noobs | Helldivers 2 Ep7](http://www.youtube.com/watch?v=bn0GTO_zvAg)), built from the [Modular Game Prompt Library](https://docs.google.com/document/d/1ZoW7Oou5QpTyvwD6vrczKuXv0nW42JgLJC-au62H7Pw/edit?usp=drivesdk&ouid=114024991701964609548).
