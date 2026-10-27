@@ -83,3 +83,6 @@ Restore the replaced v0.0.22 files. No migration reversal or save-data rollback 
 - Validation rules: `ART_ASSET_VALIDATION_RULES.md`.
 - Implementation checklist: `ART_IMPLEMENTATION_CHECKLIST.md`.
 - Current manifest entries are intentionally `placeholder`; production mode must fail until approved assets exist.
+
+## Applied visual direction
+The battle scene now uses an original bright anime-inspired meadow-and-ruins presentation with three procedural Canvas depth layers, four role-differentiated chibi puppets, multiple fantasy-mob silhouettes, a four-card skill dock, wave badge and countdown. The design adapts the requested visual principles without copying named game assets. The fixed squad requirement remains four, so the dock contains four cards rather than five.
